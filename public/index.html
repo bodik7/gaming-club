@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Монополія України</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ===== ЛОБІ ===== */
+        .lobby-screen, .waiting-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .lobby-card {
+            background: rgba(255,255,255,0.97);
+            border-radius: 24px;
+            padding: 40px 50px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            border: 4px solid #ffd700;
+        }
+        .lobby-card h1 { font-size: 32px; color: #004494; margin-bottom: 6px; }
+        .lobby-card h2 { font-size: 20px; color: #004494; margin-bottom: 20px; }
+        .lobby-input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #0057b7;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            box-sizing: border-box;
+        }
+        .lobby-input:focus { outline: none; border-color: #ffd700; }
+        .lobby-divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 18px 0;
+            color: #999;
+            font-size: 13px;
+        }
+        .lobby-divider::before, .lobby-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #ddd;
+        }
+        .lobby-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+        }
+        .lobby-btn-primary {
+            background: linear-gradient(135deg, #ffd700, #ffaa00);
+            color: #004494;
+            box-shadow: 0 4px 14px rgba(255,170,0,0.4);
+        }
+        .lobby-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,170,0,0.5); }
+        .lobby-btn-secondary {
+            background: #0057b7;
+            color: white;
+            box-shadow: 0 4px 14px rgba(0,87,183,0.3);
+        }
+        .lobby-btn-secondary:hover { background: #004494; transform: translateY(-2px); }
+
+        .room-code-box {
+            background: #f4f7fc;
+            border: 2px dashed #0057b7;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        .room-code-box .code {
+            font-size: 28px;
+            font-weight: 900;
+            color: #004494;
+            letter-spacing: 3px;
+        }
+        .room-code-box .hint { font-size: 12px; color: #888; margin-top: 6px; }
+
+        #lobby-players-list {
+            text-align: left;
+            background: #f9f9f9;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin: 12px 0;
+            font-size: 14px;
+            min-height: 40px;
+        }
+        #lobby-players-list div { padding: 4px 0; border-bottom: 1px solid #eee; }
+        #lobby-players-list div:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+    <!-- ===== ЛОБІ — введення імені та коду ===== -->
+    <div id="lobby-screen" class="lobby-screen">
+        <div class="lobby-card">
+            <h1>🇺🇦 МОНОПОЛІЯ УКРАЇНИ</h1>
+            <p style="color:#666;margin-bottom:24px;font-style:italic">Онлайн мультиплеєр</p>
+
+            <label style="display:block;text-align:left;font-weight:700;color:#004494;margin-bottom:6px">Ваше ім'я:</label>
+            <input id="lobby-name" class="lobby-input" type="text" placeholder="Введіть ім'я гравця" maxlength="20"
+                   onkeydown="if(event.key==='Enter')createRoom()">
+
+            <button class="lobby-btn lobby-btn-primary" onclick="createRoom()">
+                🏠 Створити нову гру
+            </button>
+
+            <div class="lobby-divider">або приєднатись до існуючої</div>
+
+            <button class="lobby-btn" onclick="findRoom()"
+                    style="background:#f4f7fc;color:#0057b7;border:2px solid #0057b7;margin-bottom:4px">
+                🔍 Знайти вільну кімнату
+            </button>
+
+            <div class="lobby-divider" style="margin:12px 0 10px">або за кодом</div>
+
+            <input id="lobby-code" class="lobby-input" type="text" placeholder="Код кімнати (напр. KYIV-1234)"
+                   style="text-transform:uppercase;letter-spacing:2px" maxlength="15"
+                   onkeydown="if(event.key==='Enter')joinRoom()">
+            <button class="lobby-btn lobby-btn-secondary" onclick="joinRoom()">
+                🔗 Приєднатись
+            </button>
+
+            <div id="rejoin-error" style="display:none;color:#cc1f1f;font-size:13px;
+                 background:#ffeae8;border-radius:8px;padding:8px 12px;margin-top:8px"></div>
+            <p style="font-size:12px;color:#aaa;margin-top:10px">2–6 гравців · кожен зі свого пристрою</p>
+        </div>
+    </div>
+
+    <!-- ===== ЗАЛА ОЧІКУВАННЯ ===== -->
+    <div id="waiting-screen" class="waiting-screen hidden">
+        <div class="lobby-card">
+            <h2>⏳ Очікування гравців</h2>
+
+            <div class="room-code-box">
+                <div style="font-size:12px;color:#888;margin-bottom:4px">Код кімнати — поділіться з друзями:</div>
+                <div class="code" id="room-code-display">——</div>
+                <div class="hint">Інші гравці вводять цей код для приєднання</div>
+            </div>
+
+            <button id="copy-link-btn" class="lobby-btn lobby-btn-secondary"
+                    onclick="copyInviteLink()" style="margin-bottom:16px;font-size:14px;padding:10px">
+                📋 Копіювати посилання-запрошення
+            </button>
+
+            <div style="font-size:13px;font-weight:700;color:#004494;margin-bottom:6px;text-align:left;display:flex;justify-content:space-between;align-items:center">
+                <span>Гравці в кімнаті:</span>
+                <span id="lobby-player-count" style="background:#0057b7;color:white;padding:2px 10px;border-radius:20px;font-size:12px">0/6</span>
+            </div>
+            <div id="lobby-players-list"></div>
+
+            <button id="start-btn" class="lobby-btn lobby-btn-primary hidden" onclick="startGame()">
+                🚀 Почати гру
+            </button>
+            <p id="waiting-hint" style="font-size:12px;color:#888">
+                Хост побачить кнопку старту. Потрібно мінімум 2 гравці.
+            </p>
+        </div>
+    </div>
+
+
+    <!-- Toast-сповіщення -->
+    <div id="toast-container" style="
+        position:fixed;bottom:20px;right:16px;z-index:9998;
+        display:flex;flex-direction:column-reverse;align-items:flex-end"></div>
+
+    <!-- ===== ІГРОВИЙ ЕКРАН ===== -->
+    <div id="game-screen" class="game-screen hidden">
+        <div class="game-layout">
+            <!-- Ліва панель: гравці + чат -->
+            <div class="left-panel">
+                <aside class="players-panel" id="players-panel"></aside>
+                <div class="chat-panel">
+                    <h3 class="chat-title">💬 Чат гравців</h3>
+                    <div class="chat-messages" id="chat-messages"></div>
+                    <div class="chat-input-row">
+                        <input type="text" id="chat-input" class="chat-input"
+                               placeholder="Написати повідомлення…" maxlength="120"
+                               onkeydown="if(event.key==='Enter')sendChatMessage()">
+                        <button class="chat-send-btn" onclick="sendChatMessage()">➤</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Центр: дошка -->
+            <main class="board-wrapper">
+                <div class="board" id="board">
+                    <div class="board-center">
+                        <div class="logo">🇺🇦</div>
+                        <div class="logo-text">МОНОПОЛІЯ<br>УКРАЇНИ</div>
+                        <div class="dice-area">
+                            <div class="die" id="die1">?</div>
+                            <div class="die" id="die2">?</div>
+                        </div>
+                        <button id="roll-btn"    class="big-btn" onclick="rollDice()">🎲 Кинути кубики</button>
+                        <button id="end-turn-btn" class="big-btn hidden" onclick="endTurn()">Завершити хід</button>
+                        <div id="turn-timer" style="min-height:28px;margin:2px 0"></div>
+                        <div class="current-player" id="current-player-info"></div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Права панель: дії та лог -->
+            <aside class="actions-panel">
+                <div class="action-buttons" id="action-buttons"></div>
+                <div class="log" id="log">
+                    <h3 style="display:flex;justify-content:space-between;align-items:center">
+                        Хід гри
+                        <span id="connection-status" style="display:none;font-size:11px;font-weight:700;
+                            padding:2px 8px;border-radius:12px;background:#e8f5e9;color:#2e7d32">🟢</span>
+                    </h3>
+                    <div id="log-content"></div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Модальне вікно -->
+    <div id="modal" class="modal hidden">
+        <div class="modal-card">
+            <h2 id="modal-title"></h2>
+            <div id="modal-body"></div>
+            <div id="modal-buttons" class="modal-buttons"></div>
+        </div>
+    </div>
+
+    <!-- Картка нерухомості -->
+    <div id="property-modal" class="modal hidden">
+        <div class="property-card" id="property-card-content"></div>
+    </div>
+
+    <!-- Socket.io (автоматично підключається до сервера) -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <!-- Дані дошки та іконки -->
+    <script src="board.js"></script>
+    <script src="icons.js"></script>
+
+    <!-- UI (рендеринг) -->
+    <script src="ui.js"></script>
+
+    <!-- Socket-клієнт (замінює engine.js і script.js) -->
+    <script src="client.js"></script>
+
+    <script>
+        // Ініціалізація дошки при старті гри
+        function showGameScreen() {
+            document.getElementById('game-screen').classList.remove('hidden');
+            buildBoard();
+            renderActionButtons();
+        }
+    </script>
+</body>
+</html>

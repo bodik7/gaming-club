@@ -1,0 +1,998 @@
+// ============================================
+// МОНОПОЛІЯ УКРАЇНИ — server.js
+// Node.js + Express + Socket.io
+// ============================================
+const express = require('express');
+const http    = require('http');
+const { Server } = require('socket.io');
+const path    = require('path');
+
+const app    = express();
+const server = http.createServer(app);
+const io     = new Server(server);
+
+app.use(express.static(path.join(__dirname, 'public')));
+
+// ── Кімнати: { [code]: Room } ───────────────
+const rooms = {};
+
+// ── Дані дошки (дублюємо тут, бо Node не бачить browser-globals) ──
+const BOARD = [
+    { pos: 0,  type: 'corner',   name: 'СТАРТ',                   icon: '➡️', desc: 'Отримайте ₴200' },
+    { pos: 1,  type: 'property', name: 'Сумська',      city: 'Полтава',    color: '#8B4513', price: 60,  rent: [2,10,30,90,160,250],          housePrice: 50  },
+    { pos: 2,  type: 'card',     name: 'Шанс',                    icon: '❓', cardType: 'chance' },
+    { pos: 3,  type: 'property', name: 'Полтавська',   city: 'Полтава',    color: '#8B4513', price: 60,  rent: [4,20,60,180,320,450],          housePrice: 50  },
+    { pos: 4,  type: 'tax',      name: 'Податкова',               icon: '💰', amount: 200 },
+    { pos: 5,  type: 'railway',  name: 'Львівська залізниця',      icon: '🚂', price: 200 },
+    { pos: 6,  type: 'property', name: 'Хортиця',      city: 'Запоріжжя', color: '#FFD700', price: 100, rent: [6,30,90,270,400,550],          housePrice: 50  },
+    { pos: 7,  type: 'card',     name: 'Екскурсія',               icon: '🗺️', cardType: 'excursion' },
+    { pos: 8,  type: 'property', name: 'Дніпрогес',    city: 'Запоріжжя', color: '#FFD700', price: 100, rent: [6,30,90,270,400,550],          housePrice: 50  },
+    { pos: 9,  type: 'property', name: 'Соборний пр.', city: 'Запоріжжя', color: '#FFD700', price: 120, rent: [8,40,100,300,450,600],         housePrice: 50  },
+    { pos: 10, type: 'corner',   name: "В'ЯЗНИЦЯ",                icon: '🔒', desc: 'У гостях' },
+    { pos: 11, type: 'property', name: 'Дерибасівська',city: 'Одеса',     color: '#FF69B4', price: 140, rent: [10,50,150,450,625,750],        housePrice: 100 },
+    { pos: 12, type: 'utility',  name: 'Одеський порт',            icon: '⚓', price: 150 },
+    { pos: 13, type: 'property', name: 'Молдованка',   city: 'Одеса',     color: '#FF69B4', price: 140, rent: [10,50,150,450,625,750],        housePrice: 100 },
+    { pos: 14, type: 'property', name: 'Аркадія',      city: 'Одеса',     color: '#FF69B4', price: 160, rent: [12,60,180,500,700,900],        housePrice: 100 },
+    { pos: 15, type: 'railway',  name: 'Південно-Західна залізниця', icon: '🚂', price: 200 },
+    { pos: 16, type: 'property', name: 'Сумська',      city: 'Харків',    color: '#FFA500', price: 180, rent: [14,70,200,550,750,950],        housePrice: 100 },
+    { pos: 17, type: 'card',     name: 'Шанс',                    icon: '❓', cardType: 'chance' },
+    { pos: 18, type: 'property', name: 'Пушкінська',   city: 'Харків',    color: '#FFA500', price: 180, rent: [14,70,200,550,750,950],        housePrice: 100 },
+    { pos: 19, type: 'property', name: 'Дзеркальний струмінь', city: 'Харків', color: '#FFA500', price: 200, rent: [16,80,220,600,800,1000],  housePrice: 100 },
+    { pos: 20, type: 'corner',   name: 'БЕЗКОШТОВНА СТОЯНКА',     icon: '🅿️', desc: 'Відпочинок' },
+    { pos: 21, type: 'property', name: 'Соборна площа',city: 'Дніпро',    color: '#FF0000', price: 220, rent: [18,90,250,700,875,1050],       housePrice: 150 },
+    { pos: 22, type: 'card',     name: 'Екскурсія',               icon: '🗺️', cardType: 'excursion' },
+    { pos: 23, type: 'property', name: 'Вул. Січеславська', city: 'Дніпро', color: '#FF0000', price: 220, rent: [18,90,250,700,875,1050],     housePrice: 150 },
+    { pos: 24, type: 'property', name: 'Набережна',    city: 'Дніпро',    color: '#FF0000', price: 240, rent: [20,100,300,750,925,1100],      housePrice: 150 },
+    { pos: 25, type: 'railway',  name: 'Дніпровська залізниця',    icon: '🚂', price: 200 },
+    { pos: 26, type: 'property', name: 'Площа Ринок',  city: 'Львів',     color: '#87CEEB', price: 260, rent: [22,110,330,800,975,1150],      housePrice: 150 },
+    { pos: 27, type: 'property', name: 'Личаківська',  city: 'Львів',     color: '#87CEEB', price: 260, rent: [22,110,330,800,975,1150],      housePrice: 150 },
+    { pos: 28, type: 'utility',  name: 'Маріупольський порт',      icon: '⚓', price: 150 },
+    { pos: 29, type: 'property', name: 'Сихівська',    city: 'Львів',     color: '#87CEEB', price: 280, rent: [24,120,360,850,1025,1200],     housePrice: 150 },
+    { pos: 30, type: 'corner',   name: "ІТИ ДО В'ЯЗНИЦІ",         icon: '👮', desc: 'У тюрму!' },
+    { pos: 31, type: 'property', name: 'Андріївський узвіз', city: 'Київ', color: '#008000', price: 300, rent: [26,130,390,900,1100,1275],    housePrice: 200 },
+    { pos: 32, type: 'property', name: 'Поділ',        city: 'Київ',      color: '#008000', price: 300, rent: [26,130,390,900,1100,1275],     housePrice: 200 },
+    { pos: 33, type: 'card',     name: 'Шанс',                    icon: '❓', cardType: 'chance' },
+    { pos: 34, type: 'property', name: 'Печерськ',     city: 'Київ',      color: '#008000', price: 320, rent: [28,150,450,1000,1200,1400],    housePrice: 200 },
+    { pos: 35, type: 'railway',  name: 'Аеропорт Бориспіль',       icon: '✈️', price: 200 },
+    { pos: 36, type: 'card',     name: 'Шанс',                    icon: '❓', cardType: 'chance' },
+    { pos: 37, type: 'property', name: 'Хрещатик',    city: 'Київ',      color: '#00008B', price: 350, rent: [35,175,500,1100,1300,1500],    housePrice: 200 },
+    { pos: 38, type: 'tax',      name: 'Розкішний податок',        icon: '💎', amount: 100 },
+    { pos: 39, type: 'property', name: 'Майдан Незалежності', city: 'Київ', color: '#00008B', price: 400, rent: [50,200,600,1400,1700,2000], housePrice: 200 },
+];
+
+const TOKEN_COLORS = ['#FF4136','#0074D9','#2ECC40','#FFDC00','#B10DC9','#FF851B','#39CFFF','#85144b'];
+const TOKEN_ICONS  = ['🎩','🚗','🐕','🚀','🐎','👑','⚓','🎯'];
+
+const CHANCE_CARDS = [
+    { text: '🔄 ДАІ зупинила вас за «нестандартний» розворот посеред міста. Штраф — повернутись на СТАРТ. Зате отримайте ₴200 — на адвоката.',    action: 'goToStart' },
+    { text: '💸 Укрпошта доставила посилку з жовтня — лише через 8 місяців. Всередині ₴50 від бабусі і записка «на морозиво». Отримайте ₴50.',  action: 'addMoney', amount: 50 },
+    { text: '🔨 ЖЕК «відремонтував» під\'їзд — поклав нову плитку прямо поверх старої. Вона вже відвалилась. Сплатіть ₴75.',                     action: 'takeMoney', amount: 75 },
+    { text: '🗳️ Вас обрали старостою будинку. Традиція є традиція — проставляєтесь. Сплатіть кожному гравцю ₴50.',                                action: 'payAll', amount: 50 },
+    { text: '🎁 Знайшли 500 купонів 1991 року в матрасі. Антикварна крамниця дала ₴25. Це мистецтво. Отримайте ₴25.',                            action: 'addMoney', amount: 25 },
+    { text: '🎵 Вас спіймали за спів «Кораблів» Скрябіна у переході метро. За авторські права. Сплатіть ₴15.',                                    action: 'takeMoney', amount: 15 },
+    { text: '🪖 Поліція знайшла у вас «сувенір» — уламок снаряду який ви підняли на пам\'ять. Це кримінал. До В\'ЯЗНИЦІ!',                       action: 'goToJail' },
+    { text: '☕ Вас покликали на «важливу зустріч» у Kyiv Coffee на Хрещатику. Там зараз весь бізнес України. Переходьте на Хрещатик.',            action: 'moveTo', pos: 37 },
+    { text: '🚂 Укрзалізниця надіслала смс «Ваш поїзд прибув» — три дні тому. Але поїзд все ще їде. Переходьте до найближчої залізниці.',        action: 'nearestRailway' },
+    { text: '📱 Ви знайшли номер прокурора з яким колись ділили маршрутку. Корисна людина. Це картка «Безкоштовно вийти з В\'язниці»!',           action: 'jailCard' },
+    { text: '🌀 Ви повірили що «завтра буде краще» і зупинились чекати. Не зупиняйтесь. Поверніться на 3 клітинки назад.',                       action: 'moveBack', amount: 3 },
+    { text: '📝 Податкова надіслала «роз\'яснення» на 47 сторінках дрібним шрифтом. Бухгалтер зламався. Сплатіть ₴50.',                          action: 'takeMoney', amount: 50 },
+    { text: '🎰 Квиток «Лото-Забава» зіграв. Не мільйон — але ваш бухгалтер радий. Отримайте ₴100.',                                             action: 'addMoney', amount: 100 },
+    { text: '🌻 Вас викликали на мітинг «за краще майбутнє». Безкоштовний автобус і бутерброди. Переходьте на Майдан Незалежності.',              action: 'moveTo', pos: 39 },
+    { text: '💎 Американський дядько Петро з Детройту, якого ви ніколи не бачили, відписав вам ₴200. Бог є. Отримайте ₴200.',                    action: 'addMoney', amount: 200 },
+    { text: '🔧 Ваша «Славута» вирішила відремонтуватись сама — прямо на КПП. Евакуатор, штраф, не той деталь. Сплатіть ₴100.',                  action: 'takeMoney', amount: 100 },
+];
+
+const EXCURSION_CARDS = [
+    { text: '🏝️ Тур «Острів козацької слави»! Гід розповідав про Запорізьку Січ 4 години без зупинки. Де ви — незрозуміло. Переходьте на Хортицю.',         action: 'moveTo', pos: 6 },
+    { text: '🌊 «Перловий» тур в Одесу! Номер пахне морем і трохи рибою. Але вид шикарний. Переходьте на Дерибасівську.',                                     action: 'moveTo', pos: 11 },
+    { text: '🏙️ Службове відрядження до Києва! Готель, добові, вечеря за рахунок «фірми». Переходьте на Хрещатик.',                                            action: 'moveTo', pos: 37 },
+    { text: '🔄 Тур «Вся Україна за 10 днів» закінчився там де починався. Поверніться на СТАРТ. Отримайте ₴200 — моральна компенсація.',                      action: 'goToStart' },
+    { text: '📸 Ви сфоткували «секретний об\'єкт» — насправді занедбана фабрика з 1970-х. СБУ не оцінила творчий підхід. До В\'ЯЗНИЦІ!',                      action: 'goToJail' },
+    { text: '✈️ Рейс скасували. Авіакомпанія повернула гроші. Вперше в житті — без суду. Отримайте ₴100.',                                                     action: 'addMoney', amount: 100 },
+    { text: '🌮 «Автентичний борщ» у туристичному ресторані за ₴800 виявився банкою консервів. Шлунок висловив незгоду. Лікарня. Сплатіть ₴100.',             action: 'takeMoney', amount: 100 },
+    { text: '🤝 Місцевий депутат, якому ви допомогли перенести валізи, дав корисний папірець. Картка «Безкоштовно вийти з В\'язниці»!',                        action: 'jailCard' },
+    { text: '🎂 Ви брехнули що у вас день народження щоб уникнути черги в ресторані. Всі гравці дізнались. Платять. Отримайте ₴10 від кожного.',              action: 'collectAll', amount: 10 },
+    { text: '🔥 Залишили включеним праску в готелі. Господиня стримана, рахунок — ні. Сплатіть ₴50.',                                                          action: 'takeMoney', amount: 50 },
+    { text: '📋 Податкова переплутала ваш ІПН з чиїмось і повернула «переплачений» ПДВ. Мовчіть. Отримайте ₴20.',                                             action: 'addMoney', amount: 20 },
+    { text: '🌸 Ваша вишиванка перемогла в конкурсі «Найколоритніший турист». Видали ₴10 і грамоту. Грамота гарна. Отримайте ₴10.',                           action: 'addMoney', amount: 10 },
+    { text: '🏡 З\'ясувалось що дідусева дача записана на вас ще з 1994 року. Продали сусіду. Отримайте ₴100.',                                                action: 'addMoney', amount: 100 },
+    { text: '💊 «Морська кухня» на пляжі. Криветки виглядали свіжими. Виглядали. Сплатіть ₴100.',                                                             action: 'takeMoney', amount: 100 },
+    { text: '🎓 Записались на «інтенсив з ораторського мистецтва» від відомого коуча. Він три години говорив про себе. Сплатіть ₴150.',                       action: 'takeMoney', amount: 150 },
+    { text: '🐕 Повернули загублену собаку мера невеликого містечка. Він щедрий. Отримайте ₴25.',                                                              action: 'addMoney', amount: 25 },
+];
+
+// ── Утиліти ──────────────────────────────────
+function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+function generateCode() {
+    const cities = ['KYIV', 'LVIV', 'ODESA', 'KHARKIV', 'DNIPRO', 'ZAPORIZHZHIA'];
+    return cities[Math.floor(Math.random() * cities.length)] + '-' + (Math.floor(Math.random() * 9000) + 1000);
+}
+
+// ── Ініціалізація стану гри ───────────────────
+function createGameState(roomPlayers) {
+    const players = roomPlayers.map((rp, i) => ({
+        id: i,
+        socketId: rp.socketId,
+        name: rp.name,
+        color: TOKEN_COLORS[i],
+        icon: TOKEN_ICONS[i],
+        money: 1500,
+        position: 0,
+        properties: [],
+        inJail: false,
+        jailTurns: 0,
+        hasJailCard: false,
+        bankrupt: false,
+        loan: 0,
+        loanInterest: 0,
+        loanTurnsLeft: 0,
+        stats: { rentPaid: 0, rentReceived: 0, housesBuilt: 0, hotelsBuilt: 0, taxesPaid: 0, cardsTotal: 0 },
+    }));
+
+    const cellState = {};
+    BOARD.forEach(c => {
+        if (c.type === 'property' || c.type === 'railway' || c.type === 'utility') {
+            cellState[c.pos] = { owner: null, houses: 0, mortgaged: false };
+        }
+    });
+
+    return {
+        players,
+        cellState,
+        currentPlayerIndex: 0,
+        lastDiceRoll: [0, 0],
+        doublesCount: 0,
+        hasRolled: false,
+        chanceDeck: shuffle(CHANCE_CARDS.map((_, i) => i)),
+        excursionDeck: shuffle(EXCURSION_CARDS.map((_, i) => i)),
+        auctionState: null,
+        pendingTrade: null,
+        log: [],
+        pendingAction: null,
+        pendingData: null,
+        turnDeadline: null,
+        tradeDeadline: null,
+    };
+}
+
+// ── Логування ─────────────────────────────────
+function addLog(state, text, type = '') {
+    state.log.unshift({ text, type, ts: Date.now() });
+    if (state.log.length > 40) state.log.pop();
+}
+
+// ── Ігрова логіка ─────────────────────────────
+function calcNetWorth(state, player) {
+    let total = player.money;
+    player.properties.forEach(pos => {
+        const c = BOARD[pos];
+        const s = state.cellState[pos];
+        total += s.mortgaged ? Math.floor(c.price / 2) : c.price;
+        total += s.houses === 5 ? c.housePrice * 5 : s.houses * c.housePrice;
+    });
+    total -= (player.loan || 0) + (player.loanInterest || 0);
+    return total;
+}
+
+function calculateRent(state, cell) {
+    const s = state.cellState[cell.pos];
+    const owner = state.players[s.owner];
+    if (cell.type === 'property') {
+        const group = BOARD.filter(b => b.type === 'property' && b.color === cell.color);
+        const allSame = group.every(b => state.cellState[b.pos]?.owner === s.owner);
+        let rent = cell.rent[s.houses];
+        if (s.houses === 0 && allSame) rent *= 2;
+        return rent;
+    }
+    if (cell.type === 'railway') {
+        const owned = BOARD.filter(b => b.type === 'railway' && state.cellState[b.pos]?.owner === s.owner).length;
+        return [0, 25, 50, 100, 200][owned];
+    }
+    if (cell.type === 'utility') {
+        const owned = BOARD.filter(b => b.type === 'utility' && state.cellState[b.pos]?.owner === s.owner).length;
+        const total = state.lastDiceRoll[0] + state.lastDiceRoll[1];
+        return owned === 1 ? total * 4 : total * 10;
+    }
+    return 0;
+}
+
+function goToJail(state, player) {
+    player.position = 10;
+    player.inJail = true;
+    player.jailTurns = 0;
+    state.hasRolled = true;
+    state.doublesCount = 0;
+}
+
+function moveTo(state, player, pos) {
+    if (pos < player.position) {
+        player.money += 200;
+        addLog(state, `💰 ${player.name} пройшов через СТАРТ. +₴200`, 'success');
+    }
+    player.position = pos;
+}
+
+function drawCard(state, player, type) {
+    let deck = type === 'chance' ? state.chanceDeck : state.excursionDeck;
+    const cards = type === 'chance' ? CHANCE_CARDS : EXCURSION_CARDS;
+    if (deck.length === 0) {
+        deck = shuffle(cards.map((_, i) => i));
+        if (type === 'chance') state.chanceDeck = deck;
+        else state.excursionDeck = deck;
+    }
+    const idx = deck.shift();
+    const card = cards[idx];
+    player.stats.cardsTotal++;
+    addLog(state, `🃏 ${player.name}: ${card.text}`, 'success');
+
+    let nextEffect = null;
+
+    switch (card.action) {
+        case 'addMoney':    player.money += card.amount; break;
+        case 'takeMoney':   player.money -= card.amount; break;
+        case 'goToStart':   moveTo(state, player, 0); player.money += 200; break;
+        case 'goToJail':    goToJail(state, player); break;
+        case 'jailCard':    player.hasJailCard = true; break;
+        case 'moveTo':
+            moveTo(state, player, card.pos);
+            nextEffect = handleLanding(state, player);
+            break;
+        case 'moveBack':
+            player.position = (player.position - card.amount + 40) % 40;
+            nextEffect = handleLanding(state, player);
+            break;
+        case 'payAll': {
+            const alive = state.players.filter(p => !p.bankrupt && p.id !== player.id);
+            alive.forEach(p => { player.money -= card.amount; p.money += card.amount; });
+            break;
+        }
+        case 'collectAll': {
+            const alive = state.players.filter(p => !p.bankrupt && p.id !== player.id);
+            alive.forEach(p => { p.money -= card.amount; player.money += card.amount; });
+            break;
+        }
+        case 'nearestRailway': {
+            const railways = BOARD.filter(b => b.type === 'railway').map(b => b.pos);
+            const next = railways.find(p => p > player.position) || railways[0];
+            moveTo(state, player, next);
+            nextEffect = handleLanding(state, player);
+            break;
+        }
+    }
+
+    return { event: 'cardDrawn', cardType: type, text: card.text, nextEffect };
+}
+
+function handleLanding(state, player) {
+    const cell = BOARD[player.position];
+    if (!cell) return null;
+
+    if (cell.type === 'property' || cell.type === 'railway' || cell.type === 'utility') {
+        const s = state.cellState[cell.pos];
+        if (s.owner === null || s.owner === undefined) {
+            state.pendingAction = 'offerPurchase';
+            state.pendingData = { pos: cell.pos };
+            return { event: 'offerPurchase', cell };
+        } else if (s.owner !== player.id && !s.mortgaged) {
+            const rent = calculateRent(state, cell);
+            if (rent > 0) {
+                state.pendingAction = 'payRent';
+                state.pendingData = { pos: cell.pos, rent, ownerId: s.owner };
+                return { event: 'payRent', rent, owner: state.players[s.owner], cell };
+            }
+        }
+    } else if (cell.type === 'tax') {
+        player.money -= cell.amount;
+        player.stats.taxesPaid += cell.amount;
+        const taxReasons = cell.pos === 4 ? [
+            `🍺 ${player.name} сплачує податок за розпиття пива «Опілля» на вулицях Львова без дозволу міської ради. ₴${cell.amount}`,
+            `🌿 Сусід поскаржився що трава у ${player.name} зеленіша ніж у нього. Введено податок на надмірну зеленість. ₴${cell.amount}`,
+            `🐈 ${player.name} має трьох котів. Держава порахувала. Податок на щастя. ₴${cell.amount}`,
+            `☀️ Податкова помітила що у ${player.name} надто гарний настрій для понеділка. Підозріло. ₴${cell.amount}`,
+            `🥣 ${player.name} їв вівсянку на сніданок замість пшоняної каші. ДФС кваліфікує це як імпорт культури. ₴${cell.amount}`,
+            `📸 ${player.name} зробив фото їжі в ресторані. Податок на блогерство. ₴${cell.amount}`,
+            `🧦 ${player.name} носить різні шкарпетки. Митниця оцінила це як ввезення авангардної моди. ₴${cell.amount}`,
+            `🌧️ ${player.name} поскаржився на погоду. Нараховано збір за незадоволення кліматом. ₴${cell.amount}`,
+            `🏋️ ${player.name} записався до спортзалу в січні і кинув у лютому. Штраф за нереалізовані амбіції. ₴${cell.amount}`,
+            `🐕 Собака ${player.name} гавкав о 6 ранку. Сусіди об'єднались. Колективний позов. ₴${cell.amount}`,
+        ] : [
+            `💎 ${player.name} придбав п'яту пару взуття цього місяця. Податок на розкіш активовано. ₴${cell.amount}`,
+            `✈️ ${player.name} літав бізнес-класом і попросив додаткову подушку. Зафіксовано. Сплатіть ₴${cell.amount}`,
+            `🧴 ${player.name} купив крем для обличчя дорожче ніж середня зарплата по країні. Розкішний податок. ₴${cell.amount}`,
+            `🍾 На вечірці у ${player.name} відкрили шампанське у неділю до 18:00. Порушення гламурного кодексу. ₴${cell.amount}`,
+            `🚗 ${player.name} помив машину, а наступного дня пішов дощ. Карма і податкова діють узгоджено. ₴${cell.amount}`,
+            `🛥️ ${player.name} орендував яхту на годину і весь час говорив про це. Податок на хвастощі. ₴${cell.amount}`,
+            `🥩 ${player.name} замовив стейк прожарки medium rare і залишив офіціанту коментар про прожарку. Штраф за гастрономічний снобізм. ₴${cell.amount}`,
+            `🏌️ ${player.name} грав у гольф хоча ніхто не просив. Розкішний збір від заздрісних сусідів. ₴${cell.amount}`,
+            `👜 ${player.name} купив брендову сумку і носить її тільки додому з магазину. Податок на невикористану розкіш. ₴${cell.amount}`,
+            `🍣 ${player.name} їв суші паличками хоча виделка лежала поряд. Претензії від виделочного лобі. ₴${cell.amount}`,
+        ];
+        const taxReason = taxReasons[Math.floor(Math.random() * taxReasons.length)];
+        addLog(state, `💸 ${taxReason}`, 'warn');
+        return { event: 'tax', amount: cell.amount, cellPos: cell.pos, reason: taxReason };
+    } else if (cell.type === 'card') {
+        return drawCard(state, player, cell.cardType);
+    } else if (cell.pos === 30) {
+        const jailReasons = [
+            `🎵 ${player.name} впіймали за прослуховуванням російської музики. До В'ЯЗНИЦІ!`,
+            `🗣️ У Львові хтось почув, як ${player.name} хвалив Януковича. В'ЯЗНИЦЯ чекає!`,
+            `🪆 На митниці у ${player.name} знайшли матрьошку. «Це сувенір» — не врятувало. В'ЯЗНИЦЯ!`,
+            `📺 ${player.name} дивився «Кіно» замість «Слуги народу». Художній смак покараний. До В'ЯЗНИЦІ!`,
+            `🥟 ${player.name} назвав вареники пельменями. Сусіди подали скаргу. В'ЯЗНИЦЯ!`,
+            `🌊 ${player.name} сказав що Крим — «просто півострів». Вирушайте до В'ЯЗНИЦІ!`,
+            `🚗 ${player.name} припаркувався на місці для інвалідів біля магазину і пішов «на хвилинку». В'ЯЗНИЦЯ!`,
+            `📱 ${player.name} надіслав голосове повідомлення на 10 хвилин замість того щоб зателефонувати. Злочин! В'ЯЗНИЦЯ!`,
+            `🐈 ${player.name} не погладив сусідського кота. Кіт поскаржився особисто. В'ЯЗНИЦЯ!`,
+            `🧂 ${player.name} посолив борщ до того як скуштував. Господиня не пробачила. До В'ЯЗНИЦІ!`,
+            `🫖 ${player.name} заварив чай у мікрохвильовці. Британці написали ноту протесту. В'ЯЗНИЦЯ!`,
+            `🤳 ${player.name} ліз на Потьомкінські сходи для сторіс і заважав усім. До В'ЯЗНИЦІ!`,
+            `🌭 ${player.name} назвав хот-дог із Сільпо вечерею. Рідня дізналась. В'ЯЗНИЦЯ!`,
+            `🦟 ${player.name} не вбив комара вночі і той розбудив весь будинок. Мешканці вирішили колегіально. До В'ЯЗНИЦІ!`,
+            `🎻 ${player.name} сказав що Скрябін — це лише Андрій Кузьменко і не знав про гурт. Фани не пробачили. В'ЯЗНИЦЯ!`,
+        ];
+        const jailReason = jailReasons[Math.floor(Math.random() * jailReasons.length)];
+        goToJail(state, player);
+        addLog(state, `👮 ${jailReason}`, 'warn');
+        return { event: 'goToJail', reason: jailReason };
+    }
+    return null;
+}
+
+function nextPlayer(state) {
+    // зменшуємо лічильник кредиту
+    const cur = state.players[state.currentPlayerIndex];
+    if (cur.loan > 0 && cur.loanTurnsLeft > 0) cur.loanTurnsLeft--;
+
+    state.doublesCount = 0;
+    state.hasRolled = false;
+    do {
+        state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
+    } while (state.players[state.currentPlayerIndex].bankrupt);
+
+    // перевіряємо кредит нового гравця
+    const next = state.players[state.currentPlayerIndex];
+    if (next.loan > 0 && next.loanTurnsLeft !== undefined) {
+        if (next.loanTurnsLeft === 1) return { event: 'loanWarning', player: next };
+        if (next.loanTurnsLeft <= 0) return { event: 'loanDeadline', player: next };
+    }
+    if (next.inJail) return { event: 'inJail', player: next };
+    return null;
+}
+
+function awardAuction(state, a) {
+    const winner = state.players[a.currentBidder];
+    winner.money -= a.currentBid;
+    state.cellState[a.cell.pos].owner = a.currentBidder;
+    winner.properties.push(a.cell.pos);
+    addLog(state, `🔨 ${winner.name} виграв аукціон "${a.cell.name}" за ₴${a.currentBid}`, 'success');
+    state.auctionState = null;
+}
+
+// ── Обробка дій від клієнта ───────────────────
+function processAction(state, type, data, room) {
+    const player = state.players[state.currentPlayerIndex];
+    let sideEffect = null;
+
+    switch (type) {
+
+        case 'rollDice': {
+            if (state.hasRolled) break;
+            const d1 = Math.floor(Math.random() * 6) + 1;
+            const d2 = Math.floor(Math.random() * 6) + 1;
+            state.lastDiceRoll = [d1, d2];
+            const isDouble = d1 === d2;
+            if (isDouble) state.doublesCount++;
+            else state.doublesCount = 0;
+
+            addLog(state, `🎲 ${player.name} кинув ${d1}+${d2}=${d1+d2}${isDouble ? ' (дубль!)' : ''}`, '');
+
+            if (player.inJail) {
+                if (isDouble) {
+                    player.inJail = false;
+                    addLog(state, `🔓 ${player.name} вийшов з В'язниці дублем!`, 'success');
+                } else {
+                    player.jailTurns++;
+                    if (player.jailTurns >= 3) {
+                        player.money -= 50;
+                        player.inJail = false;
+                        addLog(state, `💸 ${player.name} сплатив ₴50 і вийшов з В'язниці`, 'warn');
+                    } else {
+                        state.hasRolled = true;
+                        addLog(state, `🔒 ${player.name} залишається у В'язниці (хід ${player.jailTurns}/3)`, 'warn');
+                        break;
+                    }
+                }
+            }
+
+            if (state.doublesCount >= 3) {
+                addLog(state, `👮 Три дублі поспіль — ${player.name} до В'ЯЗНИЦІ!`, 'warn');
+                goToJail(state, player);
+                break;
+            }
+
+            if (!isDouble) state.hasRolled = true;
+
+            player.position = (player.position + d1 + d2) % 40;
+            if (player.position < (player.position - d1 - d2 + 40) % 40 || (player.position === 0)) {
+                // passed start — handled in moveTo; simpler check:
+            }
+            // check passing start
+            const prevPos = ((player.position - d1 - d2) % 40 + 40) % 40;
+            if (prevPos + d1 + d2 >= 40) {
+                player.money += 200;
+                addLog(state, `💰 ${player.name} пройшов через СТАРТ. +₴200`, 'success');
+            }
+
+            const landingPos = player.position; // позиція до обробки ефектів (В'язниця змінює на 10)
+            addLog(state, `📍 ${player.name} зупинився на: ${BOARD[landingPos].name}`);
+            sideEffect = handleLanding(state, player);
+            if (sideEffect) sideEffect.landingPos = landingPos; // куди фізично потрапив токен
+            break;
+        }
+
+        case 'buyProperty': {
+            const { pos } = state.pendingData || {};
+            const cell = BOARD[pos];
+            if (!cell || state.cellState[pos].owner !== null) break;
+            player.money -= cell.price;
+            state.cellState[pos].owner = player.id;
+            player.properties.push(pos);
+            addLog(state, `🏆 ${player.name} придбав "${cell.name}" за ₴${cell.price}`, 'success');
+            state._toast = { text: `🏠 ${player.name} купив ${cell.name} за ₴${cell.price}`, color: '#2e7d32' };
+            state.pendingAction = null;
+            state.pendingData = null;
+            break;
+        }
+
+        case 'startAuction': {
+            const { pos } = state.pendingData || {};
+            const cell = BOARD[pos];
+            // Учасники в порядку ходів — починаємо від НАСТУПНОГО після того хто відмовився
+            const n = state.players.length;
+            const eligible = [];
+            for (let i = 1; i < n; i++) {
+                const p = state.players[(state.currentPlayerIndex + i) % n];
+                if (!p.bankrupt) eligible.push(p.id);
+            }
+            if (eligible.length < 1) { addLog(state, 'Немає учасників для аукціону', 'warn'); break; }
+            state.auctionState = {
+                cell,
+                currentBid: Math.floor(cell.price / 2),
+                currentBidder: null,
+                active: eligible,
+                turnIdx: 0,
+                declinerId: player.id,
+            };
+            state.pendingAction = null;
+            state.pendingData = null;
+            addLog(state, `🔨 Аукціон на "${cell.name}" (старт ₴${state.auctionState.currentBid})`, 'warn');
+            sideEffect = { event: 'auctionStarted' };
+            break;
+        }
+
+        case 'auctionBid': {
+            const a = state.auctionState;
+            if (!a) break;
+            const bidderId = a.active[a.turnIdx % a.active.length];
+            const bidder = state.players[bidderId];
+            const { bid } = data;
+            if (bid < a.currentBid + 1 || bid > bidder.money) break;
+            a.currentBid = bid;
+            a.currentBidder = bidderId;
+            a.turnIdx++;
+            addLog(state, `💰 ${bidder.name} ставить ₴${bid}`);
+            // Якщо ставник єдиний в active (решта вже пасували) — він виграє
+            if (a.active.length === 1) {
+                awardAuction(state, a);
+            } else {
+                sideEffect = { event: 'auctionUpdated' };
+            }
+            break;
+        }
+
+        case 'auctionPass': {
+            const a = state.auctionState;
+            if (!a) break;
+            const bidderId = a.active[a.turnIdx % a.active.length];
+            const bidder = state.players[bidderId];
+            addLog(state, `⏭️ ${bidder.name} пасує`, 'warn');
+            a.active = a.active.filter(id => id !== bidderId);
+
+            if (a.active.length === 0) {
+                addLog(state, 'Аукціон завершився без покупця', 'warn');
+                state.auctionState = null;
+            } else if (a.active.length === 1 && a.active[0] === a.currentBidder) {
+                // Єдиний хто залишився — той хто зробив останню ставку → виграє
+                awardAuction(state, a);
+            } else {
+                if (a.turnIdx >= a.active.length) a.turnIdx %= a.active.length;
+                sideEffect = { event: 'auctionUpdated' };
+            }
+            break;
+        }
+
+        case 'payRent': {
+            const { rent, ownerId } = state.pendingData || {};
+            const owner = state.players[ownerId];
+            if (player.money < rent) break;
+            player.money -= rent;
+            owner.money += rent;
+            player.stats.rentPaid += rent;
+            owner.stats.rentReceived += rent;
+            addLog(state, `💰 ${player.name} сплатив оренду ₴${rent} → ${owner.name}`, 'warn');
+            state._toast = { text: `💸 ${player.name} сплатив ₴${rent} → ${owner.name}`, color: '#1565c0' };
+            state.pendingAction = null;
+            state.pendingData = null;
+            break;
+        }
+
+        case 'declareBankrupt': {
+            const creditorId = state.pendingData?.ownerId ?? null;
+            const creditor = creditorId !== null ? state.players[creditorId] : null;
+            addLog(state, `💀 ${player.name} оголосив банкрутство!`, 'error');
+            if (creditor) {
+                creditor.money += player.money;
+                player.properties.forEach(pos => {
+                    state.cellState[pos].owner = creditor.id;
+                    creditor.properties.push(pos);
+                });
+            } else {
+                player.properties.forEach(pos => {
+                    state.cellState[pos].owner = null;
+                    state.cellState[pos].houses = 0;
+                    state.cellState[pos].mortgaged = false;
+                });
+            }
+            player.money = 0;
+            player.bankrupt = true;
+            player.properties = [];
+            state.pendingAction = null;
+            state.pendingData = null;
+            break;
+        }
+
+        case 'buildHouse': {
+            const { pos } = data;
+            const cell = BOARD[pos];
+            const s = state.cellState[pos];
+            if (s.houses >= 5 || player.money < cell.housePrice) break;
+            const group = BOARD.filter(b => b.type === 'property' && b.color === cell.color);
+            const allOwned = group.every(b => state.cellState[b.pos].owner === player.id && !state.cellState[b.pos].mortgaged);
+            const minH = Math.min(...group.map(b => state.cellState[b.pos].houses));
+            if (!allOwned || s.houses !== minH) break;
+            player.money -= cell.housePrice;
+            s.houses++;
+            if (s.houses === 5) player.stats.hotelsBuilt++;
+            else player.stats.housesBuilt++;
+            addLog(state, `🏠 ${player.name} збудував ${s.houses === 5 ? 'готель' : 'будинок'} на "${cell.name}"`, 'success');
+            break;
+        }
+
+        case 'sellHouse': {
+            const { pos } = data;
+            const cell = BOARD[pos];
+            const s = state.cellState[pos];
+            if (s.houses === 0) break;
+            const group = BOARD.filter(b => b.type === 'property' && b.color === cell.color);
+            const maxH = Math.max(...group.map(b => state.cellState[b.pos].houses));
+            if (s.houses !== maxH) break;
+            s.houses--;
+            player.money += Math.floor(cell.housePrice * 0.9);
+            addLog(state, `🔻 ${player.name} продав будинок на "${cell.name}"`, 'success');
+            break;
+        }
+
+        case 'mortgage': {
+            const { pos } = data;
+            const cell = BOARD[pos];
+            const s = state.cellState[pos];
+            if (s.mortgaged || s.houses > 0) break;
+            s.mortgaged = true;
+            player.money += Math.floor(cell.price / 2);
+            addLog(state, `🏷️ ${player.name} заставив "${cell.name}"`, 'warn');
+            break;
+        }
+
+        case 'redeem': {
+            const { pos } = data;
+            const cell = BOARD[pos];
+            const s = state.cellState[pos];
+            const cost = Math.ceil(Math.floor(cell.price / 2) * 1.1);
+            if (!s.mortgaged || player.money < cost) break;
+            s.mortgaged = false;
+            player.money -= cost;
+            addLog(state, `💸 ${player.name} викупив "${cell.name}" за ₴${cost}`, 'success');
+            break;
+        }
+
+        case 'takeLoan': {
+            const { amount } = data;
+            const maxLoan = Math.max(50, player.properties.reduce((acc, pos) => {
+                return acc + (!state.cellState[pos].mortgaged ? Math.floor(BOARD[pos].price / 2) : 0);
+            }, 0));
+            if (amount < 50 || amount > maxLoan) break;
+            player.money += amount;
+            player.loan += amount;
+            player.loanInterest += Math.ceil(amount * 0.1);
+            if (!player.loanTurnsLeft || player.loanTurnsLeft <= 0) player.loanTurnsLeft = 10;
+            addLog(state, `🏦 ${player.name} взяв ₴${amount} кредиту (повернути за 10 ходів)`, 'success');
+            break;
+        }
+
+        case 'repayLoan': {
+            const total = player.loan + player.loanInterest;
+            if (player.money < total) break;
+            player.money -= total;
+            player.loan = 0;
+            player.loanInterest = 0;
+            player.loanTurnsLeft = 0;
+            addLog(state, `✅ ${player.name} повернув кредит ₴${total}`, 'success');
+            break;
+        }
+
+        case 'jailPay': {
+            if (player.money < 50) break;
+            player.money -= 50;
+            player.inJail = false;
+            addLog(state, `💸 ${player.name} сплатив ₴50 і вийшов з В'язниці`, 'success');
+            break;
+        }
+
+        case 'jailCard': {
+            if (!player.hasJailCard) break;
+            player.hasJailCard = false;
+            player.inJail = false;
+            addLog(state, `🔓 ${player.name} використав картку виходу з В'язниці`, 'success');
+            break;
+        }
+
+        case 'endTurn': {
+            if (!state.hasRolled) break;
+            sideEffect = nextPlayer(state);
+            break;
+        }
+
+        case 'offerTrade': {
+            const { toIdx, offerMoney = 0, offerProps = [], requestMoney = 0, requestProps = [] } = data;
+            const to = state.players[toIdx];
+            if (!to || to.bankrupt || toIdx === state.currentPlayerIndex) break;
+            if (offerMoney > player.money || requestMoney > to.money) break;
+            if (offerProps.some(pos => !player.properties.includes(pos))) break;
+            if (requestProps.some(pos => !to.properties.includes(pos))) break;
+            state.pendingTrade = { fromIdx: state.currentPlayerIndex, toIdx, offerMoney, offerProps, requestMoney, requestProps };
+            addLog(state, `🤝 ${player.name} пропонує угоду до ${to.name}`);
+            sideEffect = { event: 'tradeOffer', trade: state.pendingTrade };
+            break;
+        }
+
+        case 'acceptTrade': {
+            const trade = state.pendingTrade;
+            if (!trade || data.callerIdx !== trade.toIdx) break;
+            const from = state.players[trade.fromIdx];
+            const to   = state.players[trade.toIdx];
+            from.money -= trade.offerMoney;  to.money   += trade.offerMoney;
+            from.money += trade.requestMoney; to.money  -= trade.requestMoney;
+            for (const pos of trade.offerProps) {
+                from.properties = from.properties.filter(p => p !== pos);
+                to.properties.push(pos);
+                state.cellState[pos].owner = trade.toIdx;
+            }
+            for (const pos of trade.requestProps) {
+                to.properties = to.properties.filter(p => p !== pos);
+                from.properties.push(pos);
+                state.cellState[pos].owner = trade.fromIdx;
+            }
+            addLog(state, `✅ ${from.name} і ${to.name} уклали угоду!`, 'success');
+            state._toast = { text: `🤝 ${from.name} і ${to.name} обмінялись!`, color: '#1565c0' };
+            state.pendingTrade = null;
+            break;
+        }
+
+        case 'rejectTrade': {
+            const trade = state.pendingTrade;
+            if (!trade || data.callerIdx !== trade.toIdx) break;
+            const from = state.players[trade.fromIdx];
+            const to   = state.players[trade.toIdx];
+            addLog(state, `❌ ${to.name} відхилив угоду від ${from.name}`, 'warn');
+            state._toast = { text: `❌ ${to.name} відхилив угоду від ${from.name}`, color: '#c62828' };
+            state.pendingTrade = null;
+            break;
+        }
+    }
+
+    return sideEffect;
+}
+
+// ── Таймер ходу ──────────────────────────────
+function clearTurnTimer(room) {
+    if (room.turnTimer) { clearTimeout(room.turnTimer); room.turnTimer = null; }
+    if (room.state) room.state.turnDeadline = null;
+}
+
+function clearTradeTimer(room) {
+    if (room.tradeTimer) { clearTimeout(room.tradeTimer); room.tradeTimer = null; }
+    if (room.state) room.state.tradeDeadline = null;
+}
+
+function startTradeTimer(room) {
+    clearTradeTimer(room);
+    clearTurnTimer(room); // пауза таймера ходу під час угоди
+    room.state.tradeDeadline = Date.now() + 20000;
+    room.tradeTimer = setTimeout(() => {
+        if (!room.started || !room.state?.pendingTrade) return;
+        const trade = room.state.pendingTrade;
+        const to = room.state.players[trade.toIdx];
+        addLog(room.state, `⏱️ ${to.name} не відповів на угоду — скасовано`, 'warn');
+        room.state.pendingTrade = null;
+        room.state.tradeDeadline = null;
+        startTurnTimer(room); // відновлюємо таймер ходу
+        io.to(room.code).emit('stateUpdate', {
+            state: sanitize(room.state),
+            sideEffect: null,
+            toast: { text: `⏱️ Час на відповідь вийшов — угоду скасовано`, color: '#e65100' },
+        });
+    }, 20000);
+}
+
+function startTurnTimer(room) {
+    if (room.state?.pendingTrade) return; // не запускаємо під час очікування угоди
+    clearTurnTimer(room);
+    const TURN_MS = 90 * 1000;
+    room.state.turnDeadline = Date.now() + TURN_MS;
+    room.turnTimer = setTimeout(() => {
+        if (!room.started || !room.state) return;
+        const state = room.state;
+        try {
+            if (state.auctionState) {
+                processAction(state, 'auctionPass', {}, room);
+            } else if (!state.hasRolled) {
+                processAction(state, 'rollDice', {}, room);
+                if (state.pendingAction === 'payRent')            processAction(state, 'payRent', {}, room);
+                else if (state.pendingAction === 'offerPurchase') processAction(state, 'startAuction', {}, room);
+                if (state.hasRolled && !state.auctionState)       processAction(state, 'endTurn', {}, room);
+            } else if (!state.auctionState) {
+                processAction(state, 'endTurn', {}, room);
+            }
+        } catch(e) { console.error('Auto-turn error:', e.message); }
+
+        io.to(room.code).emit('stateUpdate', {
+            state: sanitize(room.state),
+            sideEffect: null,
+            toast: { text: '⏱️ Час вийшов! Хід передано автоматично.', color: '#e65100' },
+        });
+        startTurnTimer(room);
+    }, TURN_MS);
+}
+
+// ── Очищення неактивних кімнат ────────────────
+setInterval(() => {
+    const now = Date.now();
+    const IDLE_MS = 30 * 60 * 1000;
+    Object.keys(rooms).forEach(code => {
+        const room = rooms[code];
+        if (now - (room.lastActivityAt || room.createdAt) > IDLE_MS) {
+            clearTurnTimer(room);
+            clearTradeTimer(room);
+            delete rooms[code];
+            console.log(`🗑️ Кімнату ${code} видалено (неактивна 30+ хв)`);
+        }
+    });
+}, 5 * 60 * 1000);
+
+// ── Socket.io ─────────────────────────────────
+io.on('connection', (socket) => {
+    console.log('+ підключення:', socket.id);
+
+    // Створити кімнату
+    socket.on('createRoom', ({ playerName }, cb) => {
+        const code = generateCode();
+        rooms[code] = {
+            code,
+            players: [{ socketId: socket.id, name: playerName, index: 0 }],
+            started: false,
+            state: null,
+            createdAt: Date.now(),
+            lastActivityAt: Date.now(),
+        };
+        socket.join(code);
+        socket.roomCode = code;
+        socket.playerIndex = 0;
+        console.log(`Кімната ${code} створена`);
+        cb({ code, playerIndex: 0 });
+    });
+
+    // Приєднатись до кімнати
+    socket.on('joinRoom', ({ code, playerName }, cb) => {
+        const room = rooms[code];
+        if (!room)             return cb({ error: 'Кімнату не знайдено' });
+        if (room.started)      return cb({ error: 'Гра вже почалась' });
+        if (room.players.length >= 6) return cb({ error: 'Кімната повна (макс 6)' });
+
+        const idx = room.players.length;
+        room.players.push({ socketId: socket.id, name: playerName, index: idx });
+        socket.join(code);
+        socket.roomCode = code;
+        socket.playerIndex = idx;
+
+        io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name) });
+        cb({ code, playerIndex: idx });
+    });
+
+    // Отримати список вільних кімнат
+    socket.on('getRooms', (cb) => {
+        const available = Object.values(rooms)
+            .filter(r => !r.started && r.players.length > 0 && r.players.length < 6)
+            .map(r => ({
+                code: r.code,
+                playerCount: r.players.length,
+                hostName: r.players[0].name,
+            }));
+        cb({ rooms: available });
+    });
+
+    // Видалити гравця з кімнати (тільки хост, до початку гри)
+    socket.on('kickPlayer', ({ kickIndex }) => {
+        const room = rooms[socket.roomCode];
+        if (!room || room.started || socket.playerIndex !== 0) return;
+
+        const kicked = room.players.find(p => p.index === kickIndex);
+        if (!kicked) return;
+
+        // Повідомляємо та від'єднуємо видаленого гравця
+        io.to(kicked.socketId).emit('kicked', { reason: 'Вас видалив хост' });
+        const kickedSocket = io.sockets.sockets.get(kicked.socketId);
+        if (kickedSocket) {
+            kickedSocket.leave(socket.roomCode);
+            kickedSocket.roomCode = null;
+            kickedSocket.playerIndex = null;
+        }
+
+        // Видаляємо та переіндексуємо
+        room.players = room.players.filter(p => p.index !== kickIndex);
+        room.players.forEach((p, i) => { p.index = i; });
+
+        // Оновлюємо playerIndex на живих сокетах
+        room.players.forEach(p => {
+            const s = io.sockets.sockets.get(p.socketId);
+            if (s) s.playerIndex = p.index;
+        });
+
+        io.to(socket.roomCode).emit('lobbyUpdate', { players: room.players.map(p => p.name) });
+    });
+
+    // Почати гру (тільки хост — index 0)
+    socket.on('startGame', () => {
+        const room = rooms[socket.roomCode];
+        if (!room || socket.playerIndex !== 0) return;
+        if (room.players.length < 2) return io.to(socket.id).emit('error', 'Потрібно мінімум 2 гравці');
+
+        room.started = true;
+        room.state = createGameState(room.players);
+        addLog(room.state, `🎮 Гра почалась! Перший хід: ${room.state.players[0].name}`, 'success');
+        startTurnTimer(room);
+        io.to(socket.roomCode).emit('gameStarted', { state: sanitize(room.state) });
+    });
+
+    // Дія від гравця
+    socket.on('action', ({ type, data }) => {
+        const room = rooms[socket.roomCode];
+        if (!room?.state) return;
+        const state = room.state;
+
+        // Перевірка прав на дію
+        const isAuctionAction  = ['auctionBid', 'auctionPass'].includes(type);
+        const isTradeResponse  = ['acceptTrade', 'rejectTrade'].includes(type);
+        if (!isAuctionAction && !isTradeResponse && state.currentPlayerIndex !== socket.playerIndex) return;
+        if (isAuctionAction && state.auctionState) {
+            const a = state.auctionState;
+            const bidderId = a.active[a.turnIdx % a.active.length];
+            if (bidderId !== socket.playerIndex) return;
+        }
+        if (isTradeResponse) {
+            (data = data || {}).callerIdx = socket.playerIndex;
+        }
+
+        room.lastActivityAt = Date.now();
+        const prevIdx = state.currentPlayerIndex;
+        const sideEffect = processAction(state, type, data || {}, room);
+        const toast = state._toast || null;
+        delete state._toast;
+
+        // Управління таймерами
+        if (type === 'offerTrade' && state.pendingTrade) {
+            startTradeTimer(room);                         // запускаємо 20с таймер угоди
+        } else if (isTradeResponse && !state.pendingTrade) {
+            clearTradeTimer(room);                         // угода закрита — відновлюємо хід
+            startTurnTimer(room);
+        } else if (state.currentPlayerIndex !== prevIdx) {
+            startTurnTimer(room);                          // хід змінився — перезапуск
+        }
+
+        // Перевірка переможця
+        const alive = state.players.filter(p => !p.bankrupt);
+        if (alive.length === 1) {
+            clearTurnTimer(room);
+            addLog(state, `🏆 ${alive[0].name} — переможець!`, 'success');
+            io.to(socket.roomCode).emit('gameOver', { winner: alive[0], state: sanitize(state) });
+            return;
+        }
+
+        io.to(socket.roomCode).emit('stateUpdate', {
+            state: sanitize(state),
+            sideEffect,
+            toast,
+        });
+    });
+
+    // Перепідключення після оновлення сторінки
+    socket.on('rejoin', ({ code, playerIndex, playerName }, cb) => {
+        const room = rooms[code];
+        if (!room) return cb({ error: 'Кімнату не знайдено (можливо сервер перезапускався)' });
+
+        const rp = room.players.find(p => p.index === playerIndex && p.name === playerName);
+        if (!rp) return cb({ error: 'Гравця не знайдено в кімнаті' });
+
+        // Оновлюємо socket ID
+        rp.socketId = socket.id;
+        socket.join(code);
+        socket.roomCode  = code;
+        socket.playerIndex = playerIndex;
+
+        if (room.started && room.state) {
+            cb({ success: true, started: true, state: sanitize(room.state) });
+        } else {
+            cb({ success: true, started: false, players: room.players.map(p => p.name) });
+            io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name) });
+        }
+    });
+
+    // Чат
+    socket.on('chatMessage', ({ text, icon, name, color }) => {
+        if (!socket.roomCode) return;
+        const clean = String(text).slice(0, 200); // захист від довгих повідомлень
+        io.to(socket.roomCode).emit('chatMessage', {
+            playerIndex: socket.playerIndex,
+            icon, name, color,
+            text: clean,
+        });
+    });
+
+    // Відключення
+    socket.on('disconnect', () => {
+        console.log('- відключення:', socket.id);
+        const room = rooms[socket.roomCode];
+        if (room) {
+            io.to(socket.roomCode).emit('playerDisconnected', { playerIndex: socket.playerIndex });
+        }
+    });
+});
+
+// Прибираємо надмірні дані перед відправкою клієнту
+function sanitize(state) {
+    return {
+        players: state.players,
+        cellState: state.cellState,
+        currentPlayerIndex: state.currentPlayerIndex,
+        lastDiceRoll: state.lastDiceRoll,
+        hasRolled: state.hasRolled,
+        doublesCount: state.doublesCount,
+        auctionState: state.auctionState,
+        pendingTrade: state.pendingTrade,
+        log: state.log,
+        pendingAction: state.pendingAction,
+        pendingData: state.pendingData,
+        turnDeadline: state.turnDeadline,
+        tradeDeadline: state.tradeDeadline,
+    };
+}
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`🇺🇦 Монополія України запущена: http://localhost:${PORT}`));
