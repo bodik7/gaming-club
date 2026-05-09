@@ -341,6 +341,7 @@ body {
     grid-template-rows: 14% repeat(9, 1fr) 14%;
     position: relative;
     box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    overflow: hidden;
 }
 
 .cell {
@@ -1005,9 +1006,17 @@ body {
     .board-center .logo-text { font-size: 8px; letter-spacing: 1px; }
     .dice-area { gap: 8px; margin: 2px 0; }
     .die { width: 32px; height: 32px; font-size: 20px; }
-    #turn-timer { font-size: 11px !important; padding: 2px 7px !important; }
-    /* На мобільному ховаємо current-player-info — дублює картки гравців вгорі */
-    #current-player-info { display: none; }
+    /* Таймер — у верхньому правому куті center, не займає flex-місця */
+    #turn-timer {
+        position: absolute !important;
+        top: 4px;
+        right: 4px;
+        font-size: 11px !important;
+        padding: 2px 7px !important;
+        z-index: 10;
+    }
+    /* Ховаємо current-player-info — .board overflow:hidden тепер клипає, але для надійності */
+    #current-player-info { display: none !important; }
 
     /* Клітинки — вимикаємо iOS hyphens (ламають українські слова) */
     .cell-content, .cell-name {
