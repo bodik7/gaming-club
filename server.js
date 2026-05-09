@@ -36,7 +36,7 @@ const BOARD = [
     { pos: 15, type: 'railway',  name: 'Південно-Західна залізниця', icon: '🚂', price: 200 },
     { pos: 16, type: 'property', name: 'Сумська',      city: 'Харків',    color: '#FFA500', price: 180, rent: [14,70,200,550,750,950],        housePrice: 100 },
     { pos: 17, type: 'card',     name: 'Шанс',                    icon: '❓', cardType: 'chance' },
-    { pos: 18, type: 'property', name: 'Пушкінська',   city: 'Харків',    color: '#FFA500', price: 180, rent: [14,70,200,550,750,950],        housePrice: 100 },
+    { pos: 18, type: 'property', name: 'Університетська',   city: 'Харків',    color: '#FFA500', price: 180, rent: [14,70,200,550,750,950],        housePrice: 100 },
     { pos: 19, type: 'property', name: 'Дзеркальний струмінь', city: 'Харків', color: '#FFA500', price: 200, rent: [16,80,220,600,800,1000],  housePrice: 100 },
     { pos: 20, type: 'corner',   name: 'БЕЗКОШТОВНА СТОЯНКА',     icon: '🅿️', desc: 'Відпочинок' },
     { pos: 21, type: 'property', name: 'Соборна площа',city: 'Дніпро',    color: '#FF0000', price: 220, rent: [18,90,250,700,875,1050],       housePrice: 150 },
