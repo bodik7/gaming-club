@@ -904,50 +904,51 @@ function showLoanMenu() {
     });
     maxLoan = Math.max(50, maxLoan);
 
-    let html = `<p style="font-size:13px">Кредит дозволяє швидко отримати готівку, не закладаючи нерухомість. Повертати потрібно з <b>10%</b> відсотків.</p>`;
-    if (totalDebt > 0) {
-        html += `<div style="background:#fff4e0;padding:10px;border-radius:6px;margin-top:10px">
-            <p><b>Поточний борг:</b> ₴${totalDebt}</p>
-            <p style="font-size:12px;color:#666">тіло ₴${player.loan} + відсотки ₴${player.loanInterest}</p>
-        </div>`;
-    }
-    html += `<div style="margin-top:14px">
-        <label>Сума нового кредиту (макс ₴${maxLoan}):</label>
-        <input type="number" id="loan-amount" value="${Math.min(500, maxLoan)}" min="50" max="${maxLoan}"
-               style="width:100%;padding:8px;font-size:16px;border:2px solid #0057b7;border-radius:6px;margin-top:6px">
-    </div>`;
+    let html, buttons;
 
-    const buttons = [
-        { text: 'Взяти кредит', class: 'btn-primary', action: () => {
-            const amt = parseInt(document.getElementById('loan-amount').value) || 0;
-            if (amt < 50 || amt > maxLoan) { log(`Сума має бути 50…${maxLoan}`, 'error'); return; }
-            addMoney(player, amt);
-            player.loan += amt;
-            player.loanInterest += Math.ceil(amt * 0.1);
-            if (!player.loanTurnsLeft || player.loanTurnsLeft <= 0) player.loanTurnsLeft = 10;
-            log(`🏦 ${player.name} взяв ₴${amt} кредиту (повернути за 10 ходів)`, 'success');
-            playSound('coin');
-            renderPlayers();
-            saveGame();
-            closeModal();
-        }}
-    ];
     if (totalDebt > 0) {
-        buttons.push({ text: `Погасити ₴${totalDebt}`, class: 'btn-success',
-            disabled: player.money < totalDebt,
-            action: () => {
+        html = `
+            <div style="background:#fff4e0;border:2px solid #ff9800;padding:14px;border-radius:10px;margin-bottom:14px">
+                <div style="font-size:12px;color:#e65100;text-transform:uppercase;font-weight:700;margin-bottom:6px">⚠️ Діючий кредит</div>
+                <div style="font-size:22px;font-weight:900;color:#e65100">₴${totalDebt}</div>
+                <div style="font-size:11px;color:#888;margin-top:4px">тіло ₴${player.loan} + відсотки ₴${player.loanInterest} · залишилось ходів: ${player.loanTurnsLeft}</div>
+            </div>
+            <div style="font-size:13px;color:#666;text-align:center;padding:8px;background:#f4f7fc;border-radius:8px">
+                Спочатку погасіть діючий кредит, щоб взяти новий.
+            </div>`;
+        buttons = [
+            { text: `✅ Погасити ₴${totalDebt}`, class: 'btn-success',
+              disabled: player.money < totalDebt,
+              action: () => {
                 takeMoney(player, totalDebt);
                 log(`✅ ${player.name} повернув кредит ₴${totalDebt}`, 'success');
-                player.loan = 0;
-                player.loanInterest = 0;
-                player.loanTurnsLeft = 0;
-                playSound('coin');
-                renderPlayers();
-                saveGame();
-                closeModal();
-            }});
+                player.loan = 0; player.loanInterest = 0; player.loanTurnsLeft = 0;
+                playSound('coin'); renderPlayers(); saveGame(); closeModal();
+              }},
+            { text: 'Скасувати', class: 'btn-secondary', action: closeModal }
+        ];
+    } else {
+        html = `
+            <p style="font-size:13px;color:#666;margin-bottom:14px">Кредит повертається з 10% протягом 10 ходів.</p>
+            <div>
+                <label style="font-size:13px;font-weight:700">Сума кредиту (макс ₴${maxLoan}):</label>
+                <input type="number" id="loan-amount" value="${Math.min(500, maxLoan)}" min="50" max="${maxLoan}"
+                       style="width:100%;padding:8px;font-size:16px;border:2px solid #0057b7;border-radius:6px;margin-top:6px;box-sizing:border-box">
+            </div>`;
+        buttons = [
+            { text: 'Взяти кредит', class: 'btn-primary', action: () => {
+                const amt = parseInt(document.getElementById('loan-amount').value) || 0;
+                if (amt < 50 || amt > maxLoan) { log(`Сума має бути 50…${maxLoan}`, 'error'); return; }
+                addMoney(player, amt);
+                player.loan += amt;
+                player.loanInterest += Math.ceil(amt * 0.1);
+                if (!player.loanTurnsLeft || player.loanTurnsLeft <= 0) player.loanTurnsLeft = 10;
+                log(`🏦 ${player.name} взяв ₴${amt} кредиту (повернути за 10 ходів)`, 'success');
+                playSound('coin'); renderPlayers(); saveGame(); closeModal();
+            }},
+            { text: 'Скасувати', class: 'btn-secondary', action: closeModal }
+        ];
     }
-    buttons.push({ text: 'Скасувати', class: 'btn-secondary', action: closeModal });
 
     showModal({ title: '🏦 Кредит у банку', body: html, buttons });
 }
@@ -1753,31 +1754,45 @@ document.addEventListener('DOMContentLoaded', () => {
             return acc + (!cellState[pos].mortgaged ? Math.floor(BOARD[pos].price / 2) : 0);
         }, 0));
 
-        let html = `<p style="font-size:13px">Кредит повертається з 10% протягом 10 ходів.</p>`;
-        if (totalDebt > 0) {
-            html += `<div style="background:#fff4e0;padding:10px;border-radius:6px;margin-top:10px">
-                <p><b>Поточний борг:</b> ₴${totalDebt}</p></div>`;
-        }
-        html += `<div style="margin-top:14px">
-            <label>Сума кредиту (макс ₴${maxLoan}):</label>
-            <input type="number" id="loan-amount" value="${Math.min(500,maxLoan)}" min="50" max="${maxLoan}"
-                   style="width:100%;padding:8px;font-size:16px;border:2px solid #0057b7;border-radius:6px;margin-top:6px">
-        </div>`;
+        let html, buttons;
 
-        const buttons = [
-            { text: 'Взяти кредит', class: 'btn-primary', action: () => {
-                const amt = parseInt(document.getElementById('loan-amount').value) || 0;
-                if (amt < 50 || amt > maxLoan) { log('Невалідна сума', 'error'); return; }
-                sendAction('takeLoan', { amount: amt });
-                closeModal();
-            }}
-        ];
         if (totalDebt > 0) {
-            buttons.push({ text: `Погасити ₴${totalDebt}`, class: 'btn-success',
-                disabled: player.money < totalDebt,
-                action: () => { sendAction('repayLoan'); closeModal(); }});
+            // Є діючий кредит — тільки погашення
+            html = `
+                <div style="background:#fff4e0;border:2px solid #ff9800;padding:14px;border-radius:10px;margin-bottom:14px">
+                    <div style="font-size:12px;color:#e65100;text-transform:uppercase;font-weight:700;margin-bottom:6px">⚠️ Діючий кредит</div>
+                    <div style="font-size:22px;font-weight:900;color:#e65100">₴${totalDebt}</div>
+                    <div style="font-size:11px;color:#888;margin-top:4px">тіло ₴${player.loan} + відсотки ₴${player.loanInterest} · залишилось ходів: ${player.loanTurnsLeft}</div>
+                </div>
+                <div style="font-size:13px;color:#666;text-align:center;padding:8px;background:#f4f7fc;border-radius:8px">
+                    Спочатку погасіть діючий кредит, щоб взяти новий.
+                </div>`;
+            buttons = [
+                { text: `✅ Погасити ₴${totalDebt}`, class: 'btn-success',
+                  disabled: player.money < totalDebt,
+                  action: () => { sendAction('repayLoan'); closeModal(); }},
+                { text: 'Скасувати', class: 'btn-secondary', action: closeModal }
+            ];
+        } else {
+            // Немає кредиту — форма нового
+            html = `
+                <p style="font-size:13px;color:#666;margin-bottom:14px">Кредит повертається з 10% протягом 10 ходів.</p>
+                <div>
+                    <label style="font-size:13px;font-weight:700">Сума кредиту (макс ₴${maxLoan}):</label>
+                    <input type="number" id="loan-amount" value="${Math.min(500, maxLoan)}" min="50" max="${maxLoan}"
+                           style="width:100%;padding:8px;font-size:16px;border:2px solid #0057b7;border-radius:6px;margin-top:6px;box-sizing:border-box">
+                </div>`;
+            buttons = [
+                { text: 'Взяти кредит', class: 'btn-primary', action: () => {
+                    const amt = parseInt(document.getElementById('loan-amount').value) || 0;
+                    if (amt < 50 || amt > maxLoan) { log('Невалідна сума', 'error'); return; }
+                    sendAction('takeLoan', { amount: amt });
+                    closeModal();
+                }},
+                { text: 'Скасувати', class: 'btn-secondary', action: closeModal }
+            ];
         }
-        buttons.push({ text: 'Скасувати', class: 'btn-secondary', action: closeModal });
+
         showModal({ title: '🏦 Кредит у банку', body: html, buttons });
     };
 

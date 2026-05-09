@@ -615,6 +615,7 @@ function processAction(state, type, data, room) {
 
         case 'takeLoan': {
             const { amount } = data;
+            if (player.loan > 0) break; // спочатку погаси діючий кредит
             const maxLoan = Math.max(50, player.properties.reduce((acc, pos) => {
                 return acc + (!state.cellState[pos].mortgaged ? Math.floor(BOARD[pos].price / 2) : 0);
             }, 0));
