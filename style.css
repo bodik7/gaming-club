@@ -389,7 +389,7 @@ body {
     line-height: 1.2;
     overflow: hidden;
     overflow-wrap: break-word;
-    word-break: normal;
+    word-break: break-word;
     hyphens: auto;
     -webkit-hyphens: auto;
 }
@@ -571,8 +571,9 @@ body {
     justify-content: center;
     color: white;
     padding: 20px;
-    gap: 14px;
+    gap: 8px;
     text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+    overflow: hidden;
 }
 
 .logo {
@@ -996,8 +997,25 @@ body {
     .big-btn { font-size: 13px; padding: 8px 12px; }
     .action-buttons { display: flex; flex-wrap: wrap; gap: 4px; }
     .action-buttons button { flex: 1 1 45%; font-size: 11px; padding: 7px 6px; min-width: 110px; }
-    .board-center .logo { font-size: 28px; }
-    .board-center .logo-text { font-size: 9px; }
-    .die { width: 36px; height: 36px; font-size: 24px; }
-    #turn-timer { font-size: 13px !important; padding: 3px 10px !important; }
+
+    /* Центр дошки — компактніше щоб не виходило за межі */
+    .board-center { padding: 6px; gap: 4px; }
+    .board-center .logo { font-size: 22px; }
+    .board-center .logo-text { font-size: 8px; letter-spacing: 1px; }
+    .dice-area { gap: 8px; margin: 2px 0; }
+    .die { width: 32px; height: 32px; font-size: 20px; }
+    #turn-timer { font-size: 12px !important; padding: 2px 8px !important; }
+    #current-player-info { font-size: 11px; padding: 4px 8px; }
+
+    /* Клітинки — вимикаємо iOS hyphens (ламають українські слова) */
+    .cell-content, .cell-name {
+        font-size: 8px !important;
+        hyphens: none;
+        -webkit-hyphens: none;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+    .cell-price { font-size: 8px !important; }
+    .cell.corner .cell-content { font-size: 9px !important; }
+    .token { width: 20px; height: 20px; font-size: 11px; }
 }
