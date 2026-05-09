@@ -604,6 +604,24 @@ function applyState(state, diceRolled, landingPos, onDone) {
     _prevCurrentPlayerIdx = state.currentPlayerIndex;
     pendingRent        = state.pendingAction === 'payRent' ? (pendingRent || null) : null;
 
+    // Після застави — оновлюємо баланс у модалі оренди і перемальовуємо
+    if (pendingRent && state.pendingAction === 'payRent' && myPlayerIndex === state.currentPlayerIndex) {
+        pendingRent.player = state.players[state.currentPlayerIndex];
+        renderRentModal();
+        setTimeout(() => {
+            document.querySelectorAll('#modal-buttons button').forEach(btn => {
+                if (btn.textContent.includes('Сплатити')) {
+                    btn.onclick = () => {
+                        playSound('rent');
+                        sendAction('payRent');
+                        pendingRent = null;
+                        closeModal();
+                    };
+                }
+            });
+        }, 50);
+    }
+
     // Угода скасована сервером (таймаут) — закриваємо попап у отримувача
     const tradeJustCancelled = !state.pendingTrade && prevPendingTrade;
     if (tradeJustCancelled && myPlayerIndex === prevPendingTrade.toIdx) {
