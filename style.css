@@ -1018,15 +1018,50 @@ body {
     /* Ховаємо current-player-info — .board overflow:hidden тепер клипає, але для надійності */
     #current-player-info { display: none !important; }
 
-    /* Клітинки — вимикаємо iOS hyphens (ламають українські слова) */
-    .cell-content, .cell-name {
-        font-size: 8px !important;
-        hyphens: none;
-        -webkit-hyphens: none;
-        word-break: break-word;
-        overflow-wrap: break-word;
+    /* Кубики — менші */
+    .dice-area { gap: 6px; margin: 2px 0; }
+    .die { width: 26px; height: 26px; font-size: 16px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+
+    /* Кнопка "Кинути кубики" / "Завершити хід" — компактна */
+    #roll-btn, #end-turn-btn {
+        font-size: 12px !important;
+        padding: 6px 14px !important;
+        border-radius: 8px !important;
     }
-    .cell-price { font-size: 8px !important; }
-    .cell.corner .cell-content { font-size: 9px !important; }
-    .token { width: 20px; height: 20px; font-size: 11px; }
+
+    /* Кольорова смуга клітинок — тонша */
+    .cell-color-bar { height: 8px; }
+    .cell.left .cell-color-bar,
+    .cell.right .cell-color-bar { width: 8px; height: 100%; }
+
+    /* Клітинки — вимикаємо iOS hyphens, обмежуємо 2 рядками */
+    .cell-content {
+        font-size: 7px !important;
+        hyphens: none !important;
+        -webkit-hyphens: none !important;
+        word-break: break-word;
+        padding: 1px;
+    }
+    .cell-name {
+        font-size: 7px !important;
+        hyphens: none !important;
+        -webkit-hyphens: none !important;
+        word-break: break-word;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin-bottom: 1px;
+    }
+    .cell-price { font-size: 7px !important; }
+
+    /* Іконки в клітинках (SVG) — менші */
+    .cell-content svg { width: 12px !important; height: 12px !important; }
+
+    /* Кутові клітинки */
+    .cell.corner .cell-content { font-size: 7px !important; padding: 2px; }
+    .cell.corner .cell-icon { font-size: 16px; margin-bottom: 2px; }
+
+    /* Токени */
+    .token { width: 18px; height: 18px; font-size: 10px; }
 }
