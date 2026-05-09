@@ -305,8 +305,8 @@ function _renderTradeModal(me, opponent) {
                     ${oppSelect}
                 </select>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-                <div style="background:#e8f5e9;border-radius:10px;padding:12px">
+            <div style="display:flex;flex-wrap:wrap;gap:14px">
+                <div style="flex:1;min-width:220px;background:#e8f5e9;border-radius:10px;padding:12px">
                     <div style="font-weight:700;color:#2e7d32;margin-bottom:8px">📤 Ви пропонуєте:</div>
                     <div style="max-height:140px;overflow-y:auto">${myProps}</div>
                     <div style="margin-top:10px">
@@ -315,7 +315,7 @@ function _renderTradeModal(me, opponent) {
                                style="width:100%;padding:6px;border:2px solid #a5d6a7;border-radius:6px;font-size:14px;margin-top:4px;box-sizing:border-box">
                     </div>
                 </div>
-                <div style="background:#ffebee;border-radius:10px;padding:12px">
+                <div style="flex:1;min-width:220px;background:#ffebee;border-radius:10px;padding:12px">
                     <div style="font-weight:700;color:#c62828;margin-bottom:8px">📥 Ви запитуєте:</div>
                     <div id="trade-request-props" style="max-height:140px;overflow-y:auto">${theirProps}</div>
                     <div style="margin-top:10px">
@@ -386,12 +386,12 @@ function showTradeOfferModal(state, trade) {
                     ⏱ Час на відповідь: <span id="trade-offer-countdown">20</span>с
                 </span>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                <div style="background:#e8f5e9;border-radius:10px;padding:14px">
+            <div style="display:flex;flex-wrap:wrap;gap:12px">
+                <div style="flex:1;min-width:220px;background:#e8f5e9;border-radius:10px;padding:14px">
                     <div style="font-weight:700;color:#2e7d32;margin-bottom:8px">📤 Вам пропонують:</div>
                     <div style="font-size:13px;line-height:1.7">${offerLines}</div>
                 </div>
-                <div style="background:#ffebee;border-radius:10px;padding:14px">
+                <div style="flex:1;min-width:220px;background:#ffebee;border-radius:10px;padding:14px">
                     <div style="font-weight:700;color:#c62828;margin-bottom:8px">📥 Просять взамін:</div>
                     <div style="font-size:13px;line-height:1.7">${requestLines}</div>
                 </div>
