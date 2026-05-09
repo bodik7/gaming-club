@@ -228,6 +228,24 @@ function showLobbyWaiting(code) {
     document.getElementById('start-btn').classList.toggle('hidden', myPlayerIndex !== 0);
 }
 
+function leaveRoom() {
+    socket.emit('leaveRoom');
+    clearSession();
+    myPlayerIndex = null;
+    _inviteCode = '';
+    document.getElementById('waiting-screen').classList.add('hidden');
+    document.getElementById('lobby-screen').classList.remove('hidden');
+}
+
+socket.on('roomClosed', ({ reason }) => {
+    clearSession();
+    myPlayerIndex = null;
+    _inviteCode = '';
+    document.getElementById('waiting-screen').classList.add('hidden');
+    document.getElementById('lobby-screen').classList.remove('hidden');
+    showRejoinError(`🚪 ${reason}`);
+});
+
 function copyInviteLink() {
     const url = `${location.origin}${location.pathname}?join=${_inviteCode}`;
     navigator.clipboard.writeText(url).then(() => {
@@ -604,22 +622,24 @@ function applyState(state, diceRolled, landingPos, onDone) {
     _prevCurrentPlayerIdx = state.currentPlayerIndex;
     pendingRent        = state.pendingAction === 'payRent' ? (pendingRent || null) : null;
 
-    // Після застави — оновлюємо баланс у модалі оренди і перемальовуємо
+    // Після mortgage/redeem/buildHouse/sellHouse — перевідкриваємо картку з актуальним станом
+    if (window._pendingCardPos != null && myPlayerIndex === state.currentPlayerIndex) {
+        const pos = window._pendingCardPos;
+        window._pendingCardPos = null;
+        setTimeout(() => showPropertyCard(pos), 0);
+    }
+
+    // Після продажу будинку з меню кредиту — перевідкриваємо меню
+    if (window._loanMenuOpen && myPlayerIndex === state.currentPlayerIndex) {
+        window._loanMenuOpen = false;
+        setTimeout(() => window.showLoanMenu?.(), 0);
+    }
+
+    // Після застави/продажу будинку — перемальовуємо модал оренди через showRentModalOnline
+    // (вона правильно патчить кнопку "Сплатити" — без ризику локального stub onclick)
     if (pendingRent && state.pendingAction === 'payRent' && myPlayerIndex === state.currentPlayerIndex) {
-        pendingRent.player = state.players[state.currentPlayerIndex];
-        renderRentModal();
-        setTimeout(() => {
-            document.querySelectorAll('#modal-buttons button').forEach(btn => {
-                if (btn.textContent.includes('Сплатити')) {
-                    btn.onclick = () => {
-                        playSound('rent');
-                        sendAction('payRent');
-                        pendingRent = null;
-                        closeModal();
-                    };
-                }
-            });
-        }, 50);
+        const { cell, rent, owner } = pendingRent;
+        showRentModalOnline(players[currentPlayerIndex], cell, rent, owner);
     }
 
     // Угода скасована сервером (таймаут) — закриваємо попап у отримувача

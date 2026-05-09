@@ -38,6 +38,21 @@ function showModal({ title, body, buttons, wide = false }) {
     });
     const card = document.querySelector('.modal-card');
     card.style.maxWidth = wide ? '820px' : '';
+    card.style.position = 'relative';
+
+    // Кнопка ✕ — одна на весь модал, не дублюється
+    card.querySelectorAll('.modal-close-btn').forEach(el => el.remove());
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'modal-close-btn';
+    closeBtn.innerHTML = '✕';
+    closeBtn.style.cssText = `position:absolute;top:10px;right:12px;background:none;border:none;
+        font-size:18px;color:#aaa;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px;
+        transition:color 0.15s,background 0.15s;z-index:1`;
+    closeBtn.onmouseover = () => { closeBtn.style.color = '#333'; closeBtn.style.background = '#f0f0f0'; };
+    closeBtn.onmouseout  = () => { closeBtn.style.color = '#aaa'; closeBtn.style.background = 'none'; };
+    closeBtn.onclick = closeModal;
+    card.appendChild(closeBtn);
+
     document.getElementById('modal').classList.remove('hidden');
 }
 
@@ -653,7 +668,9 @@ function showPropertyCard(pos) {
     const content = document.getElementById('property-card-content');
 
     // --- Перевірка монополії та можливостей будівництва ---
-    const isMyProperty = s.owner === currentPlayerIndex;
+    // В онлайн-режимі кнопки дій показуємо лише поточному гравцю під час його ходу
+    const isOnlineTurn = typeof myPlayerIndex === 'undefined' || myPlayerIndex === currentPlayerIndex;
+    const isMyProperty = s.owner === currentPlayerIndex && isOnlineTurn;
     let hasMonopoly = false, canBuild = false, canSell = false, group = [];
 
     if (c.type === 'property' && isMyProperty && !s.mortgaged) {
@@ -907,15 +924,36 @@ function showLoanMenu() {
     let html, buttons;
 
     if (totalDebt > 0) {
+        // Секція продажу будинків для збору суми
+        const loanSellable = player.properties.filter(pos => (cellState[pos]?.houses || 0) > 0);
+        const loanSellHTML = loanSellable.length > 0 ? `
+            <div style="margin-top:14px">
+                <div style="font-size:10px;font-weight:700;color:#2e7d32;text-transform:uppercase;
+                            letter-spacing:0.8px;margin-bottom:6px">🏠 Продати будинки / готелі</div>
+                <div style="max-height:130px;overflow-y:auto;background:#f5f5f5;border-radius:8px;padding:6px">
+                    ${loanSellable.map(pos => {
+                        const c = BOARD[pos]; const s = cellState[pos];
+                        const val = Math.floor(c.housePrice * 0.9);
+                        const label = s.houses === 5 ? '🏨 готель' : `🏠×${s.houses}`;
+                        return `<div style="display:flex;justify-content:space-between;align-items:center;
+                                            padding:5px 8px;background:white;margin:2px 0;
+                                            border-radius:0 5px 5px 0;border-left:4px solid ${c.color||'#888'}">
+                            <span style="font-size:12px;font-weight:600">${c.name}
+                                <span style="color:#888;font-weight:400">${label}</span></span>
+                            <button class="big-btn green" style="font-size:11px;padding:2px 9px;flex-shrink:0"
+                                onclick="sellHouseForLoan(${pos})">+₴${val}</button>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>` : '';
         html = `
             <div style="background:#fff4e0;border:2px solid #ff9800;padding:14px;border-radius:10px;margin-bottom:14px">
                 <div style="font-size:12px;color:#e65100;text-transform:uppercase;font-weight:700;margin-bottom:6px">⚠️ Діючий кредит</div>
                 <div style="font-size:22px;font-weight:900;color:#e65100">₴${totalDebt}</div>
                 <div style="font-size:11px;color:#888;margin-top:4px">тіло ₴${player.loan} + відсотки ₴${player.loanInterest} · залишилось ходів: ${player.loanTurnsLeft}</div>
             </div>
-            <div style="font-size:13px;color:#666;text-align:center;padding:8px;background:#f4f7fc;border-radius:8px">
-                Спочатку погасіть діючий кредит, щоб взяти новий.
-            </div>`;
+            ${loanSellHTML}
+            ${loanSellable.length === 0 ? `<div style="font-size:13px;color:#666;text-align:center;padding:8px;background:#f4f7fc;border-radius:8px">Спочатку погасіть діючий кредит, щоб взяти новий.</div>` : ''}`;
         buttons = [
             { text: `✅ Погасити ₴${totalDebt}`, class: 'btn-success',
               disabled: player.money < totalDebt,
@@ -1476,7 +1514,9 @@ function showRentModal(player, cell, rent, owner) {
 }
 
 function renderRentModal() {
-    const { player, cell, rent, owner } = pendingRent;
+    const { cell, rent, owner } = pendingRent;
+    // Завжди беремо актуального гравця з глобального масиву (оновлюється при кожному stateUpdate)
+    const player = players[currentPlayerIndex];
     const canPay = player.money >= rent;
     const shortage = rent - player.money;
     const accent = cell.color || '#8B0000';
@@ -1546,7 +1586,35 @@ function renderRentModal() {
             ⚠️ Не вистачає ₴${shortage}
         </div>` : ''}`;
 
-    // 5. Список застав згрупований по групах монополії
+    // 5а. Продаж будинків / готелів
+    const sellable = player.properties.filter(pos => (cellState[pos]?.houses || 0) > 0);
+    let sellHTML = '';
+    if (sellable.length > 0) {
+        const rows = sellable.map(pos => {
+            const c = BOARD[pos];
+            const s = cellState[pos];
+            const val = Math.floor(c.housePrice * 0.9);
+            const label = s.houses === 5 ? '🏨 готель' : `🏠×${s.houses}`;
+            return `<div style="display:flex;justify-content:space-between;align-items:center;
+                                padding:5px 8px;background:white;margin:2px 0;
+                                border-radius:0 5px 5px 0;border-left:4px solid ${c.color||'#888'}">
+                <span style="font-size:12px;font-weight:600">${c.name}
+                    <span style="color:#888;font-weight:400">${label}</span>
+                </span>
+                <button class="big-btn green" style="font-size:11px;padding:2px 9px;flex-shrink:0"
+                    onclick="sellHouseForRent(${pos})">+₴${val}</button>
+            </div>`;
+        }).join('');
+        sellHTML = `
+            <div style="margin-top:14px">
+                <div style="font-size:10px;font-weight:700;color:#2e7d32;text-transform:uppercase;
+                            letter-spacing:0.8px;margin-bottom:6px">🏠 Продати будинки / готелі</div>
+                <div style="max-height:150px;overflow-y:auto;background:#f5f5f5;
+                            border-radius:8px;padding:6px">${rows}</div>
+            </div>`;
+    }
+
+    // 5б. Список застав згрупований по групах монополії
     let mortgageHTML = '';
     if (mortgageable.length > 0) {
         // Групуємо в порядку дошки
@@ -1604,12 +1672,6 @@ function renderRentModal() {
                 <div style="max-height:200px;overflow-y:auto;background:#f5f5f5;
                             border-radius:8px;padding:6px">${groupsHTML}</div>
             </div>`;
-    } else if (!canPay && hasBuildings) {
-        mortgageHTML = `
-            <div style="font-size:12px;color:#888;background:#f5f5f5;padding:9px 12px;
-                        border-radius:6px;margin-top:12px;border-left:4px solid #e07820">
-                Щоб звільнити ділянки під заставу — спершу продайте будинки, натиснувши на їх картку.
-            </div>`;
     }
 
     const buttons = [];
@@ -1656,9 +1718,23 @@ function renderRentModal() {
 
     showModal({
         title: '',
-        body: banner + ownerBlock + heroRent + balanceBlock + mortgageHTML,
+        body: banner + ownerBlock + heroRent + balanceBlock + sellHTML + mortgageHTML,
         buttons
     });
+}
+
+function sellHouseForRent(pos) {
+    sellHouse(pos);
+    renderPlayers();
+    if (pendingRent) renderRentModal();
+    saveGame();
+}
+
+function sellHouseForLoan(pos) {
+    sellHouse(pos);
+    renderPlayers();
+    showLoanMenu();
+    saveGame();
 }
 
 function mortgageForRent(pos) {
@@ -1741,13 +1817,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof sendAction === 'undefined') return; // локальний режим
 
     // Кнопки картки нерухомості
-    window.buildHouseFromCard = (pos) => { playSound('buy');  sendAction('buildHouse', { pos }); showPropertyCard(pos); };
-    window.sellHouseFromCard  = (pos) => { playSound('coin'); sendAction('sellHouse',  { pos }); showPropertyCard(pos); };
-    window.mortgageFromCard   = (pos) => { playSound('coin'); sendAction('mortgage',   { pos }); showPropertyCard(pos); };
-    window.redeemFromCard     = (pos) => { playSound('buy');  sendAction('redeem',     { pos }); showPropertyCard(pos); };
+    const _isMyTurn = () => myPlayerIndex === currentPlayerIndex;
+    // Після sendAction закриваємо модал і перевідкриємо тільки після stateUpdate (з актуальним станом)
+    window.buildHouseFromCard = (pos) => { if (!_isMyTurn()) return; playSound('buy');  sendAction('buildHouse', { pos }); window._pendingCardPos = pos; closeModal(); };
+    window.sellHouseFromCard  = (pos) => { if (!_isMyTurn()) return; playSound('coin'); sendAction('sellHouse',  { pos }); window._pendingCardPos = pos; closeModal(); };
+    window.mortgageFromCard   = (pos) => { if (!_isMyTurn()) return; playSound('coin'); sendAction('mortgage',   { pos }); window._pendingCardPos = pos; closeModal(); };
+    window.redeemFromCard     = (pos) => { if (!_isMyTurn()) return; playSound('buy');  sendAction('redeem',     { pos }); window._pendingCardPos = pos; closeModal(); };
+
+    // Продаж будинків з модалу оренди — stateUpdate перемалює modal через pendingRent
+    window.sellHouseForRent = (pos) => { playSound('coin'); sendAction('sellHouse', { pos }); };
+
+    // Продаж будинків з модалу кредиту — після stateUpdate перевідкриваємо меню
+    window.sellHouseForLoan = (pos) => {
+        playSound('coin');
+        sendAction('sellHouse', { pos });
+        window._loanMenuOpen = true;
+    };
 
     // Меню кредиту — перехоплюємо кнопку "Взяти"
     window.showLoanMenu = function() {
+        window._loanMenuOpen = false;
         const player = players[currentPlayerIndex];
         const totalDebt = player.loan + player.loanInterest;
         let maxLoan = Math.max(50, player.properties.reduce((acc, pos) => {
@@ -1757,21 +1846,40 @@ document.addEventListener('DOMContentLoaded', () => {
         let html, buttons;
 
         if (totalDebt > 0) {
-            // Є діючий кредит — тільки погашення
+            const loanSellable = player.properties.filter(pos => (cellState[pos]?.houses || 0) > 0);
+            const loanSellHTML = loanSellable.length > 0 ? `
+                <div style="margin-top:14px">
+                    <div style="font-size:10px;font-weight:700;color:#2e7d32;text-transform:uppercase;
+                                letter-spacing:0.8px;margin-bottom:6px">🏠 Продати будинки / готелі</div>
+                    <div style="max-height:130px;overflow-y:auto;background:#f5f5f5;border-radius:8px;padding:6px">
+                        ${loanSellable.map(pos => {
+                            const c = BOARD[pos]; const s = cellState[pos];
+                            const val = Math.floor(c.housePrice * 0.9);
+                            const label = s.houses === 5 ? '🏨 готель' : `\u{1F3E0}\u{D7}${s.houses}`;
+                            return `<div style="display:flex;justify-content:space-between;align-items:center;
+                                                padding:5px 8px;background:white;margin:2px 0;
+                                                border-radius:0 5px 5px 0;border-left:4px solid ${c.color||'#888'}">
+                                <span style="font-size:12px;font-weight:600">${c.name}
+                                    <span style="color:#888;font-weight:400">${label}</span></span>
+                                <button class="big-btn green" style="font-size:11px;padding:2px 9px;flex-shrink:0"
+                                    onclick="sellHouseForLoan(${pos})">+₴${val}</button>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>` : '';
             html = `
                 <div style="background:#fff4e0;border:2px solid #ff9800;padding:14px;border-radius:10px;margin-bottom:14px">
                     <div style="font-size:12px;color:#e65100;text-transform:uppercase;font-weight:700;margin-bottom:6px">⚠️ Діючий кредит</div>
                     <div style="font-size:22px;font-weight:900;color:#e65100">₴${totalDebt}</div>
                     <div style="font-size:11px;color:#888;margin-top:4px">тіло ₴${player.loan} + відсотки ₴${player.loanInterest} · залишилось ходів: ${player.loanTurnsLeft}</div>
                 </div>
-                <div style="font-size:13px;color:#666;text-align:center;padding:8px;background:#f4f7fc;border-radius:8px">
-                    Спочатку погасіть діючий кредит, щоб взяти новий.
-                </div>`;
+                ${loanSellHTML}
+                ${loanSellable.length === 0 ? `<div style="font-size:13px;color:#666;text-align:center;padding:8px;background:#f4f7fc;border-radius:8px">Спочатку погасіть діючий кредит, щоб взяти новий.</div>` : ''}`;
             buttons = [
                 { text: `✅ Погасити ₴${totalDebt}`, class: 'btn-success',
                   disabled: player.money < totalDebt,
                   action: () => { sendAction('repayLoan'); closeModal(); }},
-                { text: 'Скасувати', class: 'btn-secondary', action: closeModal }
+                { text: 'Скасувати', class: 'btn-secondary', action: () => { window._loanMenuOpen = false; closeModal(); } }
             ];
         } else {
             // Немає кредиту — форма нового
@@ -1794,6 +1902,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         showModal({ title: '🏦 Кредит у банку', body: html, buttons });
+    };
+
+    // Дедлайн кредиту — сплата через sendAction замість takeMoney
+    window.showLoanDeadlineModal = function(player) {
+        const debt = player.loan + player.loanInterest;
+        const canPay = player.money >= debt;
+        const deadline = LOAN_DEADLINES[Math.floor(Math.random() * LOAN_DEADLINES.length)];
+
+        const buttons = [];
+        if (canPay) {
+            buttons.push({ text: `💸 Сплатити ₴${debt}`, class: 'btn-success',
+                action: () => { sendAction('repayLoan'); closeModal(); }});
+        } else {
+            buttons.push({ text: '🏷️ Заставити поля', class: 'btn-primary',
+                action: () => { closeModal(); window.showLoanMenu(); }});
+        }
+        buttons.push({ text: '💀 Банкрутство', class: 'btn-danger',
+            action: () => { sendAction('declareBankrupt'); closeModal(); }});
+
+        showModal({
+            title: '',
+            body: `
+                <div style="margin:-30px -30px 20px;padding:20px 24px 16px;
+                            background:linear-gradient(135deg,#b71c1c,#7f0000);
+                            border-radius:18px 18px 0 0;text-align:center;color:white">
+                    <div style="font-size:48px;margin-bottom:6px">🏦</div>
+                    <div style="font-size:19px;font-weight:900">ЧАС ВИЙШОВ!</div>
+                </div>
+                <div style="background:#ffeae8;border:2px solid #b71c1c;border-radius:12px;
+                            padding:13px 16px;font-size:14px;line-height:1.6;text-align:center;margin-bottom:12px">
+                    ${deadline}
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;
+                            padding:10px 14px;background:#ffeae8;border-radius:8px;margin-bottom:6px">
+                    <span style="font-size:13px;color:#555">Борг до сплати:</span>
+                    <span style="font-size:22px;font-weight:900;color:#b71c1c">₴${debt}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;
+                            padding:10px 14px;background:${canPay?'#e8f8ec':'#ffeae8'};border-radius:8px">
+                    <span style="font-size:13px;color:#555">Ваша готівка:</span>
+                    <span style="font-size:18px;font-weight:700;color:${canPay?'#2a9d3f':'#cc1f1f'}">₴${player.money}</span>
+                </div>`,
+            buttons
+        });
     };
 
     // В'язниця — оплата і картка через sendAction
