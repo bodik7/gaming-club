@@ -56,6 +56,22 @@ function tryRejoin() {
             showGameScreen();
             applyState(state, false, null, null);
             log(`🔄 Підключення відновлено як ${playerName}`, 'success');
+            // Відновлюємо модали які були відкриті до відключення
+            setTimeout(() => {
+                const me = state.players[myPlayerIndex];
+                if (!me) return;
+                if (state.pendingAction === 'payRent' && myPlayerIndex === state.currentPlayerIndex) {
+                    const { rent, ownerId, pos } = state.pendingData || {};
+                    showRentModalOnline(me, BOARD[pos], rent, state.players[ownerId]);
+                } else if (state.auctionState) {
+                    showAuctionUIOnline(state);
+                } else if (me.inJail && myPlayerIndex === state.currentPlayerIndex) {
+                    offerJailOptions(me);
+                } else if (state.pendingAction === 'offerPurchase' && myPlayerIndex === state.currentPlayerIndex) {
+                    offerPurchaseOnline(me, BOARD[state.pendingData?.pos]);
+                }
+            }, 500);
+
         } else {
             // Очікування гравців — показуємо залу
             showLobbyWaiting(code);
@@ -142,13 +158,16 @@ socket.on('connect', () => {
 socket.on('disconnect', () => setConnectionStatus(false));
 
 // ── Чат ──────────────────────────────────────
+const _esc = s => String(s).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
 socket.on('chatMessage', ({ playerIndex, icon, name, color, text }) => {
     const container = document.getElementById('chat-messages');
     if (!container) return;
     const msg = document.createElement('div');
     msg.className = 'chat-message';
-    msg.style.borderLeftColor = color;
-    msg.innerHTML = `<span class="chat-author" style="color:${color}">${icon} ${name}:</span>${text}`;
+    msg.style.borderLeftColor = _esc(color);
+    msg.innerHTML = `<span class="chat-author" style="color:${_esc(color)}">${_esc(icon)} ${_esc(name)}:</span>${_esc(text)}`;
     container.appendChild(msg);
     container.scrollTop = container.scrollHeight;
     while (container.children.length > 60) container.removeChild(container.firstChild);

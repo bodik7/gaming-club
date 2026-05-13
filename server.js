@@ -135,7 +135,11 @@ function shuffle(arr) {
 
 function generateCode() {
     const cities = ['KYIV', 'LVIV', 'ODESA', 'KHARKIV', 'DNIPRO', 'ZAPORIZHZHIA'];
-    return cities[Math.floor(Math.random() * cities.length)] + '-' + (Math.floor(Math.random() * 9000) + 1000);
+    let code;
+    do {
+        code = cities[Math.floor(Math.random() * cities.length)] + '-' + (Math.floor(Math.random() * 9000) + 1000);
+    } while (rooms[code]);
+    return code;
 }
 
 // ── Ініціалізація стану гри ───────────────────
@@ -419,6 +423,12 @@ function nextPlayer(state) {
 
 function awardAuction(state, a) {
     const winner = state.players[a.currentBidder];
+    if (winner.money < a.currentBid) {
+        // Переможець не може сплатити — аукціон анулюється
+        addLog(state, `💀 ${winner.name} не може сплатити аукціон ₴${a.currentBid} — скасовано`, 'error');
+        state.auctionState = null;
+        return;
+    }
     winner.money -= a.currentBid;
     state.cellState[a.cell.pos].owner = a.currentBidder;
     winner.properties.push(a.cell.pos);
@@ -618,6 +628,7 @@ function processAction(state, type, data, room) {
             const { pos } = data;
             const cell = BOARD[pos];
             const s = state.cellState[pos];
+            if (!s || s.owner !== player.id) break;
             if (s.houses >= 5 || player.money < cell.housePrice) break;
             const group = BOARD.filter(b => b.type === 'property' && b.color === cell.color);
             const allOwned = group.every(b => state.cellState[b.pos].owner === player.id && !state.cellState[b.pos].mortgaged);
@@ -635,6 +646,7 @@ function processAction(state, type, data, room) {
             const { pos } = data;
             const cell = BOARD[pos];
             const s = state.cellState[pos];
+            if (!s || s.owner !== player.id) break;
             if (s.houses === 0) break;
             const group = BOARD.filter(b => b.type === 'property' && b.color === cell.color);
             const maxH = Math.max(...group.map(b => state.cellState[b.pos].houses));
@@ -649,6 +661,7 @@ function processAction(state, type, data, room) {
             const { pos } = data;
             const cell = BOARD[pos];
             const s = state.cellState[pos];
+            if (!s || s.owner !== player.id) break;
             if (s.mortgaged || s.houses > 0) break;
             s.mortgaged = true;
             player.money += Math.floor(cell.price / 2);
@@ -660,6 +673,7 @@ function processAction(state, type, data, room) {
             const { pos } = data;
             const cell = BOARD[pos];
             const s = state.cellState[pos];
+            if (!s || s.owner !== player.id) break;
             const cost = Math.ceil(Math.floor(cell.price / 2) * 1.1);
             if (!s.mortgaged || player.money < cost) break;
             s.mortgaged = false;
@@ -703,9 +717,10 @@ function processAction(state, type, data, room) {
         }
 
         case 'jailCard': {
-            if (!player.hasJailCard) break;
+            if (!player.hasJailCard || !player.inJail) break;
             player.hasJailCard = false;
             player.inJail = false;
+            player.jailTurns = 0;
             addLog(state, `🔓 ${player.name} використав картку виходу з В'язниці`, 'success');
             break;
         }
@@ -718,6 +733,7 @@ function processAction(state, type, data, room) {
 
         case 'offerTrade': {
             const { toIdx, offerMoney = 0, offerProps = [], requestMoney = 0, requestProps = [] } = data;
+            if (toIdx < 0 || toIdx >= state.players.length) break;
             const to = state.players[toIdx];
             if (!to || to.bankrupt || toIdx === state.currentPlayerIndex) break;
             if (offerMoney > player.money || requestMoney > to.money) break;
@@ -813,8 +829,12 @@ function startTurnTimer(room) {
                 processAction(state, 'auctionPass', {}, room);
             } else if (!state.hasRolled) {
                 processAction(state, 'rollDice', {}, room);
-                if (state.pendingAction === 'payRent')            processAction(state, 'payRent', {}, room);
-                else if (state.pendingAction === 'offerPurchase') processAction(state, 'startAuction', {}, room);
+                if (state.pendingAction === 'payRent') {
+                    const canPay = state.players[state.currentPlayerIndex].money >= (state.pendingData?.rent || 0);
+                    processAction(state, canPay ? 'payRent' : 'declareBankrupt', {}, room);
+                } else if (state.pendingAction === 'offerPurchase') {
+                    processAction(state, 'startAuction', {}, room);
+                }
                 if (state.hasRolled && !state.auctionState)       processAction(state, 'endTurn', {}, room);
             } else if (!state.auctionState) {
                 processAction(state, 'endTurn', {}, room);
@@ -1055,9 +1075,20 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('- відключення:', socket.id);
         const room = rooms[socket.roomCode];
-        if (room) {
-            io.to(socket.roomCode).emit('playerDisconnected', { playerIndex: socket.playerIndex });
+        if (!room) return;
+        // Прибираємо гравця з активного аукціону щоб не зависав
+        if (room.state?.auctionState) {
+            const a = room.state.auctionState;
+            a.active = a.active.filter(id => id !== socket.playerIndex);
+            if (a.active.length === 0) {
+                addLog(room.state, '🔨 Аукціон скасовано — всі відключились', 'warn');
+                room.state.auctionState = null;
+            } else if (a.active.length === 1 && a.currentBidder !== null) {
+                awardAuction(room.state, a);
+            }
+            io.to(socket.roomCode).emit('stateUpdate', { state: sanitize(room.state), sideEffect: null });
         }
+        io.to(socket.roomCode).emit('playerDisconnected', { playerIndex: socket.playerIndex });
     });
 });
 
