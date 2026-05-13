@@ -273,12 +273,20 @@ function drawCard(state, player, type) {
             break;
         case 'payAll': {
             const alive = state.players.filter(p => !p.bankrupt && p.id !== player.id);
-            alive.forEach(p => { player.money -= card.amount; p.money += card.amount; });
+            alive.forEach(p => {
+                const pay = Math.min(card.amount, Math.max(0, player.money));
+                player.money -= pay;
+                p.money += pay;
+            });
             break;
         }
         case 'collectAll': {
             const alive = state.players.filter(p => !p.bankrupt && p.id !== player.id);
-            alive.forEach(p => { p.money -= card.amount; player.money += card.amount; });
+            alive.forEach(p => {
+                const pay = Math.min(card.amount, Math.max(0, p.money));
+                p.money -= pay;
+                player.money += pay;
+            });
             break;
         }
         case 'nearestRailway': {
@@ -389,7 +397,7 @@ function handleLanding(state, player) {
 }
 
 function nextPlayer(state) {
-    // зменшуємо лічильник кредиту
+    // зменшуємо лічильник кредиту поточного гравця
     const cur = state.players[state.currentPlayerIndex];
     if (cur.loan > 0 && cur.loanTurnsLeft > 0) cur.loanTurnsLeft--;
 
@@ -401,7 +409,7 @@ function nextPlayer(state) {
 
     // перевіряємо кредит нового гравця
     const next = state.players[state.currentPlayerIndex];
-    if (next.loan > 0 && next.loanTurnsLeft !== undefined) {
+    if (next.loan > 0) {
         if (next.loanTurnsLeft === 1) return { event: 'loanWarning', player: next };
         if (next.loanTurnsLeft <= 0) return { event: 'loanDeadline', player: next };
     }
@@ -439,6 +447,10 @@ function processAction(state, type, data, room) {
             if (player.inJail) {
                 if (isDouble) {
                     player.inJail = false;
+                    player.jailTurns = 0;
+                    // Дубль з в'язниці не дає повторного ходу — це хід виходу
+                    state.doublesCount = 0;
+                    state.hasRolled = true;
                     addLog(state, `🔓 ${player.name} вийшов(ла) з В'язниці дублем!`, 'success');
                 } else {
                     player.jailTurns++;
@@ -474,7 +486,7 @@ function processAction(state, type, data, room) {
             }
 
             const landingPos = player.position; // позиція до обробки ефектів (В'язниця змінює на 10)
-            addLog(state, `📍 ${player.name} зупинився на: ${BOARD[landingPos].name}`);
+            addLog(state, `📍 ${player.name} зупинив(ла)ся на: ${BOARD[landingPos].name}`);
             sideEffect = handleLanding(state, player);
             if (sideEffect) sideEffect.landingPos = landingPos; // куди фізично потрапив токен
             break;
@@ -551,8 +563,9 @@ function processAction(state, type, data, room) {
             if (a.active.length === 0) {
                 addLog(state, 'Аукціон завершився без покупця', 'warn');
                 state.auctionState = null;
-            } else if (a.active.length === 1 && a.active[0] === a.currentBidder) {
-                // Єдиний хто залишився — той хто зробив останню ставку → виграє
+            } else if (a.active.length === 1) {
+                // Єдиний учасник — виграє навіть якщо не робив ставку (стартова ціна)
+                if (a.currentBidder === null) a.currentBidder = a.active[0];
                 awardAuction(state, a);
             } else {
                 if (a.turnIdx >= a.active.length) a.turnIdx %= a.active.length;
@@ -787,6 +800,8 @@ function startTradeTimer(room) {
 
 function startTurnTimer(room) {
     if (room.state?.pendingTrade) return; // не запускаємо під час очікування угоди
+    const next = room.state?.players[room.state?.currentPlayerIndex];
+    if (next?.inJail) return; // гравець у в'язниці — чекаємо на його вибір (jailPay/jailCard/roll)
     clearTurnTimer(room);
     const TURN_MS = 90 * 1000;
     room.state.turnDeadline = Date.now() + TURN_MS;

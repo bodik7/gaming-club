@@ -839,6 +839,8 @@ body {
     flex: 1;
     min-height: 0;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
 }
 
 .modal-buttons {
