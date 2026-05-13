@@ -360,8 +360,13 @@ function renderActionButtons() {
 }
 
 function updateCurrentPlayerInfo() {
+    const el = document.getElementById('current-player-info');
+    if (!el) return;
+    // На малих екранах (viewport width=1100, але фізично < 700px) ховаємо
+    if (window.innerWidth < 700) { el.style.display = 'none'; return; }
     const p = players[currentPlayerIndex];
-    document.getElementById('current-player-info').innerHTML = `
+    el.style.display = '';
+    el.innerHTML = `
         <div style="font-weight:700">Хід: ${p.name}</div>
         <div style="font-size:12px;opacity:0.9">${p.icon} ${p.money} ₴</div>
     `;

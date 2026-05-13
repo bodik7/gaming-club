@@ -8,8 +8,9 @@
 
 body {
     min-height: 100vh;
+    height: 100vh;
     background: url('ya-21688.jpg') center center / cover fixed;
-    overflow-x: hidden;
+    overflow: hidden;
 }
 
 .hidden { display: none !important; }
