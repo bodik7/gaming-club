@@ -413,11 +413,26 @@ function nextPlayer(state) {
 
     // перевіряємо кредит нового гравця
     const next = state.players[state.currentPlayerIndex];
+
+    // Jail перевіряємо першим — гравець у в'язниці може мати кредит, але основна дія — вийти
+    if (next.inJail) return { event: 'inJail', player: next };
+
     if (next.loan > 0) {
         if (next.loanTurnsLeft === 1) return { event: 'loanWarning', player: next };
-        if (next.loanTurnsLeft <= 0) return { event: 'loanDeadline', player: next };
+        if (next.loanTurnsLeft <= 0) {
+            // Автоматично списуємо якщо є кошти, інакше — банкрутство
+            const total = next.loan + next.loanInterest;
+            if (next.money >= total) {
+                next.money -= total;
+                next.loan = 0;
+                next.loanInterest = 0;
+                next.loanTurnsLeft = 0;
+                addLog(state, `🏦 Банк автоматично списав борг ₴${total} з ${next.name}`, 'warn');
+            } else {
+                return { event: 'loanDeadline', player: next };
+            }
+        }
     }
-    if (next.inJail) return { event: 'inJail', player: next };
     return null;
 }
 
@@ -685,9 +700,10 @@ function processAction(state, type, data, room) {
         case 'takeLoan': {
             const { amount } = data;
             if (player.loan > 0) break; // спочатку погаси діючий кредит
-            const maxLoan = Math.max(50, player.properties.reduce((acc, pos) => {
+            const maxLoan = player.properties.reduce((acc, pos) => {
                 return acc + (!state.cellState[pos].mortgaged ? Math.floor(BOARD[pos].price / 2) : 0);
-            }, 0));
+            }, 0);
+            if (maxLoan < 50) break; // без майна — кредит недоступний
             if (amount < 50 || amount > maxLoan) break;
             player.money += amount;
             player.loan += amount;
@@ -1063,11 +1079,14 @@ io.on('connection', (socket) => {
     // Чат
     socket.on('chatMessage', ({ text, icon, name, color }) => {
         if (!socket.roomCode) return;
-        const clean = String(text).slice(0, 200); // захист від довгих повідомлень
+        const esc = s => String(s).replace(/[&<>"']/g, c =>
+            ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
         io.to(socket.roomCode).emit('chatMessage', {
             playerIndex: socket.playerIndex,
-            icon, name, color,
-            text: clean,
+            icon:  esc(String(icon  || '').slice(0, 10)),
+            name:  esc(String(name  || '').slice(0, 30)),
+            color: /^#[0-9a-fA-F]{3,6}$/.test(color) ? color : '#888',
+            text:  esc(String(text  || '').slice(0, 200)),
         });
     });
 
@@ -1087,6 +1106,17 @@ io.on('connection', (socket) => {
                 awardAuction(room.state, a);
             }
             io.to(socket.roomCode).emit('stateUpdate', { state: sanitize(room.state), sideEffect: null });
+        }
+        // Якщо відключився отримувач угоди — скасовуємо pendingTrade і trade timer
+        if (room.state?.pendingTrade?.toIdx === socket.playerIndex) {
+            clearTradeTimer(room);
+            room.state.pendingTrade = null;
+            room.state.tradeDeadline = null;
+            startTurnTimer(room);
+            io.to(socket.roomCode).emit('stateUpdate', {
+                state: sanitize(room.state), sideEffect: null,
+                toast: { text: '🚪 Отримувач угоди відключився — угоду скасовано', color: '#e65100' },
+            });
         }
         io.to(socket.roomCode).emit('playerDisconnected', { playerIndex: socket.playerIndex });
     });

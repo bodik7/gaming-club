@@ -54,6 +54,8 @@ function tryRejoin() {
             // Гра вже йде — відновлюємо ігровий екран
             document.getElementById('lobby-screen').classList.add('hidden');
             showGameScreen();
+            // Ініціалізуємо _prevPos щоб токени не анімувались з позиції 0
+            if (state.players) state.players.forEach(p => { _prevPos[p.id] = p.position; });
             applyState(state, false, null, null);
             log(`🔄 Підключення відновлено як ${playerName}`, 'success');
             // Відновлюємо модали які були відкриті до відключення
@@ -677,8 +679,10 @@ function applyState(state, diceRolled, landingPos, onDone) {
     // Аукціон тільки-но стартував або оновився — показуємо попап одразу
     const auctionJustChanged = state.auctionState && (
         !prevAuctionSnapshot ||
-        prevAuctionSnapshot.turnIdx !== state.auctionState.turnIdx ||
-        prevAuctionSnapshot.active?.length !== state.auctionState.active?.length
+        prevAuctionSnapshot.turnIdx     !== state.auctionState.turnIdx ||
+        prevAuctionSnapshot.active?.length !== state.auctionState.active?.length ||
+        prevAuctionSnapshot.currentBid  !== state.auctionState.currentBid ||
+        prevAuctionSnapshot.currentBidder !== state.auctionState.currentBidder
     );
     if (auctionJustChanged) {
         setTimeout(() => showAuctionUIOnline(state), 0);
