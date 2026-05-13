@@ -8,9 +8,8 @@
 
 body {
     min-height: 100vh;
-    height: 100vh;
     background: url('ya-21688.jpg') center center / cover fixed;
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
 .hidden { display: none !important; }
@@ -134,6 +133,7 @@ body {
     height: 100vh;
     padding: 8px;
     overflow: hidden;
+    background: url('ya-21688.jpg') center center / cover fixed;
 }
 
 .game-layout {
