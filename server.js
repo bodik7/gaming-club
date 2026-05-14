@@ -916,18 +916,14 @@ function processTysyachaAction(state, type, data, pidx) {
             if (hidx === -1) break;
             const trick = state.trick;
 
-            // Валідація: масть + козир
+            // Валідація: масть (козир необов'язковий)
             if (trick.cards.length > 0) {
                 const leadSuit = tSuit(trick.cards[0].card);
                 const cardSuit = tSuit(card);
                 const hasSuit  = player.hand.some(c => tSuit(c) === leadSuit);
-                // Правило 1: є масть — грай масть
+                // Є масть — грай масть
                 if (cardSuit !== leadSuit && hasSuit) break;
-                // Правило 2: немає масті, але є козир — мусиш грати козирем
-                if (!hasSuit && state.trump && leadSuit !== state.trump) {
-                    const hasTrump = player.hand.some(c => tSuit(c) === state.trump);
-                    if (hasTrump && cardSuit !== state.trump) break;
-                }
+                // Якщо масті немає — будь-яка карта дозволена (козир необов'язковий)
             }
 
             // Шлюб (бракосочетання)
