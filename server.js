@@ -799,6 +799,258 @@ function processAction(state, type, data, room) {
     return sideEffect;
 }
 
+// ════════════════════════════════════════════
+// ТИСЯЧА — карткова гра
+// ════════════════════════════════════════════
+const T_SUITS   = ['♠','♣','♦','♥'];
+const T_RANKS   = ['9','J','Q','K','10','A'];
+const T_POINTS  = {'9':0,'J':2,'Q':3,'K':4,'10':10,'A':11};
+const T_MARRIAGE= {'♠':40,'♣':60,'♦':80,'♥':100};
+const T_RANK_ORD= ['9','J','Q','K','10','A'];
+
+function tSuit(c) { return c.slice(-1); }
+function tRank(c) { return c.slice(0,-1); }
+function tPts(c)  { return T_POINTS[tRank(c)] || 0; }
+function tRankN(c){ return T_RANK_ORD.indexOf(tRank(c)); }
+
+function createTDeck() {
+    return shuffle(T_SUITS.flatMap(s => T_RANKS.map(r => `${r}${s}`)));
+}
+
+function createTysyachaState(roomPlayers) {
+    const n = roomPlayers.length;
+    const cpp = n === 2 ? 10 : 7; // cards per player
+    const deck = createTDeck();
+    return {
+        gameType: 'tysyacha',
+        players: roomPlayers.map((rp, i) => ({
+            id: i, name: rp.name,
+            score: 0, hand: deck.slice(i*cpp, (i+1)*cpp), trickPts: 0,
+        })),
+        talon: deck.slice(cpp*n),
+        dealer: 0, round: 1,
+        phase: 'auction', // auction|talon|playing|scoring|gameover
+        currentPlayer: 1 % n,
+        auction: { current: 100, passed: Array(n).fill(false), winner: null },
+        trick: { cards: [], leader: 1 % n },
+        trump: null, declaredBid: null,
+        marriages: {}, givenCards: [],
+        log: [], winner: null,
+    };
+}
+
+function processTysyachaAction(state, type, data, pidx) {
+    const player = state.players[pidx];
+    const n = state.players.length;
+
+    switch (type) {
+        case 'tBid': {
+            if (state.phase !== 'auction' || pidx !== state.currentPlayer) break;
+            if (data.pass) {
+                state.auction.passed[pidx] = true;
+                state.log.unshift(`${player.name}: пас`);
+            } else {
+                const amt = parseInt(data.amount) || 0;
+                if (amt <= state.auction.current || amt % 10 !== 0 || amt > 840) break;
+                state.auction.current = amt;
+                state.log.unshift(`${player.name}: ${amt}`);
+            }
+            const active = state.players.map((_,i)=>i).filter(i => !state.auction.passed[i]);
+            if (active.length === 1) {
+                const w = active[0];
+                state.auction.winner = w;
+                state.log.unshift(`🏆 ${state.players[w].name} виграє торги (${state.auction.current})`);
+                // Переможець бере тялон
+                state.players[w].hand.push(...state.talon);
+                state.talon = [];
+                state.phase = 'talon';
+                state.currentPlayer = w;
+            } else {
+                let next = (pidx + 1) % n;
+                while (state.auction.passed[next]) next = (next + 1) % n;
+                state.currentPlayer = next;
+            }
+            break;
+        }
+
+        case 'tGiveCard': {
+            if (state.phase !== 'talon' || pidx !== state.auction.winner) break;
+            const { card, toPlayer } = data;
+            if (toPlayer === pidx || toPlayer < 0 || toPlayer >= n) break;
+            const idx = player.hand.indexOf(card);
+            if (idx === -1) break;
+            player.hand.splice(idx, 1);
+            state.players[toPlayer].hand.push(card);
+            state.givenCards.push(toPlayer);
+            // Перевіряємо чи всі отримали по 1 картці
+            const opponents = state.players.map((_,i)=>i).filter(i=>i!==pidx);
+            const allReceived = opponents.every(i => state.givenCards.filter(g=>g===i).length >= 1);
+            if (allReceived) {
+                state.declaredBid = state.auction.current;
+                state.phase = 'playing';
+                state.currentPlayer = state.auction.winner;
+                state.trick.leader = state.auction.winner;
+                state.log.unshift(`📢 ${state.players[state.auction.winner].name} грає на ${state.declaredBid}`);
+            }
+            break;
+        }
+
+        case 'tPlayCard': {
+            if (state.phase !== 'playing' || pidx !== state.currentPlayer) break;
+            const { card, marriage } = data;
+            const hidx = player.hand.indexOf(card);
+            if (hidx === -1) break;
+            const trick = state.trick;
+
+            // Валідація: масть
+            if (trick.cards.length > 0) {
+                const leadSuit = tSuit(trick.cards[0].card);
+                const cardSuit = tSuit(card);
+                const hasSuit  = player.hand.some(c => tSuit(c) === leadSuit);
+                if (cardSuit !== leadSuit && hasSuit) break;
+            }
+
+            // Шлюб (бракосочетання)
+            if (marriage && trick.cards.length === 0) {
+                const rank = tRank(card);
+                const suit = tSuit(card);
+                if (rank === 'Q' || rank === 'K') {
+                    const partner = rank === 'Q' ? `K${suit}` : `Q${suit}`;
+                    if (player.hand.includes(partner)) {
+                        if (!state.marriages[pidx]) state.marriages[pidx] = [];
+                        if (!state.marriages[pidx].includes(suit)) {
+                            state.marriages[pidx].push(suit);
+                            if (!state.trump) state.trump = suit;
+                            state.log.unshift(`💍 ${player.name} оголошує ${suit} (+${T_MARRIAGE[suit]})`);
+                        }
+                    }
+                }
+            }
+
+            player.hand.splice(hidx, 1);
+            trick.cards.push({ playerId: pidx, card });
+
+            if (trick.cards.length === n) {
+                // Взятка завершена
+                const winnerId = tDetermineWinner(trick.cards, state.trump);
+                const pts = trick.cards.reduce((s,c) => s + tPts(c.card), 0);
+                state.players[winnerId].trickPts += pts;
+                state.log.unshift(`🃏 ${state.players[winnerId].name} бере (+${pts})`);
+
+                if (state.players[0].hand.length === 0) {
+                    return tFinishRound(state);
+                }
+                state.trick = { cards: [], leader: winnerId };
+                state.currentPlayer = winnerId;
+            } else {
+                state.currentPlayer = (pidx + 1) % n;
+            }
+            break;
+        }
+
+        case 'tSetBid': {
+            if (state.phase !== 'talon' || pidx !== state.auction.winner) break;
+            const amt = parseInt(data.amount) || 0;
+            if (amt < state.auction.current || amt % 10 !== 0) break;
+            state.declaredBid = amt;
+            state.log.unshift(`📢 ${player.name} підвищує до ${amt}`);
+            break;
+        }
+    }
+    return null;
+}
+
+function tDetermineWinner(cards, trump) {
+    const leadSuit = tSuit(cards[0].card);
+    let best = cards[0];
+    for (let i = 1; i < cards.length; i++) {
+        const c = cards[i];
+        const cs = tSuit(c.card), bs = tSuit(best.card);
+        if (trump && cs === trump && bs !== trump) { best = c; continue; }
+        if (cs === bs && tRankN(c.card) > tRankN(best.card)) best = c;
+    }
+    return best.playerId;
+}
+
+function tFinishRound(state) {
+    const n = state.players.length;
+    const bidder = state.auction.winner;
+    // Додаємо очки шлюбів
+    Object.entries(state.marriages).forEach(([pid, suits]) => {
+        suits.forEach(s => { state.players[+pid].trickPts += T_MARRIAGE[s]; });
+    });
+    const bid = state.declaredBid || state.auction.current;
+    state.players.forEach((p, i) => {
+        const rnd = Math.round(p.trickPts / 10) * 10;
+        if (i === bidder) {
+            if (p.trickPts >= bid) {
+                p.score += bid;
+                state.log.unshift(`✅ ${p.name}: набрав ${p.trickPts} ≥ ${bid}, +${bid}`);
+            } else {
+                p.score -= bid;
+                state.log.unshift(`❌ ${p.name}: набрав ${p.trickPts} < ${bid}, −${bid}`);
+            }
+        } else {
+            p.score += rnd;
+            state.log.unshift(`${p.name}: +${rnd}`);
+        }
+    });
+    const winner = state.players.find(p => p.score >= 1000);
+    if (winner) {
+        state.phase = 'gameover';
+        state.winner = winner.id;
+        state.log.unshift(`🏆 ${winner.name} набрав(ла) 1000! Перемога!`);
+        return { event: 'tGameOver', winner };
+    }
+    // Новий раунд
+    state.round++;
+    state.dealer = (state.dealer + 1) % n;
+    const cpp = n === 2 ? 10 : 7;
+    const deck = createTDeck();
+    state.players.forEach((p, i) => {
+        p.hand = deck.slice(i * cpp, (i + 1) * cpp);
+        p.trickPts = 0;
+    });
+    state.talon = deck.slice(cpp * n);
+    state.phase = 'auction';
+    state.currentPlayer = (state.dealer + 1) % n;
+    state.auction = { current: 100, passed: Array(n).fill(false), winner: null };
+    state.trick = { cards: [], leader: (state.dealer + 1) % n };
+    state.trump = null; state.declaredBid = null;
+    state.marriages = {}; state.givenCards = [];
+    return null;
+}
+
+function sanitizeTysyacha(state, forIdx) {
+    return {
+        gameType: 'tysyacha',
+        players: state.players.map((p, i) => ({
+            id: p.id, name: p.name, score: p.score, trickPts: p.trickPts,
+            handCount: p.hand.length,
+            hand: i === forIdx ? p.hand : null,
+        })),
+        talon: state.phase === 'talon' && forIdx === state.auction.winner
+            ? state.talon : null,
+        dealer: state.dealer, round: state.round,
+        phase: state.phase, currentPlayer: state.currentPlayer,
+        auction: state.auction,
+        trick: state.trick,
+        trump: state.trump, declaredBid: state.declaredBid,
+        marriages: state.marriages,
+        log: state.log.slice(0, 30),
+        winner: state.winner,
+    };
+}
+
+function emitTysyachaUpdate(room, sideEffect, toast) {
+    room.players.forEach(rp => {
+        io.to(rp.socketId).emit('stateUpdate', {
+            state: sanitizeTysyacha(room.state, rp.index),
+            sideEffect, toast: toast || null,
+        });
+    });
+}
+
 // ── Таймер ходу ──────────────────────────────
 function clearTurnTimer(room) {
     if (room.turnTimer) { clearTimeout(room.turnTimer); room.turnTimer = null; }
@@ -886,13 +1138,14 @@ io.on('connection', (socket) => {
     console.log('+ підключення:', socket.id);
 
     // Створити кімнату
-    socket.on('createRoom', ({ playerName }, cb) => {
+    socket.on('createRoom', ({ playerName, gameType = 'monopoly' }, cb) => {
         const code = generateCode();
         rooms[code] = {
             code,
             players: [{ socketId: socket.id, name: playerName, index: 0 }],
             started: false,
             state: null,
+            gameType: gameType === 'tysyacha' ? 'tysyacha' : 'monopoly',
             createdAt: Date.now(),
             lastActivityAt: Date.now(),
         };
@@ -956,6 +1209,7 @@ io.on('connection', (socket) => {
                 code: r.code,
                 playerCount: r.players.length,
                 hostName: r.players[0].name,
+                gameType: r.gameType || 'monopoly',
             }));
         cb({ rooms: available });
     });
@@ -994,13 +1248,26 @@ io.on('connection', (socket) => {
     socket.on('startGame', () => {
         const room = rooms[socket.roomCode];
         if (!room || socket.playerIndex !== 0) return;
-        if (room.players.length < 2) return io.to(socket.id).emit('error', 'Потрібно мінімум 2 гравці');
 
-        room.started = true;
-        room.state = createGameState(room.players);
-        addLog(room.state, `🎮 Гра почалась! Перший хід: ${room.state.players[0].name}`, 'success');
-        startTurnTimer(room);
-        io.to(socket.roomCode).emit('gameStarted', { state: sanitize(room.state) });
+        if (room.gameType === 'tysyacha') {
+            if (room.players.length < 2 || room.players.length > 3)
+                return io.to(socket.id).emit('error', 'Тисяча: потрібно 2 або 3 гравці');
+            room.started = true;
+            room.state = createTysyachaState(room.players);
+            room.players.forEach(rp => {
+                io.to(rp.socketId).emit('gameStarted', {
+                    state: sanitizeTysyacha(room.state, rp.index),
+                    gameType: 'tysyacha',
+                });
+            });
+        } else {
+            if (room.players.length < 2) return io.to(socket.id).emit('error', 'Потрібно мінімум 2 гравці');
+            room.started = true;
+            room.state = createGameState(room.players);
+            addLog(room.state, `🎮 Гра почалась! Перший хід: ${room.state.players[0].name}`, 'success');
+            startTurnTimer(room);
+            io.to(socket.roomCode).emit('gameStarted', { state: sanitize(room.state) });
+        }
     });
 
     // Дія від гравця
@@ -1008,6 +1275,23 @@ io.on('connection', (socket) => {
         const room = rooms[socket.roomCode];
         if (!room?.state) return;
         const state = room.state;
+
+        // ── Тисяча ──
+        if (state.gameType === 'tysyacha') {
+            room.lastActivityAt = Date.now();
+            const result = processTysyachaAction(state, type, data || {}, socket.playerIndex);
+            if (result?.event === 'tGameOver') {
+                room.players.forEach(rp => {
+                    io.to(rp.socketId).emit('gameOver', {
+                        winner: state.players[state.winner],
+                        state: sanitizeTysyacha(state, rp.index),
+                    });
+                });
+            } else {
+                emitTysyachaUpdate(room, result, null);
+            }
+            return;
+        }
 
         // Перевірка прав на дію
         const isAuctionAction  = ['auctionBid', 'auctionPass'].includes(type);

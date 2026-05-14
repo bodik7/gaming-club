@@ -214,12 +214,19 @@ function declareBankrupt() {
 
 // ── Лобі ─────────────────────────────────────
 let _inviteCode = '';
+let _selectedGame = 'monopoly';
+
+function selectGame(type) {
+    _selectedGame = type;
+    document.getElementById('game-btn-monopoly')?.classList.toggle('active', type === 'monopoly');
+    document.getElementById('game-btn-tysyacha')?.classList.toggle('active', type === 'tysyacha');
+}
 
 function createRoom() {
     const name = document.getElementById('lobby-name').value.trim();
     if (!name) return alert('Введіть своє ім\'я');
     saveName(name);
-    socket.emit('createRoom', { playerName: name }, ({ code, playerIndex, error }) => {
+    socket.emit('createRoom', { playerName: name, gameType: _selectedGame }, ({ code, playerIndex, error }) => {
         if (error) return alert(error);
         myPlayerIndex = playerIndex;
         saveSession(code, playerIndex, name);
@@ -456,11 +463,11 @@ function findRoom() {
                     onmouseover="this.style.background='#e8f0fe';this.style.borderColor='#0057b7'"
                     onmouseout="this.style.background='#f8faff';this.style.borderColor='#e0e8f5'">
                     <div>
-                        <div style="font-weight:700;color:#004494;font-size:15px">👑 ${r.hostName}</div>
-                        <div style="font-size:12px;color:#999;margin-top:2px">Код: ${r.code}</div>
+                        <div style="font-weight:700;color:#004494;font-size:15px">${r.gameType==='tysyacha'?'🃏':'🏦'} ${r.hostName}</div>
+                        <div style="font-size:12px;color:#999;margin-top:2px">${r.gameType==='tysyacha'?'Тисяча':'Монополія'} · ${r.code}</div>
                     </div>
                     <div style="text-align:right">
-                        <div style="font-size:14px;color:#0057b7;font-weight:700">${r.playerCount}/6</div>
+                        <div style="font-size:14px;color:#0057b7;font-weight:700">${r.playerCount}/${r.gameType==='tysyacha'?3:6}</div>
                         <div style="font-size:11px;color:#4caf50;margin-top:2px">● вільна</div>
                     </div>
                 </div>
@@ -539,15 +546,23 @@ socket.on('kicked', ({ reason }) => {
     showRejoinError(`❌ ${reason}`);
 });
 
-socket.on('gameStarted', ({ state }) => {
+socket.on('gameStarted', ({ state, gameType }) => {
     document.getElementById('waiting-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.add('hidden');
+    if (gameType === 'tysyacha' || state?.gameType === 'tysyacha') {
+        initTysyacha(state, myPlayerIndex);
+        return;
+    }
     showGameScreen();
     applyState(state, false, null, null);
     log(`🎮 Гра почалась! Хід: ${state.players[0].name}`, 'success');
 });
 
 socket.on('stateUpdate', ({ state, sideEffect, toast }) => {
+    if (state?.gameType === 'tysyacha') {
+        updateTysyacha(state);
+        return;
+    }
     const [d1, d2] = state.lastDiceRoll;
     const diceRolled = (d1 !== _prevDice[0] || d2 !== _prevDice[1]) && d1 > 0;
     const landingPos = sideEffect?.landingPos ?? null;

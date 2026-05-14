@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=1100, height=700">
     <title>Монополія України</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="tysyacha.css">
     <style>
         /* ===== ЛОБІ ===== */
         .lobby-screen, .waiting-screen {
@@ -74,6 +75,16 @@
         }
         .lobby-btn-secondary:hover { background: #004494; transform: translateY(-2px); }
 
+        .game-select-btn {
+            flex: 1; padding: 12px 8px; border-radius: 10px; cursor: pointer;
+            font-size: 14px; font-weight: 700; border: 2px solid #ddd;
+            background: #f4f7fc; color: #555; transition: all 0.2s; text-align: center;
+        }
+        .game-select-btn.active {
+            border-color: #0057b7; background: #0057b7; color: white;
+        }
+        .game-select-btn:hover:not(.active) { border-color: #0057b7; color: #0057b7; }
+
         .room-code-box {
             background: #f4f7fc;
             border: 2px dashed #0057b7;
@@ -107,12 +118,25 @@
     <!-- ===== ЛОБІ — введення імені та коду ===== -->
     <div id="lobby-screen" class="lobby-screen">
         <div class="lobby-card">
-            <h1>🇺🇦 МОНОПОЛІЯ УКРАЇНИ</h1>
-            <p style="color:#666;margin-bottom:24px;font-style:italic">Онлайн мультиплеєр</p>
+            <h1>🇺🇦 Ігровий клуб</h1>
+            <p style="color:#666;margin-bottom:16px;font-style:italic">Онлайн мультиплеєр</p>
 
             <label style="display:block;text-align:left;font-weight:700;color:#004494;margin-bottom:6px">Ваше ім'я:</label>
             <input id="lobby-name" class="lobby-input" type="text" placeholder="Введіть ім'я гравця" maxlength="20"
                    onkeydown="if(event.key==='Enter')createRoom()">
+
+            <!-- Вибір гри -->
+            <div style="margin-bottom:12px">
+                <label style="display:block;text-align:left;font-weight:700;color:#004494;margin-bottom:6px">Оберіть гру:</label>
+                <div style="display:flex;gap:8px">
+                    <button id="game-btn-monopoly" class="game-select-btn active" onclick="selectGame('monopoly')">
+                        🏦 Монополія<br><span style="font-size:11px;font-weight:400">2–6 гравців</span>
+                    </button>
+                    <button id="game-btn-tysyacha" class="game-select-btn" onclick="selectGame('tysyacha')">
+                        🃏 Тисяча<br><span style="font-size:11px;font-weight:400">2–3 гравці</span>
+                    </button>
+                </div>
+            </div>
 
             <button class="lobby-btn lobby-btn-primary" onclick="createRoom()">
                 🏠 Створити нову гру
@@ -136,7 +160,7 @@
 
             <div id="rejoin-error" style="display:none;color:#cc1f1f;font-size:13px;
                  background:#ffeae8;border-radius:8px;padding:8px 12px;margin-top:8px"></div>
-            <p style="font-size:12px;color:#aaa;margin-top:10px">2–6 гравців · кожен зі свого пристрою</p>
+            <p style="font-size:12px;color:#aaa;margin-top:10px">Монополія: 2–6 · Тисяча: 2–3 гравці</p>
         </div>
     </div>
 
@@ -246,6 +270,26 @@
         <div class="property-card" id="property-card-content"></div>
     </div>
 
+    <!-- ===== ТИСЯЧА — ігровий екран ===== -->
+    <div id="tysyacha-screen" class="hidden">
+        <div class="t-header">
+            <h2>🃏 Тисяча</h2>
+            <div id="t-phase-info"></div>
+        </div>
+        <div class="t-layout">
+            <div style="display:flex;flex-direction:column;gap:8px">
+                <div id="t-scores"></div>
+                <div id="t-log" style="flex:1;overflow-y:auto"></div>
+            </div>
+            <div class="t-center">
+                <div id="t-opponents"></div>
+                <div id="t-trick"></div>
+                <div id="t-hand"></div>
+            </div>
+            <div id="t-actions"></div>
+        </div>
+    </div>
+
     <!-- Socket.io (автоматично підключається до сервера) -->
     <script src="/socket.io/socket.io.js"></script>
 
@@ -258,6 +302,8 @@
 
     <!-- Socket-клієнт (замінює engine.js і script.js) -->
     <script src="client.js"></script>
+    <!-- Тисяча клієнт -->
+    <script src="tysyacha.js"></script>
 
     <script>
         // Ініціалізація дошки при старті гри
