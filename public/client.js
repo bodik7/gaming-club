@@ -53,6 +53,10 @@ function tryRejoin() {
         if (started && state) {
             // Гра вже йде — відновлюємо ігровий екран
             document.getElementById('lobby-screen').classList.add('hidden');
+            if (state.gameType === 'tysyacha') {
+                initTysyacha(state, myPlayerIndex);
+                return;
+            }
             showGameScreen();
             // Ініціалізуємо _prevPos щоб токени не анімувались з позиції 0
             if (state.players) state.players.forEach(p => { _prevPos[p.id] = p.position; });
@@ -508,7 +512,8 @@ function startGame() {
 }
 
 // ── Отримання оновлень від сервера ───────────
-socket.on('lobbyUpdate', ({ players }) => {
+socket.on('lobbyUpdate', ({ players, gameType }) => {
+    if (gameType) _selectedGame = gameType; // синхронізуємо з типом кімнати
     const list = document.getElementById('lobby-players-list');
     if (!list) return;
     list.innerHTML = players.map((name, i) => {
@@ -528,7 +533,7 @@ socket.on('lobbyUpdate', ({ players }) => {
         </div>`;
     }).join('');
     const counter = document.getElementById('lobby-player-count');
-    if (counter) counter.textContent = `${players.length}/6`;
+    if (counter) counter.textContent = `${players.length}/${_selectedGame === 'tysyacha' ? 3 : 6}`;
     // Хост може змінитись після kick — оновлюємо видимість кнопки старту
     const startBtn = document.getElementById('start-btn');
     if (startBtn) startBtn.classList.toggle('hidden', myPlayerIndex !== 0);
@@ -579,6 +584,10 @@ socket.on('stateUpdate', ({ state, sideEffect, toast }) => {
 
 socket.on('gameOver', ({ winner, state }) => {
     clearSession();
+    if (state?.gameType === 'tysyacha') {
+        updateTysyacha(state);
+        return;
+    }
     applyState(state, false, null, () => announceWinner(winner, state.players));
 });
 

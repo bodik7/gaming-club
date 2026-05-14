@@ -622,6 +622,7 @@ function processAction(state, type, data, room) {
                 creditor.money += player.money;
                 player.properties.forEach(pos => {
                     state.cellState[pos].owner = creditor.id;
+                    state.cellState[pos].houses = 0; // скидаємо будинки при передачі
                     creditor.properties.push(pos);
                 });
             } else {
@@ -856,7 +857,17 @@ function processTysyachaAction(state, type, data, pidx) {
                 state.log.unshift(`${player.name}: ${amt}`);
             }
             const active = state.players.map((_,i)=>i).filter(i => !state.auction.passed[i]);
-            if (active.length === 1) {
+            if (active.length === 0) {
+                // Всі спасували — примусово перший гравець бере тялон з мінімальною ставкою
+                const w = (state.dealer + 1) % n;
+                state.auction.passed = Array(n).fill(false);
+                state.auction.winner = w;
+                state.log.unshift(`⚠️ Всі спасували — ${state.players[w].name} бере за ${state.auction.current}`);
+                state.players[w].hand.push(...state.talon);
+                state.talon = [];
+                state.phase = 'talon';
+                state.currentPlayer = w;
+            } else if (active.length === 1) {
                 const w = active[0];
                 state.auction.winner = w;
                 state.log.unshift(`🏆 ${state.players[w].name} виграє торги (${state.auction.current})`);
@@ -916,13 +927,14 @@ function processTysyachaAction(state, type, data, pidx) {
                 const suit = tSuit(card);
                 if (rank === 'Q' || rank === 'K') {
                     const partner = rank === 'Q' ? `K${suit}` : `Q${suit}`;
-                    if (player.hand.includes(partner)) {
+                    const alreadyDeclared = state.marriages[pidx]?.includes(suit);
+                    // Шлюб іншої масті після встановлення козира — заборонений
+                    const trumpBlocks = state.trump && state.trump !== suit;
+                    if (player.hand.includes(partner) && !alreadyDeclared && !trumpBlocks) {
                         if (!state.marriages[pidx]) state.marriages[pidx] = [];
-                        if (!state.marriages[pidx].includes(suit)) {
-                            state.marriages[pidx].push(suit);
-                            if (!state.trump) state.trump = suit;
-                            state.log.unshift(`💍 ${player.name} оголошує ${suit} (+${T_MARRIAGE[suit]})`);
-                        }
+                        state.marriages[pidx].push(suit);
+                        if (!state.trump) state.trump = suit;
+                        state.log.unshift(`💍 ${player.name} оголошує ${suit} (+${T_MARRIAGE[suit]})`);
                     }
                 }
             }
@@ -981,7 +993,7 @@ function tFinishRound(state) {
     });
     const bid = state.declaredBid || state.auction.current;
     state.players.forEach((p, i) => {
-        const rnd = Math.round(p.trickPts / 10) * 10;
+        const rnd = Math.floor(p.trickPts / 10) * 10; // завжди вниз за правилами Тисячі
         if (i === bidder) {
             if (p.trickPts >= bid) {
                 p.score += bid;
@@ -1159,9 +1171,10 @@ io.on('connection', (socket) => {
     // Приєднатись до кімнати
     socket.on('joinRoom', ({ code, playerName }, cb) => {
         const room = rooms[code];
-        if (!room)             return cb({ error: 'Кімнату не знайдено' });
-        if (room.started)      return cb({ error: 'Гра вже почалась' });
-        if (room.players.length >= 6) return cb({ error: 'Кімната повна (макс 6)' });
+        if (!room)        return cb({ error: 'Кімнату не знайдено' });
+        if (room.started) return cb({ error: 'Гра вже почалась' });
+        const maxPlayers = room.gameType === 'tysyacha' ? 3 : 6;
+        if (room.players.length >= maxPlayers) return cb({ error: `Кімната повна (макс ${maxPlayers})` });
 
         const idx = room.players.length;
         room.players.push({ socketId: socket.id, name: playerName, index: idx });
@@ -1169,7 +1182,7 @@ io.on('connection', (socket) => {
         socket.roomCode = code;
         socket.playerIndex = idx;
 
-        io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name) });
+        io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name), gameType: room.gameType });
         cb({ code, playerIndex: idx });
     });
 
@@ -1197,7 +1210,7 @@ io.on('connection', (socket) => {
             socket.leave(socket.roomCode);
             socket.roomCode = null;
             socket.playerIndex = null;
-            io.to(room.code).emit('lobbyUpdate', { players: room.players.map(p => p.name) });
+            io.to(room.code).emit('lobbyUpdate', { players: room.players.map(p => p.name), gameType: room.gameType });
         }
     });
 
@@ -1241,7 +1254,7 @@ io.on('connection', (socket) => {
             if (s) s.playerIndex = p.index;
         });
 
-        io.to(socket.roomCode).emit('lobbyUpdate', { players: room.players.map(p => p.name) });
+        io.to(socket.roomCode).emit('lobbyUpdate', { players: room.players.map(p => p.name), gameType: room.gameType });
     });
 
     // Почати гру (тільки хост — index 0)
@@ -1353,10 +1366,13 @@ io.on('connection', (socket) => {
         socket.playerIndex = playerIndex;
 
         if (room.started && room.state) {
-            cb({ success: true, started: true, state: sanitize(room.state) });
+            const st = room.state.gameType === 'tysyacha'
+                ? sanitizeTysyacha(room.state, playerIndex)
+                : sanitize(room.state);
+            cb({ success: true, started: true, state: st, gameType: room.gameType });
         } else {
             cb({ success: true, started: false, players: room.players.map(p => p.name) });
-            io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name) });
+            io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name), gameType: room.gameType });
         }
     });
 
