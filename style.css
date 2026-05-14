@@ -419,6 +419,22 @@ body {
 }
 
 /* Кутові клітинки */
+.cell.casino {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 2px solid #ffd700;
+    color: white;
+    align-items: center;
+    justify-content: center;
+}
+.cell.casino .cell-content {
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    justify-content: center;
+}
+.cell.casino .cell-icon { font-size: 26px; margin-bottom: 4px; }
+
 .cell.corner {
     background: linear-gradient(135deg, #fff7d1, #ffe49a);
     border: 2px solid #004494;

@@ -25,7 +25,7 @@ const BOARD = [
     { pos: 17, type: 'card', name: 'Шанс', icon: '❓', cardType: 'chance' },
     { pos: 18, type: 'property', name: 'Університетська', city: 'Харків', color: '#FFA500', price: 180, rent: [14,70,200,550,750,950], housePrice: 100 },
     { pos: 19, type: 'property', name: 'Дзеркальний струмінь', city: 'Харків', color: '#FFA500', price: 200, rent: [16,80,220,600,800,1000], housePrice: 100 },
-    { pos: 20, type: 'corner', name: 'БЕЗКОШТОВНА СТОЯНКА', icon: '🅿️', desc: 'Відпочинок' },
+    { pos: 20, type: 'casino', name: 'КАЗИНО', icon: '🎰', desc: 'Спробуй удачу!' },
     { pos: 21, type: 'property', name: 'Соборна площа', city: 'Дніпро', color: '#FF0000', price: 220, rent: [18,90,250,700,875,1050], housePrice: 150 },
     { pos: 22, type: 'card', name: 'Екскурсія', icon: '🗺️', cardType: 'excursion' },
     { pos: 23, type: 'property', name: 'Вул. Січеславська', city: 'Дніпро', color: '#FF0000', price: 220, rent: [18,90,250,700,875,1050], housePrice: 150 },

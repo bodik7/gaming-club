@@ -289,6 +289,79 @@ function copyInviteLink() {
     }).catch(() => prompt('Скопіюйте посилання:', url));
 }
 
+// ── Казино ────────────────────────────────────
+function showCasinoModal(playerMoney) {
+    playSound('card');
+    const bets = [50, 100, 200, 500].filter(b => b <= playerMoney);
+    const btnsBet = bets.map(b => ({
+        text: `₴${b}`,
+        class: 'btn-primary',
+        action: () => { sendAction('casinoBet', { amount: b }); closeModal(); showCasinoSpinModal(); }
+    }));
+
+    showModal({
+        title: '',
+        body: `
+            <div style="margin:-30px -30px 20px;padding:24px;
+                        background:linear-gradient(135deg,#1a1a2e,#16213e);
+                        border-radius:18px 18px 0 0;text-align:center;color:white">
+                <div style="font-size:52px;margin-bottom:8px">🎰</div>
+                <div style="font-size:22px;font-weight:900;letter-spacing:1px">КАЗИНО</div>
+                <div style="font-size:13px;opacity:0.7;margin-top:4px">Спробуй свою удачу!</div>
+            </div>
+            <div style="background:#f8f9fa;border-radius:12px;padding:14px;margin-bottom:14px;font-size:13px">
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                    <span>🎲 Дубль (1+1, 2+2...)</span><b style="color:#2e7d32">Виграш ×3</b>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                    <span>✅ Сума ≥ 8</span><b style="color:#1565c0">Виграш ×2</b>
+                </div>
+                <div style="display:flex;justify-content:space-between">
+                    <span>❌ Сума ≤ 7</span><b style="color:#c62828">Програш ставки</b>
+                </div>
+            </div>
+            <div style="text-align:center;font-size:13px;color:#666;margin-bottom:8px">
+                Ваша готівка: <b>₴${playerMoney}</b> — Оберіть ставку:
+            </div>
+            ${bets.length === 0 ? '<p style="color:#c62828;text-align:center">Недостатньо коштів (мінімум ₴50)</p>' : ''}`,
+        buttons: bets.length > 0
+            ? [...btnsBet, { text: 'Пройти мимо', class: 'btn-secondary', action: () => { sendAction('casinoSkip'); closeModal(); } }]
+            : [{ text: 'Пройти мимо', class: 'btn-secondary', action: () => { sendAction('casinoSkip'); closeModal(); } }]
+    });
+}
+
+function showCasinoSpinModal() {
+    showModal({
+        title: '',
+        body: `<div style="text-align:center;padding:30px">
+            <div style="font-size:60px;animation:roll 1s ease-in-out infinite">🎰</div>
+            <div style="font-size:16px;margin-top:16px;color:#666">Кубики летять...</div>
+        </div>`,
+        buttons: []
+    });
+}
+
+function showCasinoResult(effect) {
+    playSound(effect.delta > 0 ? 'buy' : 'rent');
+    const win = effect.delta > 0;
+    const color = effect.isDouble ? '#2e7d32' : win ? '#1565c0' : '#c62828';
+    const icon  = effect.isDouble ? '🎉' : win ? '✅' : '❌';
+    showModal({
+        title: '',
+        body: `
+            <div style="text-align:center;padding:16px 0">
+                <div style="font-size:56px;margin-bottom:12px">${icon}</div>
+                <div style="font-size:32px;font-weight:900;margin-bottom:8px">
+                    ${effect.d1} + ${effect.d2} = ${effect.sum}
+                    ${effect.isDouble ? '<br><span style="font-size:16px;color:#2e7d32">ДУБЛЬ!</span>' : ''}
+                </div>
+                <div style="font-size:20px;font-weight:700;color:${color};margin-bottom:8px">${effect.result}</div>
+                <div style="font-size:14px;color:#888">Ставка: ₴${effect.bet}</div>
+            </div>`,
+        buttons: [{ text: 'OK', class: 'btn-primary', action: closeModal }]
+    });
+}
+
 // ── Торгівля між гравцями ─────────────────────
 function showTradeMenuOnline() {
     if (!players || !players.length) return;
@@ -851,6 +924,14 @@ function handleSideEffect(state, effect, teleportFn) {
                 teleportFn?.();
             }
             break;
+        case 'casino':
+            if (isMe) showCasinoModal(effect.playerMoney);
+            break;
+
+        case 'casinoResult':
+            if (isMe) showCasinoResult(effect);
+            break;
+
         case 'tradeOffer':
             if (myPlayerIndex === effect.trade.toIdx) {
                 playSound('trade');

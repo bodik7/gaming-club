@@ -38,7 +38,7 @@ const BOARD = [
     { pos: 17, type: 'card',     name: 'Шанс',                    icon: '❓', cardType: 'chance' },
     { pos: 18, type: 'property', name: 'Університетська',   city: 'Харків',    color: '#FFA500', price: 180, rent: [14,70,200,550,750,950],        housePrice: 100 },
     { pos: 19, type: 'property', name: 'Дзеркальний струмінь', city: 'Харків', color: '#FFA500', price: 200, rent: [16,80,220,600,800,1000],  housePrice: 100 },
-    { pos: 20, type: 'corner',   name: 'БЕЗКОШТОВНА СТОЯНКА',     icon: '🅿️', desc: 'Відпочинок' },
+    { pos: 20, type: 'casino',   name: 'КАЗИНО',                      icon: '🎰', desc: 'Спробуй удачу!' },
     { pos: 21, type: 'property', name: 'Соборна площа',city: 'Дніпро',    color: '#FF0000', price: 220, rent: [18,90,250,700,875,1050],       housePrice: 150 },
     { pos: 22, type: 'card',     name: 'Екскурсія',               icon: '🗺️', cardType: 'excursion' },
     { pos: 23, type: 'property', name: 'Вул. Січеславська', city: 'Дніпро', color: '#FF0000', price: 220, rent: [18,90,250,700,875,1050],     housePrice: 150 },
@@ -396,6 +396,11 @@ function handleLanding(state, player) {
         goToJail(state, player);
         addLog(state, `👮 ${jailReason}`, 'warn');
         return { event: 'goToJail', reason: jailReason };
+    } else if (cell.type === 'casino') {
+        addLog(state, `🎰 ${player.name} зайшов(ла) до КАЗИНО — зроби ставку!`);
+        state.pendingAction = 'casino';
+        state.pendingData = { pos: 20 };
+        return { event: 'casino', playerMoney: player.money };
     }
     return null;
 }
@@ -742,6 +747,50 @@ function processAction(state, type, data, room) {
             player.inJail = false;
             player.jailTurns = 0;
             addLog(state, `🔓 ${player.name} використав картку виходу з В'язниці`, 'success');
+            break;
+        }
+
+        case 'casinoBet': {
+            if (state.pendingAction !== 'casino') break;
+            const bet = parseInt(data.amount) || 0;
+            if (bet < 50 || bet > player.money) break;
+
+            const d1 = Math.floor(Math.random() * 6) + 1;
+            const d2 = Math.floor(Math.random() * 6) + 1;
+            const sum = d1 + d2;
+            const isDouble = d1 === d2;
+
+            let result, delta;
+            if (isDouble) {
+                // Дубль → виграш 3x ставки
+                delta  = bet * 3;
+                result = `🎉 ДУБЛЬ ${d1}+${d2}! Виграш ×3 → +₴${delta}`;
+                player.money += delta;
+            } else if (sum >= 8) {
+                // Сума ≥ 8 → виграш 2x ставки
+                delta  = bet * 2;
+                result = `✅ ${d1}+${d2}=${sum} — виграш ×2 → +₴${delta}`;
+                player.money += delta;
+            } else {
+                // Сума ≤ 7 → програш
+                delta  = -bet;
+                result = `❌ ${d1}+${d2}=${sum} — програш → -₴${bet}`;
+                player.money -= bet;
+            }
+
+            addLog(state, `🎰 ${player.name}: ставка ₴${bet}. ${result}`, isDouble ? 'success' : sum >= 8 ? 'success' : 'warn');
+            state._toast = { text: `🎰 ${result}`, color: isDouble ? '#2e7d32' : sum >= 8 ? '#1565c0' : '#c62828' };
+            state.pendingAction = null;
+            state.pendingData = null;
+            sideEffect = { event: 'casinoResult', d1, d2, sum, isDouble, bet, delta, result };
+            break;
+        }
+
+        case 'casinoSkip': {
+            if (state.pendingAction !== 'casino') break;
+            addLog(state, `🎰 ${player.name} пройшов(ла) мимо казино`);
+            state.pendingAction = null;
+            state.pendingData = null;
             break;
         }
 
