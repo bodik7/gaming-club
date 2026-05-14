@@ -747,6 +747,8 @@ body {
     backdrop-filter: blur(6px);
     padding: 16px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .modal-card {
@@ -762,6 +764,7 @@ body {
     max-height: calc(100dvh - 32px);
     margin: auto;
     position: relative;
+    touch-action: pan-y;
 }
 
 @keyframes pop {
@@ -835,12 +838,13 @@ body {
     line-height: 1.5;
     margin-bottom: 20px;
     color: #333;
-    overflow-y: auto;
+    overflow-y: scroll;
     flex: 1;
     min-height: 0;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     touch-action: pan-y;
+    will-change: scroll-position;
 }
 
 .modal-buttons {
