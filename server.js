@@ -407,8 +407,11 @@ function nextPlayer(state) {
 
     state.doublesCount = 0;
     state.hasRolled = false;
+    const totalPlayers = state.players.length;
+    let steps = 0;
     do {
-        state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
+        state.currentPlayerIndex = (state.currentPlayerIndex + 1) % totalPlayers;
+        if (++steps > totalPlayers) return null; // всі банкрути — гра вже завершена
     } while (state.players[state.currentPlayerIndex].bankrupt);
 
     // перевіряємо кредит нового гравця
@@ -913,12 +916,18 @@ function processTysyachaAction(state, type, data, pidx) {
             if (hidx === -1) break;
             const trick = state.trick;
 
-            // Валідація: масть
+            // Валідація: масть + козир
             if (trick.cards.length > 0) {
                 const leadSuit = tSuit(trick.cards[0].card);
                 const cardSuit = tSuit(card);
                 const hasSuit  = player.hand.some(c => tSuit(c) === leadSuit);
+                // Правило 1: є масть — грай масть
                 if (cardSuit !== leadSuit && hasSuit) break;
+                // Правило 2: немає масті, але є козир — мусиш грати козирем
+                if (!hasSuit && state.trump && leadSuit !== state.trump) {
+                    const hasTrump = player.hand.some(c => tSuit(c) === state.trump);
+                    if (hasTrump && cardSuit !== state.trump) break;
+                }
             }
 
             // Шлюб (бракосочетання)
@@ -1294,6 +1303,7 @@ io.on('connection', (socket) => {
             room.lastActivityAt = Date.now();
             const result = processTysyachaAction(state, type, data || {}, socket.playerIndex);
             if (result?.event === 'tGameOver') {
+                clearTurnTimer(room);
                 room.players.forEach(rp => {
                     io.to(rp.socketId).emit('gameOver', {
                         winner: state.players[state.winner],
