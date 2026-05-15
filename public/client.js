@@ -280,20 +280,40 @@ socket.on('roomClosed', ({ reason }) => {
 });
 
 function confirmAbandonGame() {
-    showModal({
-        title: '🚪 Завершити гру?',
-        body: `<p style="text-align:center;padding:12px 0;color:#555">
-            Гра буде скасована для всіх гравців.<br>
-            <span style="font-size:13px;color:#999">Цю дію неможливо скасувати.</span>
-        </p>`,
-        buttons: [
-            { text: '🚪 Завершити гру', class: 'btn-danger', action: () => {
-                closeModal();
-                socket.emit('abandonGame');
-            }},
-            { text: 'Залишитись', class: 'btn-secondary', action: closeModal }
-        ]
-    });
+    const isTysyacha = !document.getElementById('tysyacha-screen').classList.contains('hidden');
+
+    if (isTysyacha) {
+        showModal({
+            title: '🚪 Завершити гру?',
+            body: `<p style="text-align:center;padding:12px 0;color:#555">
+                Гра буде скасована для всіх гравців.<br>
+                <span style="font-size:13px;color:#999">Цю дію неможливо скасувати.</span>
+            </p>`,
+            buttons: [
+                { text: '🚪 Завершити гру', class: 'btn-danger', action: () => {
+                    closeModal();
+                    socket.emit('abandonGame');
+                }},
+                { text: 'Залишитись', class: 'btn-secondary', action: closeModal }
+            ]
+        });
+    } else {
+        showModal({
+            title: '🏳️ Здатись?',
+            body: `<p style="text-align:center;padding:12px 0;color:#555">
+                Ви вибуваєте з гри як банкрут.<br>
+                Вся ваша власність повертається банку.<br>
+                <span style="font-size:13px;color:#999">Інші гравці продовжать гру.</span>
+            </p>`,
+            buttons: [
+                { text: '🏳️ Здатись', class: 'btn-danger', action: () => {
+                    closeModal();
+                    socket.emit('surrenderMonopoly');
+                }},
+                { text: 'Продовжити гру', class: 'btn-secondary', action: closeModal }
+            ]
+        });
+    }
 }
 
 socket.on('gameAbandoned', ({ reason }) => {
@@ -305,6 +325,16 @@ socket.on('gameAbandoned', ({ reason }) => {
     document.getElementById('quit-game-btn').classList.add('hidden');
     document.getElementById('lobby-screen').classList.remove('hidden');
     showRejoinError(`🚪 ${reason}`);
+});
+
+socket.on('surrendered', () => {
+    clearSession();
+    myPlayerIndex = null;
+    closeModal();
+    document.getElementById('game-screen').classList.add('hidden');
+    document.getElementById('quit-game-btn').classList.add('hidden');
+    document.getElementById('lobby-screen').classList.remove('hidden');
+    showRejoinError('🏳️ Ви здались. Ваша власність повернута банку. Інші гравці продовжують.');
 });
 
 function copyInviteLink() {

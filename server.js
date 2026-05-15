@@ -1285,6 +1285,63 @@ io.on('connection', (socket) => {
         delete rooms[code];
     });
 
+    // Здатись у Монополії: банкрутство гравця, решта продовжує
+    socket.on('surrenderMonopoly', () => {
+        const code = socket.roomCode;
+        const room = rooms[code];
+        if (!room || !room.started) return;
+        const state = room.state;
+        if (!state || state.gameType === 'tysyacha') return;
+
+        const pidx = socket.playerIndex;
+        const player = state.players[pidx];
+        if (!player || player.bankrupt) return;
+
+        // Власність → банку
+        player.properties.forEach(pos => {
+            state.cellState[pos].owner = null;
+            state.cellState[pos].houses = 0;
+            state.cellState[pos].mortgaged = false;
+        });
+        player.properties = [];
+        player.money = 0;
+        player.bankrupt = true;
+        state.pendingAction = null;
+        state.pendingData = null;
+        state.pendingRent = null;
+        addLog(state, `🏳️ ${player.name} здав(ла)ся. Власність повернута банку.`, 'error');
+
+        // Якщо зараз хід цього гравця — передаємо
+        if (state.currentPlayerIndex === pidx) {
+            state.hasRolled = false;
+            state.doublesCount = 0;
+            nextPlayer(state);
+        }
+
+        // Від'єднуємо гравця від кімнати
+        socket.emit('surrendered');
+        socket.leave(code);
+        socket.roomCode = null;
+        socket.playerIndex = null;
+        clearTurnTimer(room);
+        clearTradeTimer(room);
+
+        // Перевіряємо переможця
+        const alive = state.players.filter(p => !p.bankrupt);
+        if (alive.length === 1) {
+            addLog(state, `🏆 ${alive[0].name} — переможець!`, 'success');
+            io.to(code).emit('gameOver', { winner: alive[0], state: sanitize(state) });
+            return;
+        }
+
+        startTurnTimer(room);
+        io.to(code).emit('stateUpdate', {
+            state: sanitize(state),
+            sideEffect: null,
+            toast: { text: `🏳️ ${player.name} здав(ла)ся`, color: '#c62828' },
+        });
+    });
+
     // Отримати список вільних кімнат
     socket.on('getRooms', (cb) => {
         const available = Object.values(rooms)
