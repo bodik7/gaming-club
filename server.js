@@ -1386,6 +1386,8 @@ function sanitizeMafia(state, forIdx) {
             ? state.players.filter(p => p.isAlive && !p.isSilenced && state.votes[p.id] !== undefined).length
             : 0,
         eligibleVoters: state.players.filter(p => p.isAlive && !p.isSilenced).length,
+        // Лічильник "Готовий" в role_reveal
+        readyCount: state._ready ? state._ready.size : 0,
         // Дедлайни для відображення таймерів
         revealDeadline: state.revealDeadline || null,
         nightDeadline:  state.nightDeadline  || null,

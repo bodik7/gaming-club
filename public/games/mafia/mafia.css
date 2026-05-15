@@ -104,6 +104,8 @@
 }
 .m-player.dead { opacity: 0.35; text-decoration: line-through; }
 .m-player.me   { background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.25); }
+.m-player.faction-town  { background: rgba(21,101,192,0.12); border: 1px solid rgba(21,101,192,0.2); }
+.m-player.faction-mafia { background: rgba(198,40,40,0.12);  border: 1px solid rgba(198,40,40,0.2); }
 .m-player-icon { font-size: 16px; flex-shrink: 0; }
 .m-player-name { flex: 1; font-weight: 600; }
 .m-silenced    { font-size: 12px; }
@@ -131,7 +133,12 @@
     padding: 3px 0;
     border-bottom: 1px solid rgba(255,255,255,0.04);
     line-height: 1.4;
+    transition: opacity 0.2s;
 }
+.m-log-newest  { color: var(--m-text); font-weight: 600; }
+.m-log-success { color: #a5d6a7; }
+.m-log-error   { color: #ef9a9a; }
+.m-log-warn    { color: #ffe082; }
 .m-log-empty { font-size: 11px; color: rgba(255,255,255,0.2); font-style: italic; }
 
 /* ── Панель дій ── */
@@ -214,9 +221,20 @@
     color: var(--m-sub);
 }
 .m-reveal-auto b { color: var(--m-text); }
-.m-reveal-hint {
+.m-reveal-ready-count {
     font-size: 12px;
-    color: rgba(255,255,255,0.25);
+    color: var(--m-sub);
+    background: var(--m-surface);
+    border: 1px solid var(--m-border);
+    border-radius: 20px;
+    padding: 3px 14px;
+}
+.m-reveal-ready-count b { color: var(--m-text); }
+#m-ready-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+    filter: none;
+    transform: none;
 }
 
 /* ── Нічні дії ── */

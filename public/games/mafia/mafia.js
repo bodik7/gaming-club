@@ -51,16 +51,20 @@ function mRenderPhaseInfo() {
 function mRenderPlayers() {
     const el = document.getElementById('m-players');
     if (!el) return;
+    const isGameover = mState.phase === 'gameover';
     el.innerHTML = mState.players.map(p => {
         const isMe = p.id === mMyIdx;
         const roleLabel = p.role ? mRoleLabel(p.role) : null;
+        const showRole  = p.role && (p.id === mMyIdx || isGameover ||
+            (mState.myFaction === 'mafia' && roleLabel?.faction === 'mafia'));
+        const factionCls = isGameover && roleLabel?.faction ? `faction-${roleLabel.faction}` : '';
         return `
-        <div class="m-player ${!p.isAlive ? 'dead' : ''} ${isMe ? 'me' : ''}">
+        <div class="m-player ${!p.isAlive ? 'dead' : ''} ${isMe ? 'me' : ''} ${factionCls}">
             <span class="m-player-icon">${roleLabel?.icon || '👤'}</span>
             <span class="m-player-name">${p.name}${isMe ? ' (я)' : ''}</span>
             ${p.isSilenced ? '<span class="m-silenced">🔇</span>' : ''}
             ${!p.isAlive ? '<span class="m-dead-label">💀</span>' : ''}
-            ${p.role && (p.id === mMyIdx || mState.phase === 'gameover')
+            ${showRole
                 ? `<span class="m-role-badge" style="background:${mFactionColor(p.role)}">${roleLabel?.icon} ${roleLabel?.ua}</span>`
                 : ''}
         </div>`;
@@ -95,11 +99,13 @@ function mRenderActions() {
                     🤝 Ваші спільники: <b>${allies.join(', ')}</b>
                 </div>` : ''}
                 <div class="m-reveal-footer">
-                    <div class="m-reveal-auto" id="m-reveal-auto">
+                    <div class="m-reveal-auto">
                         Автостарт через <b id="m-reveal-countdown">25</b>с
                     </div>
-                    <button class="m-btn primary" onclick="mReady()">✅ Готовий!</button>
-                    <div class="m-reveal-hint">Гравців: <b>${totalPlayers}</b></div>
+                    <button class="m-btn primary" onclick="mReady()" id="m-ready-btn">✅ Готовий!</button>
+                    <div class="m-reveal-ready-count">
+                        Готові: <b>${s.readyCount}</b> / <b>${totalPlayers}</b>
+                    </div>
                 </div>
             </div>`;
         mStartTimer('m-reveal-countdown', s.revealDeadline);
@@ -367,15 +373,22 @@ function mNightActions(s, me) {
 function mRenderLog() {
     const el = document.getElementById('m-log');
     if (!el) return;
-    const entries = (mState.log || []).slice(0, 20);
-    el.innerHTML = entries.length
-        ? entries.map(e => `<div class="m-log-entry">${e.text || e}</div>`).join('')
-        : '<div class="m-log-empty">Лог порожній</div>';
+    const entries = (mState.log || []).slice(0, 25);
+    if (!entries.length) { el.innerHTML = '<div class="m-log-empty">Лог порожній</div>'; return; }
+    el.innerHTML = entries.map((e, i) => {
+        const text = e.text || e;
+        const type = e.type || '';
+        const cls  = type ? `m-log-entry m-log-${type}` : 'm-log-entry';
+        const newest = i === 0 ? ' m-log-newest' : '';
+        return `<div class="${cls}${newest}">${text}</div>`;
+    }).join('');
 }
 
 // ── Дії гравця ────────────────────────────────
 function mReady() {
     socket.emit('action', { type: 'mafiaReady', data: {} });
+    const btn = document.getElementById('m-ready-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Очікуємо інших...'; }
 }
 
 function mDayVote(targetId) {
