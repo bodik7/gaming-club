@@ -146,13 +146,38 @@
 }
 
 /* ── Розкриття ролі ── */
+@keyframes roleRevealIn {
+    0%   { opacity: 0; transform: scale(0.7) translateY(20px); }
+    60%  { transform: scale(1.04) translateY(-3px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 .m-role-reveal {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 14px;
     max-width: 400px;
+    width: 100%;
     text-align: center;
+    border-radius: 18px;
+    padding: 28px 28px 22px;
+    animation: roleRevealIn 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+.m-role-reveal--town {
+    background: radial-gradient(ellipse at 50% 0%, rgba(21,101,192,0.28) 0%, rgba(0,0,0,0) 70%);
+    border: 1.5px solid rgba(21,101,192,0.35);
+}
+.m-role-reveal--mafia {
+    background: radial-gradient(ellipse at 50% 0%, rgba(198,40,40,0.28) 0%, rgba(0,0,0,0) 70%);
+    border: 1.5px solid rgba(198,40,40,0.35);
+}
+.m-role-reveal-faction {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--m-sub);
 }
 .m-role-reveal-icon { font-size: 72px; line-height: 1; }
 .m-role-reveal-name {
@@ -174,6 +199,24 @@
     border: 1px solid rgba(198,40,40,0.3);
     border-radius: 8px;
     padding: 8px 16px;
+    width: 100%;
+}
+.m-reveal-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    width: 100%;
+}
+.m-reveal-auto {
+    font-size: 12px;
+    color: var(--m-sub);
+}
+.m-reveal-auto b { color: var(--m-text); }
+.m-reveal-hint {
+    font-size: 12px;
+    color: rgba(255,255,255,0.25);
 }
 
 /* ── Нічні дії ── */

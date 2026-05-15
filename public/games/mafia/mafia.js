@@ -79,17 +79,30 @@ function mRenderActions() {
     if (s.phase === 'role_reveal') {
         const rl = mRoleLabel(me.role);
         const isMafia = rl?.faction === 'mafia';
+        const factionLabel = isMafia ? '🔴 Мафія' : '🔵 Місто';
         const allies = isMafia
             ? s.players.filter(p => p.id !== mMyIdx && s.mafiaIds?.includes(p.id)).map(p => p.name)
             : [];
+        const totalPlayers = s.players.length;
         el.innerHTML = `
-            <div class="m-role-reveal">
-                <div class="m-role-reveal-icon" style="color:${mFactionColor(me.role)}">${rl?.icon || '?'}</div>
+            <div class="m-role-reveal m-role-reveal--${isMafia ? 'mafia' : 'town'}">
+                <div class="m-role-reveal-faction">${factionLabel}</div>
+                <div class="m-role-reveal-icon">${rl?.icon || '?'}</div>
                 <div class="m-role-reveal-name">${rl?.ua || me.role}</div>
                 <div class="m-role-reveal-desc">${mRoleDesc(me.role)}</div>
-                ${allies.length ? `<div class="m-role-allies">Спільники: <b>${allies.join(', ')}</b></div>` : ''}
-                <button class="m-btn primary" onclick="mReady()">✅ Зрозумів, починаємо!</button>
+                ${allies.length ? `
+                <div class="m-role-allies">
+                    🤝 Ваші спільники: <b>${allies.join(', ')}</b>
+                </div>` : ''}
+                <div class="m-reveal-footer">
+                    <div class="m-reveal-auto" id="m-reveal-auto">
+                        Автостарт через <b id="m-reveal-countdown">25</b>с
+                    </div>
+                    <button class="m-btn primary" onclick="mReady()">✅ Готовий!</button>
+                    <div class="m-reveal-hint">Гравців: <b>${totalPlayers}</b></div>
+                </div>
             </div>`;
+        mStartTimer('m-reveal-countdown', s.revealDeadline);
         return;
     }
 

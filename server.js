@@ -1347,8 +1347,9 @@ function createMafiaState(roomPlayers, settings = {}) {
         winner:     null,
         log:        [],
         // Налаштування (передані хостом)
-        nightDuration: settings.nightDuration || 90,
-        dayDuration:   settings.dayDuration   || 120,
+        nightDuration:  settings.nightDuration || 90,
+        dayDuration:    settings.dayDuration   || 120,
+        revealDeadline: Date.now() + 25000,
     };
 }
 
@@ -1386,9 +1387,10 @@ function sanitizeMafia(state, forIdx) {
             : 0,
         eligibleVoters: state.players.filter(p => p.isAlive && !p.isSilenced).length,
         // Дедлайни для відображення таймерів
-        nightDeadline: state.nightDeadline || null,
-        dayDeadline:   state.dayDeadline   || null,
-        voteDeadline:  state.voteDeadline  || null,
+        revealDeadline: state.revealDeadline || null,
+        nightDeadline:  state.nightDeadline  || null,
+        dayDeadline:    state.dayDeadline    || null,
+        voteDeadline:   state.voteDeadline   || null,
     };
 }
 
@@ -2011,6 +2013,10 @@ io.on('connection', (socket) => {
                     gameType: 'mafia',
                 });
             });
+            // Автоматичний старт ночі через 25с якщо не всі натиснули "Готовий"
+            setTimeout(() => {
+                if (room.state?.phase === 'role_reveal') startNightPhase(room);
+            }, 25000);
         } else if (room.gameType === 'tysyacha') {
             if (room.players.length < 2 || room.players.length > 3)
                 return io.to(socket.id).emit('error', 'Тисяча: потрібно 2 або 3 гравці');
