@@ -353,16 +353,26 @@ function flashCell(pos, type) {
     setTimeout(() => cellDiv.classList.remove(`cell-flash-${type}`), 700);
 }
 
+// Повертає індекс МОГо гравця (в online = myPlayerIndex, локально = currentPlayerIndex)
+function _myIdx() {
+    return typeof myPlayerIndex === 'number' ? myPlayerIndex : currentPlayerIndex;
+}
+
 // ============================================
 // ПАНЕЛЬ КНОПОК + ІНДИКАТОР ХОДУ
 // ============================================
 function renderActionButtons() {
     const container = document.getElementById('action-buttons');
+    const isOnline  = typeof sendAction !== 'undefined';
+    const isMyTurn  = !isOnline || (typeof myPlayerIndex === 'number' && myPlayerIndex === currentPlayerIndex);
+    const myPlayer  = players[_myIdx()];
+    const hasCard   = myPlayer?.hasJailCard;
+
     container.innerHTML = `
         <button onclick="showAllProperties()">🏘️ Мої володіння</button>
-        <button onclick="showLoanMenu()">🏦 Кредит</button>
-        <button onclick="showTradeMenu()">🤝 Обмін / Торг</button>
-        <button onclick="showJailCardSale()">🔓 Продати картку</button>
+        <button onclick="showLoanMenu()" ${isOnline && !isMyTurn ? 'style="opacity:0.45" title="Доступно лише у свій хід"' : ''}>🏦 Кредит</button>
+        <button onclick="showTradeMenu()" ${isOnline && !isMyTurn ? 'style="opacity:0.45" title="Доступно лише у свій хід"' : ''}>🤝 Обмін / Торг</button>
+        ${hasCard ? '<button onclick="showJailCardSale()">🔓 Продати картку</button>' : ''}
 
         <button onclick="showStatsMenu()">📊 Статистика</button>
         <button onclick="toggleSounds()" id="sound-toggle">🔊 Звук: увімк</button>
@@ -520,7 +530,7 @@ function offerJailOptions(player) {
 // МЕНЮ ВЛАСНОСТІ ТА БУДІВЕЛЬ
 // ============================================
 function showBuildMenu() {
-    const player = players[currentPlayerIndex];
+    const player = players[_myIdx()];
     const myProps = player.properties.map(pos => BOARD[pos]).filter(c => c.type === 'property');
 
     // знаходимо групи де є монополія
@@ -556,7 +566,7 @@ function showBuildMenu() {
 }
 
 function showMortgageMenu() {
-    const player = players[currentPlayerIndex];
+    const player = players[_myIdx()];
     const myProps = player.properties;
     if (myProps.length === 0) {
         showModal({ title: 'Немає власності', body: '<p>У вас поки немає чого заставляти.</p>',
@@ -593,7 +603,7 @@ function showMortgageMenu() {
 }
 
 function showAllProperties() {
-    const player = players[currentPlayerIndex];
+    const player = players[_myIdx()];
     if (player.properties.length === 0) {
         showModal({ title: 'Без власності', body: '<p>У вас немає нерухомості</p>',
                    buttons: [{ text: 'Ок', class: 'btn-primary', action: closeModal }]});
@@ -1012,15 +1022,22 @@ function showLoanMenu() {
 // ПРОДАЖ КАРТКИ (UI)
 // ============================================
 function showJailCardSale() {
-    const seller = players[currentPlayerIndex];
+    const seller = players[_myIdx()];
     if (!seller.hasJailCard) {
         showModal({ title: 'Немає картки',
                     body: '<p>У вас немає картки "Безкоштовно вийти з В\'язниці".</p>',
                     buttons: [{ text: 'Ок', class: 'btn-primary', action: closeModal }]});
         return;
     }
+    // В онлайн-режимі ця угода не синхронізується з сервером — доступно тільки локально
+    if (typeof sendAction !== 'undefined') {
+        showModal({ title: '🔓 Продаж картки',
+            body: '<p style="text-align:center;padding:12px 0;color:#555">Продаж картки доступний лише в локальному режимі (гра на одному пристрої).<br><span style="font-size:12px;color:#999">В онлайн-режимі передача картки не підтримується.</span></p>',
+            buttons: [{ text: 'Зрозуміло', class: 'btn-secondary', action: closeModal }] });
+        return;
+    }
     const buyers = players.filter(p => !p.bankrupt && p.id !== seller.id);
-    let html = '<p>Виберіть покупця і вкажіть ціну (договірна):</p>';
+    let html = '<p>Виберіть покупця і вкажіть ціну (договірна). Передайте пристрій покупцю для підтвердження.</p>';
     buyers.forEach(p => {
         html += `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f5f5f5;margin:4px 0;border-radius:6px;border-left:5px solid ${p.color};font-size:13px">
             <span style="font-size:22px">${p.icon}</span>
@@ -1083,12 +1100,14 @@ function showStatsMenu() {
             <th style="padding:6px 4px">Податки</th>
             <th style="padding:6px 4px">Кредит</th>
         </tr>`;
-    players.forEach(p => {
+    players.forEach((p, i) => {
         const net = calcNetWorth(p);
-        html += `<tr style="border-bottom:1px solid #eee${p.bankrupt ? ';opacity:0.4' : ''}">
+        const isActive = i === currentPlayerIndex && !p.bankrupt;
+        const isMe     = i === _myIdx();
+        html += `<tr style="border-bottom:1px solid #eee${p.bankrupt ? ';opacity:0.4' : ''}${isActive ? ';background:#fffde7' : ''}">
             <td style="padding:5px 4px">
                 <span style="display:inline-block;width:14px;height:14px;background:${p.color};border-radius:50%;vertical-align:middle"></span>
-                <b>${p.name}</b>${p.bankrupt ? ' 💀' : ''}
+                <b>${p.name}</b>${p.bankrupt ? ' 💀' : ''}${isActive ? ' 🎲' : ''}${isMe ? ' 👤' : ''}
             </td>
             <td style="text-align:center;font-weight:700;color:#2a9d3f">₴${net}</td>
             <td style="text-align:center">₴${p.money}</td>
@@ -1325,21 +1344,6 @@ function announceWinner(player, allPlayers) {
     });
 }
 
-function endGameVote() {
-    showModal({
-        title: 'Завершити гру?',
-        body: '<p>Підрахуємо капітали і визначимо переможця за найбільшим капіталом.</p>',
-        buttons: [
-            { text: 'Так, закінчити', class: 'btn-danger', action: () => {
-                closeModal();
-                const alive = players.filter(p => !p.bankrupt);
-                alive.sort((a,b) => calcNetWorth(b) - calcNetWorth(a));
-                announceWinner(alive[0], players);
-            }},
-            { text: 'Скасувати', class: 'btn-secondary', action: closeModal }
-        ]
-    });
-}
 
 function showRules() {
     showModal({

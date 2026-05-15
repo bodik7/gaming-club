@@ -869,6 +869,7 @@ function applyState(state, diceRolled, landingPos, onDone) {
     }
 
     updateCurrentPlayerInfo();
+    renderActionButtons(); // оновлюємо стан кнопок (чий хід, наявність картки)
     refreshAllCells();
     updateMonopolies();
 
