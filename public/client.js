@@ -46,11 +46,13 @@ async function checkAuth() {
         } catch {}
         clearAuth();
     }
-    // Показуємо екран авторизації
-    document.getElementById('auth-screen').classList.remove('hidden');
+    // AUTH_ENABLED=false: одразу заходимо як гість, auth-екран прихований
+    // Коли будемо підключати акаунти (Мафія тощо) — замінити на:
+    //   document.getElementById('auth-screen').classList.remove('hidden');
+    playAsGuest();
     if (joinCode) {
-        // Запам'ятаємо код — після входу підставимо
-        sessionStorage.setItem('pendingJoin', joinCode);
+        const codeInput = document.getElementById('lobby-code');
+        if (codeInput) codeInput.value = joinCode.toUpperCase();
     }
 }
 
