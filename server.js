@@ -1271,6 +1271,20 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Дострокове завершення гри
+    socket.on('abandonGame', () => {
+        const code = socket.roomCode;
+        const room = rooms[code];
+        if (!room) return;
+        const name = room.players[socket.playerIndex]?.name || 'Гравець';
+        io.to(code).emit('gameAbandoned', { reason: `${name} достроково завершив(ла) гру` });
+        room.players.forEach(p => {
+            const s = io.sockets.sockets.get(p.socketId);
+            if (s) { s.leave(code); s.roomCode = null; s.playerIndex = null; }
+        });
+        delete rooms[code];
+    });
+
     // Отримати список вільних кімнат
     socket.on('getRooms', (cb) => {
         const available = Object.values(rooms)

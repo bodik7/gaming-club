@@ -303,10 +303,21 @@
     <!-- Тисяча клієнт -->
     <script src="games/tysyacha/tysyacha.js"></script>
 
+    <!-- Кнопка виходу під час гри (обидва режими) -->
+    <button id="quit-game-btn" class="hidden" onclick="confirmAbandonGame()"
+            style="position:fixed;bottom:14px;left:14px;z-index:1000;
+                   background:rgba(150,30,30,0.85);color:white;border:none;
+                   border-radius:8px;padding:7px 13px;font-size:13px;font-weight:700;
+                   cursor:pointer;backdrop-filter:blur(6px);transition:all 0.2s;
+                   box-shadow:0 2px 8px rgba(0,0,0,0.4)">
+        🚪 Вийти з гри
+    </button>
+
     <script>
         // Ініціалізація дошки при старті гри
         function showGameScreen() {
             document.getElementById('game-screen').classList.remove('hidden');
+            document.getElementById('quit-game-btn').classList.remove('hidden');
             buildBoard();
             renderActionButtons();
         }

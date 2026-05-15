@@ -53,6 +53,7 @@ function tryRejoin() {
         if (started && state) {
             // Гра вже йде — відновлюємо ігровий екран
             document.getElementById('lobby-screen').classList.add('hidden');
+            document.getElementById('quit-game-btn').classList.remove('hidden');
             if (state.gameType === 'tysyacha') {
                 initTysyacha(state, myPlayerIndex);
                 return;
@@ -274,6 +275,34 @@ socket.on('roomClosed', ({ reason }) => {
     myPlayerIndex = null;
     _inviteCode = '';
     document.getElementById('waiting-screen').classList.add('hidden');
+    document.getElementById('lobby-screen').classList.remove('hidden');
+    showRejoinError(`🚪 ${reason}`);
+});
+
+function confirmAbandonGame() {
+    showModal({
+        title: '🚪 Завершити гру?',
+        body: `<p style="text-align:center;padding:12px 0;color:#555">
+            Гра буде скасована для всіх гравців.<br>
+            <span style="font-size:13px;color:#999">Цю дію неможливо скасувати.</span>
+        </p>`,
+        buttons: [
+            { text: '🚪 Завершити гру', class: 'btn-danger', action: () => {
+                closeModal();
+                socket.emit('abandonGame');
+            }},
+            { text: 'Залишитись', class: 'btn-secondary', action: closeModal }
+        ]
+    });
+}
+
+socket.on('gameAbandoned', ({ reason }) => {
+    clearSession();
+    myPlayerIndex = null;
+    closeModal();
+    document.getElementById('game-screen').classList.add('hidden');
+    document.getElementById('tysyacha-screen').classList.add('hidden');
+    document.getElementById('quit-game-btn').classList.add('hidden');
     document.getElementById('lobby-screen').classList.remove('hidden');
     showRejoinError(`🚪 ${reason}`);
 });
@@ -627,6 +656,7 @@ socket.on('kicked', ({ reason }) => {
 socket.on('gameStarted', ({ state, gameType }) => {
     document.getElementById('waiting-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.add('hidden');
+    document.getElementById('quit-game-btn').classList.remove('hidden');
     if (gameType === 'tysyacha' || state?.gameType === 'tysyacha') {
         initTysyacha(state, myPlayerIndex);
         return;

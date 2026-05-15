@@ -13,6 +13,8 @@ function initTysyacha(state, myIdx) {
     tMyIdx  = myIdx;
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('tysyacha-screen').classList.remove('hidden');
+    const qb = document.getElementById('quit-game-btn');
+    if (qb) qb.classList.remove('hidden');
     renderTysyacha();
 }
 
