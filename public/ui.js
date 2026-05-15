@@ -155,6 +155,7 @@ function createCellDiv(cell) {
     const div = document.createElement('div');
     div.className = `cell ${place.side}`;
     if (cell.type === 'corner') div.classList.add('corner');
+    if (cell.type === 'casino') div.classList.add('corner', 'casino');
     div.dataset.pos = cell.pos;
     div.style.gridRow = place.row;
     div.style.gridColumn = place.col;
@@ -162,7 +163,16 @@ function createCellDiv(cell) {
     const isNarrow = (place.side === 'left' || place.side === 'right');
     const iconSize = isNarrow ? 17 : 22;
 
-    if (cell.type === 'corner') {
+    if (cell.type === 'casino') {
+        div.innerHTML = `
+            <div class="cell-content casino-content">
+                <div class="casino-suits">♠ ♥ ♦ ♣</div>
+                <div class="casino-icon">🎰</div>
+                <div class="casino-title">КАЗИНО</div>
+                <div class="casino-sub">Зроби ставку!</div>
+            </div>
+        `;
+    } else if (cell.type === 'corner') {
         div.innerHTML = `
             <div class="cell-content">
                 <div class="cell-icon">${renderIcon(cell.icon, 38)}</div>

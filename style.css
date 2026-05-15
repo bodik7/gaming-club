@@ -419,21 +419,81 @@ body {
 }
 
 /* Кутові клітинки */
+/* ===== КАЗИНО ===== */
 .cell.casino {
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
-    border: 2px solid #ffd700;
-    color: white;
-    align-items: center;
-    justify-content: center;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(255,215,0,0.18) 0%, transparent 65%),
+        radial-gradient(ellipse at 50% 100%, rgba(255,215,0,0.10) 0%, transparent 55%),
+        linear-gradient(160deg, #0a2a14 0%, #0f3d1f 35%, #0a2a14 70%, #071a0d 100%);
+    border: 3px solid #c9a227;
+    box-shadow:
+        inset 0 0 22px rgba(0,0,0,0.6),
+        0 0 12px rgba(201,162,39,0.45),
+        0 0 28px rgba(201,162,39,0.2);
+    overflow: visible;
+    position: relative;
+    z-index: 2;
 }
-.cell.casino .cell-content {
-    color: white;
-    font-size: 11px;
-    font-weight: 700;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-    justify-content: center;
+
+.casino-content {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    padding: 4px !important;
+    width: 100%;
+    height: 100%;
 }
-.cell.casino .cell-icon { font-size: 26px; margin-bottom: 4px; }
+
+.casino-suits {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: rgba(255,215,0,0.55);
+    margin-bottom: 1px;
+    font-weight: 400;
+}
+
+.casino-icon {
+    font-size: 32px;
+    line-height: 1;
+    filter: drop-shadow(0 0 7px rgba(255,215,0,0.9));
+    animation: casino-spin 3.5s ease-in-out infinite;
+}
+
+.casino-title {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(255,215,0,0.8), 0 1px 2px rgba(0,0,0,0.9);
+    margin-top: 2px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.casino-sub {
+    font-size: 7px;
+    color: rgba(255,215,0,0.6);
+    font-style: italic;
+    margin-top: 1px;
+}
+
+@keyframes casino-spin {
+    0%   { transform: scale(1)    rotate(0deg);   filter: drop-shadow(0 0 5px rgba(255,215,0,0.7)); }
+    25%  { transform: scale(1.12) rotate(-5deg);  filter: drop-shadow(0 0 12px rgba(255,215,0,1)); }
+    50%  { transform: scale(1)    rotate(0deg);   filter: drop-shadow(0 0 5px rgba(255,215,0,0.7)); }
+    75%  { transform: scale(1.12) rotate(5deg);   filter: drop-shadow(0 0 12px rgba(255,215,0,1)); }
+    100% { transform: scale(1)    rotate(0deg);   filter: drop-shadow(0 0 5px rgba(255,215,0,0.7)); }
+}
+
+/* Мерехтіння бордера */
+.cell.casino {
+    animation: casino-border 2.8s ease-in-out infinite alternate;
+}
+@keyframes casino-border {
+    from { box-shadow: inset 0 0 22px rgba(0,0,0,0.6), 0 0 10px rgba(201,162,39,0.4); }
+    to   { box-shadow: inset 0 0 22px rgba(0,0,0,0.6), 0 0 20px rgba(255,215,0,0.7), 0 0 40px rgba(255,215,0,0.25); }
+}
 
 .cell.corner {
     background: linear-gradient(135deg, #fff7d1, #ffe49a);
