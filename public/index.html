@@ -301,9 +301,8 @@
         display: flex;
         width: 100%;
         max-width: 960px;
-        height: 100vh;
+        align-items: stretch; /* обидві колонки однакової висоти */
         gap: 0;
-        overflow: hidden;
     }
 
     /* Ліва колонка: ігри (скролиться всередині) */
@@ -352,13 +351,16 @@
         gap: 10px;
     }
 
-    /* Права колонка: форма (фіксована висота, не скролиться) */
+    /* Права колонка: форма — тягнеться до висоти лівої */
     .lobby-right {
         width: 280px;
         flex-shrink: 0;
         display: flex;
         flex-direction: column;
         padding: 28px 20px 24px;
+    }
+    .lobby-right .lobby-glass {
+        flex: 1;
         justify-content: center;
     }
 
