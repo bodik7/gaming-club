@@ -145,17 +145,32 @@ function mRenderActions() {
 
     // ── Денне обговорення
     if (s.phase === 'day_discussion') {
-        const timer = mDeadlineTimer(s.dayDeadline, () => renderMafia());
+        const timer = mDeadlineTimer(s.dayDeadline);
+        const isSilenced = me.isSilenced;
+        const isAlive    = me.isAlive;
         el.innerHTML = `
             <div class="m-day-ui">
                 <div class="m-day-title">☀️ Обговорення</div>
                 <div class="m-day-timer" id="m-day-timer">${timer}</div>
-                <div class="m-day-hint">Обговоріть у чаті та знайдіть мафію.<br>Після таймера — голосування.</div>
                 <div class="m-day-players">
                     ${s.players.filter(p => p.isAlive).map(p => `
                         <div class="m-day-player ${p.isSilenced ? 'silenced' : ''} ${p.id === mMyIdx ? 'me' : ''}">
                             ${p.name}${p.isSilenced ? ' 🔇' : ''}${p.id === mMyIdx ? ' (я)' : ''}
                         </div>`).join('')}
+                </div>
+                <div class="m-day-chat">
+                    <div class="m-day-chat-log" id="m-day-chat-log">
+                        <div class="m-log-empty">Поки тихо...</div>
+                    </div>
+                    ${isAlive && !isSilenced
+                        ? `<div class="m-chat-input-row">
+                                <input id="m-day-chat-input" class="m-chat-input" maxlength="200"
+                                    placeholder="Повідомлення..."
+                                    onkeydown="if(event.key==='Enter')mSendDayChat()">
+                                <button class="m-chat-send" onclick="mSendDayChat()">➤</button>
+                           </div>`
+                        : `<div class="m-day-chat-muted">${isSilenced ? '🔇 Ви заглушені' : '💀 Ви загинули'}</div>`
+                    }
                 </div>
             </div>`;
         mStartTimer('m-day-timer', s.dayDeadline);
@@ -390,6 +405,28 @@ function mSendMafiaChat() {
     const text = input.value.trim();
     if (!text) return;
     socket.emit('mafiaChat', { text });
+    input.value = '';
+}
+
+// ── Денний чат ────────────────────────────────
+socket.on('dayChatMsg', ({ playerId, name, text }) => {
+    const log = document.getElementById('m-day-chat-log');
+    if (!log) return;
+    const empty = log.querySelector('.m-log-empty');
+    if (empty) empty.remove();
+    const msg = document.createElement('div');
+    msg.className = 'm-day-chat-msg' + (playerId === mMyIdx ? ' me' : '');
+    msg.innerHTML = `<span class="m-day-chat-name">${name}:</span> ${text}`;
+    log.appendChild(msg);
+    log.scrollTop = log.scrollHeight;
+});
+
+function mSendDayChat() {
+    const input = document.getElementById('m-day-chat-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    socket.emit('dayChatMsg', { text });
     input.value = '';
 }
 

@@ -1926,6 +1926,22 @@ io.on('connection', (socket) => {
         });
     });
 
+    // Денний чат (day_discussion фаза)
+    socket.on('dayChatMsg', ({ text }) => {
+        const room = rooms[socket.roomCode];
+        if (!room?.state || room.state.gameType !== 'mafia') return;
+        if (room.state.phase !== 'day_discussion') return;
+        const player = room.state.players[socket.playerIndex];
+        if (!player?.isAlive || player.isSilenced) return;
+        const esc = s => String(s).replace(/[&<>"']/g, c =>
+            ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+        io.to(socket.roomCode).emit('dayChatMsg', {
+            playerId: socket.playerIndex,
+            name: esc(player.name),
+            text: esc(String(text || '').slice(0, 200)),
+        });
+    });
+
     // Приватний чат мафії
     socket.on('mafiaChat', ({ text }) => {
         const room = rooms[socket.roomCode];
