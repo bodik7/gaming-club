@@ -7,195 +7,411 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="games/tysyacha/tysyacha.css">
     <style>
-        /* ===== ЛОБІ ===== */
-        .lobby-screen, .waiting-screen {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .lobby-card {
-            background: rgba(255,255,255,0.97);
-            border-radius: 24px;
-            padding: 40px 50px;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.4);
-            max-width: 480px;
-            width: 100%;
-            text-align: center;
-            border: 4px solid #ffd700;
-        }
-        .lobby-card h1 { font-size: 32px; color: #004494; margin-bottom: 6px; }
-        .lobby-card h2 { font-size: 20px; color: #004494; margin-bottom: 20px; }
-        .lobby-input {
-            width: 100%;
-            padding: 12px;
-            font-size: 16px;
-            border: 2px solid #0057b7;
-            border-radius: 10px;
-            margin-bottom: 12px;
-            box-sizing: border-box;
-        }
-        .lobby-input:focus { outline: none; border-color: #ffd700; }
-        .lobby-divider {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 18px 0;
-            color: #999;
-            font-size: 13px;
-        }
-        .lobby-divider::before, .lobby-divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: #ddd;
-        }
-        .lobby-btn {
-            width: 100%;
-            padding: 14px;
-            font-size: 16px;
-            font-weight: 700;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 10px;
-        }
-        .lobby-btn-primary {
-            background: linear-gradient(135deg, #ffd700, #ffaa00);
-            color: #004494;
-            box-shadow: 0 4px 14px rgba(255,170,0,0.4);
-        }
-        .lobby-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,170,0,0.5); }
-        .lobby-btn-secondary {
-            background: #0057b7;
-            color: white;
-            box-shadow: 0 4px 14px rgba(0,87,183,0.3);
-        }
-        .lobby-btn-secondary:hover { background: #004494; transform: translateY(-2px); }
+    /* ═══════════════════════════════════════════════
+       ЛОБІ — повний редизайн
+       Темний фон, CSS-generated, картки ігор
+    ═══════════════════════════════════════════════ */
 
-        .game-select-btn {
-            flex: 1; padding: 12px 8px; border-radius: 10px; cursor: pointer;
-            font-size: 14px; font-weight: 700; border: 2px solid #ddd;
-            background: #f4f7fc; color: #555; transition: all 0.2s; text-align: center;
-        }
-        .game-select-btn.active {
-            border-color: #0057b7; background: #0057b7; color: white;
-        }
-        .game-select-btn:hover:not(.active) { border-color: #0057b7; color: #0057b7; }
+    /* ── Фон лобі (CSS-only, без зображень) ── */
+    .lobby-screen, .waiting-screen {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 16px;
+        /* Темно-синя база + 3 радіальних орби в українських кольорах + dot-grid */
+        background-color: #060c1a;
+        background-image:
+            radial-gradient(ellipse 85% 65% at 5% 5%,   rgba(0,87,183,0.55)  0%, transparent 55%),
+            radial-gradient(ellipse 65% 55% at 95% 95%,  rgba(255,215,0,0.28) 0%, transparent 55%),
+            radial-gradient(ellipse 45% 40% at 95% 5%,   rgba(0,87,183,0.30)  0%, transparent 50%),
+            radial-gradient(ellipse 40% 35% at 5%  95%,  rgba(255,215,0,0.12) 0%, transparent 50%),
+            radial-gradient(circle, rgba(255,255,255,0.055) 1px, transparent 1px);
+        background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 32px 32px;
+    }
 
-        .room-code-box {
-            background: #f4f7fc;
-            border: 2px dashed #0057b7;
-            border-radius: 12px;
-            padding: 16px;
-            margin: 16px 0;
-        }
-        .room-code-box .code {
-            font-size: 28px;
-            font-weight: 900;
-            color: #004494;
-            letter-spacing: 3px;
-        }
-        .room-code-box .hint { font-size: 12px; color: #888; margin-top: 6px; }
+    /* ── Головна обгортка ── */
+    .lobby-wrapper {
+        width: 100%;
+        max-width: 520px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
 
-        #lobby-players-list {
-            text-align: left;
-            background: #f9f9f9;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin: 12px 0;
-            font-size: 14px;
-            min-height: 40px;
-        }
-        #lobby-players-list div { padding: 4px 0; border-bottom: 1px solid #eee; }
-        #lobby-players-list div:last-child { border-bottom: none; }
+    /* ── Хедер ── */
+    .lobby-header {
+        text-align: center;
+        padding-bottom: 4px;
+    }
+    .lobby-header-logo {
+        font-size: 52px;
+        line-height: 1;
+        margin-bottom: 10px;
+        filter: drop-shadow(0 4px 16px rgba(0,87,183,0.5));
+    }
+    .lobby-header-title {
+        font-size: 30px;
+        font-weight: 900;
+        color: #ffffff;
+        letter-spacing: 1px;
+        margin: 0 0 6px;
+        text-shadow: 0 2px 12px rgba(0,87,183,0.5);
+    }
+    .lobby-header-sub {
+        font-size: 13px;
+        color: rgba(255,255,255,0.45);
+        font-style: italic;
+        margin: 0;
+    }
+
+    /* ── Скло-картка ── */
+    .lobby-glass {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 24px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+
+    /* ── Картки ігор ── */
+    .game-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+        gap: 12px;
+    }
+
+    .game-card {
+        position: relative;
+        background: rgba(255,255,255,0.05);
+        border: 2px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        padding: 20px 16px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.22s;
+        color: rgba(255,255,255,0.75);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+    }
+    .game-card:hover {
+        background: rgba(255,255,255,0.09);
+        transform: translateY(-3px);
+        border-color: rgba(255,255,255,0.22);
+    }
+    .game-card.active {
+        border-color: #ffd700;
+        background: rgba(255,215,0,0.08);
+        box-shadow: 0 0 0 1px rgba(255,215,0,0.3), 0 8px 24px rgba(255,215,0,0.15);
+        color: #ffffff;
+    }
+    .game-card-icon  { font-size: 44px; line-height: 1; }
+    .game-card-name  { font-size: 15px; font-weight: 800; margin: 2px 0; }
+    .game-card-desc  { font-size: 11px; color: rgba(255,255,255,0.45); line-height: 1.4; }
+    .game-card-badge {
+        margin-top: 4px;
+        display: inline-block;
+        background: rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 2px 10px;
+        font-size: 11px;
+        color: rgba(255,255,255,0.6);
+    }
+    .game-card.active .game-card-badge {
+        background: rgba(255,215,0,0.18);
+        color: #ffd700;
+    }
+    /* Галочка обраної гри */
+    .game-card.active::after {
+        content: '✓';
+        position: absolute;
+        top: 8px; right: 12px;
+        font-size: 14px;
+        font-weight: 900;
+        color: #ffd700;
+    }
+
+    /* ── Форма ── */
+    .lobby-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: rgba(255,255,255,0.5);
+        margin-bottom: 6px;
+    }
+    .lobby-input {
+        width: 100%;
+        padding: 13px 16px;
+        font-size: 15px;
+        background: rgba(255,255,255,0.07);
+        border: 1.5px solid rgba(255,255,255,0.15);
+        border-radius: 10px;
+        color: #ffffff;
+        box-sizing: border-box;
+        outline: none;
+        transition: border-color 0.2s, background 0.2s;
+        font-family: 'Segoe UI', sans-serif;
+    }
+    .lobby-input::placeholder { color: rgba(255,255,255,0.3); }
+    .lobby-input:focus {
+        border-color: #ffd700;
+        background: rgba(255,255,255,0.1);
+    }
+
+    /* ── Кнопки ── */
+    .lobby-btn {
+        width: 100%;
+        padding: 14px;
+        font-size: 15px;
+        font-weight: 700;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: 'Segoe UI', sans-serif;
+    }
+    .lobby-btn-primary {
+        background: linear-gradient(135deg, #ffd700, #ffaa00);
+        color: #002a70;
+        box-shadow: 0 4px 18px rgba(255,170,0,0.35);
+    }
+    .lobby-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(255,170,0,0.5);
+        filter: brightness(1.05);
+    }
+    .lobby-btn-outline {
+        background: transparent;
+        color: rgba(255,255,255,0.8);
+        border: 1.5px solid rgba(255,255,255,0.2);
+    }
+    .lobby-btn-outline:hover {
+        background: rgba(255,255,255,0.07);
+        border-color: rgba(255,255,255,0.4);
+        transform: translateY(-1px);
+    }
+    .lobby-btn-blue {
+        background: #0057b7;
+        color: #ffffff;
+        box-shadow: 0 4px 14px rgba(0,87,183,0.3);
+    }
+    .lobby-btn-blue:hover {
+        background: #004494;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,87,183,0.4);
+    }
+    .lobby-btn:active { transform: translateY(0) !important; }
+
+    /* ── Роздільник ── */
+    .lobby-divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: rgba(255,255,255,0.25);
+        font-size: 12px;
+    }
+    .lobby-divider::before, .lobby-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: rgba(255,255,255,0.1);
+    }
+
+    /* ── Поле + кнопка в рядок ── */
+    .lobby-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .lobby-row .lobby-input { margin: 0; }
+    .lobby-row .lobby-btn  { width: auto; padding: 13px 18px; flex-shrink: 0; }
+
+    /* ── Помилка ── */
+    #rejoin-error {
+        background: rgba(198,40,40,0.15);
+        border: 1px solid rgba(198,40,40,0.4);
+        border-radius: 8px;
+        padding: 8px 14px;
+        font-size: 13px;
+        color: #ef9a9a;
+        display: none;
+    }
+
+    /* ══ ЗАЛА ОЧІКУВАННЯ ══ */
+    .wait-code-box {
+        background: rgba(0,87,183,0.12);
+        border: 2px solid rgba(0,87,183,0.35);
+        border-radius: 14px;
+        padding: 18px;
+        text-align: center;
+    }
+    .wait-code-label { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
+    .wait-code-value {
+        font-size: 32px;
+        font-weight: 900;
+        color: #ffd700;
+        letter-spacing: 4px;
+        text-shadow: 0 2px 12px rgba(255,215,0,0.35);
+    }
+    .wait-code-hint  { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 6px; }
+
+    .wait-players-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: rgba(255,255,255,0.45);
+    }
+    #lobby-player-count {
+        background: rgba(0,87,183,0.5);
+        color: #90caf9;
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+    }
+    #lobby-players-list {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 10px;
+        padding: 8px 12px;
+        min-height: 44px;
+        font-size: 13px;
+        color: rgba(255,255,255,0.8);
+    }
+    #lobby-players-list div {
+        padding: 5px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    #lobby-players-list div:last-child { border-bottom: none; }
+
+    /* Приховуємо старий .lobby-card якщо де залишився */
+    .lobby-card { display: none; }
     </style>
 </head>
 <body>
 
-    <!-- ===== ЛОБІ — введення імені та коду ===== -->
+    <!-- ===== ЛОБІ ===== -->
     <div id="lobby-screen" class="lobby-screen">
-        <div class="lobby-card">
-            <h1>🇺🇦 Ігровий клуб</h1>
-            <p style="color:#666;margin-bottom:16px;font-style:italic">Онлайн мультиплеєр</p>
+        <div class="lobby-wrapper">
 
-            <label style="display:block;text-align:left;font-weight:700;color:#004494;margin-bottom:6px">Ваше ім'я:</label>
-            <input id="lobby-name" class="lobby-input" type="text" placeholder="Введіть ім'я гравця" maxlength="20"
-                   onkeydown="if(event.key==='Enter')createRoom()">
-
-            <!-- Вибір гри -->
-            <div style="margin-bottom:12px">
-                <label style="display:block;text-align:left;font-weight:700;color:#004494;margin-bottom:6px">Оберіть гру:</label>
-                <div style="display:flex;gap:8px">
-                    <button id="game-btn-monopoly" class="game-select-btn active" onclick="selectGame('monopoly')">
-                        🏦 Монополія<br><span style="font-size:11px;font-weight:400">2–6 гравців</span>
-                    </button>
-                    <button id="game-btn-tysyacha" class="game-select-btn" onclick="selectGame('tysyacha')">
-                        🃏 Тисяча<br><span style="font-size:11px;font-weight:400">2–3 гравці</span>
-                    </button>
-                </div>
+            <!-- Хедер -->
+            <div class="lobby-header">
+                <div class="lobby-header-logo">🇺🇦</div>
+                <h1 class="lobby-header-title">Ігровий Клуб</h1>
+                <p class="lobby-header-sub">Онлайн мультиплеєр · Оберіть гру та запросіть друзів</p>
             </div>
 
-            <button class="lobby-btn lobby-btn-primary" onclick="createRoom()">
-                🏠 Створити нову гру
-            </button>
+            <!-- Картки ігор -->
+            <div class="game-grid">
+                <button id="game-btn-monopoly" class="game-card active" onclick="selectGame('monopoly')">
+                    <div class="game-card-icon">🏦</div>
+                    <div class="game-card-name">Монополія України</div>
+                    <div class="game-card-desc">Купуй міста, будуй готелі,<br>стань монополістом</div>
+                    <span class="game-card-badge">👥 2–6 гравців</span>
+                </button>
+                <button id="game-btn-tysyacha" class="game-card" onclick="selectGame('tysyacha')">
+                    <div class="game-card-icon">🃏</div>
+                    <div class="game-card-name">Тисяча</div>
+                    <div class="game-card-desc">Карткова гра зі шлюбами,<br>козирями і торгами</div>
+                    <span class="game-card-badge">👥 2–3 гравці</span>
+                </button>
+            </div>
 
-            <div class="lobby-divider">або приєднатись до існуючої</div>
+            <!-- Форма: ім'я + дії -->
+            <div class="lobby-glass" style="display:flex;flex-direction:column;gap:14px">
 
-            <button class="lobby-btn" onclick="findRoom()"
-                    style="background:#f4f7fc;color:#0057b7;border:2px solid #0057b7;margin-bottom:4px">
-                🔍 Знайти вільну кімнату
-            </button>
+                <div>
+                    <label class="lobby-label" for="lobby-name">Ваше ім'я</label>
+                    <input id="lobby-name" class="lobby-input" type="text"
+                           placeholder="Введіть нікнейм" maxlength="20"
+                           onkeydown="if(event.key==='Enter')createRoom()">
+                </div>
 
-            <div class="lobby-divider" style="margin:12px 0 10px">або за кодом</div>
+                <button class="lobby-btn lobby-btn-primary" onclick="createRoom()">
+                    🏠 Створити кімнату
+                </button>
 
-            <input id="lobby-code" class="lobby-input" type="text" placeholder="Код кімнати (напр. KYIV-1234)"
-                   style="text-transform:uppercase;letter-spacing:2px" maxlength="15"
-                   onkeydown="if(event.key==='Enter')joinRoom()">
-            <button class="lobby-btn lobby-btn-secondary" onclick="joinRoom()">
-                🔗 Приєднатись
-            </button>
+                <div class="lobby-divider">або приєднатись до існуючої</div>
 
-            <div id="rejoin-error" style="display:none;color:#cc1f1f;font-size:13px;
-                 background:#ffeae8;border-radius:8px;padding:8px 12px;margin-top:8px"></div>
-            <p style="font-size:12px;color:#aaa;margin-top:10px">Монополія: 2–6 · Тисяча: 2–3 гравці</p>
+                <button class="lobby-btn lobby-btn-outline" onclick="findRoom()">
+                    🔍 Знайти вільну кімнату
+                </button>
+
+                <div class="lobby-divider">або за кодом</div>
+
+                <div class="lobby-row">
+                    <input id="lobby-code" class="lobby-input" type="text"
+                           placeholder="KYIV-1234"
+                           style="text-transform:uppercase;letter-spacing:2px;flex:1"
+                           maxlength="15" onkeydown="if(event.key==='Enter')joinRoom()">
+                    <button class="lobby-btn lobby-btn-blue" onclick="joinRoom()"
+                            style="width:auto;padding:13px 20px">🔗 Увійти</button>
+                </div>
+
+            </div>
+
+            <div id="rejoin-error"></div>
+
         </div>
     </div>
 
     <!-- ===== ЗАЛА ОЧІКУВАННЯ ===== -->
     <div id="waiting-screen" class="waiting-screen hidden">
-        <div class="lobby-card">
-            <h2>⏳ Очікування гравців</h2>
+        <div class="lobby-wrapper">
 
-            <div class="room-code-box">
-                <div style="font-size:12px;color:#888;margin-bottom:4px">Код кімнати — поділіться з друзями:</div>
-                <div class="code" id="room-code-display">——</div>
-                <div class="hint">Інші гравці вводять цей код для приєднання</div>
+            <div class="lobby-header">
+                <div class="lobby-header-logo">⏳</div>
+                <h1 class="lobby-header-title">Зала очікування</h1>
+                <p class="lobby-header-sub">Поділіться кодом — чекаємо гравців</p>
             </div>
 
-            <button id="copy-link-btn" class="lobby-btn lobby-btn-secondary"
-                    onclick="copyInviteLink()" style="margin-bottom:16px;font-size:14px;padding:10px">
-                📋 Копіювати посилання-запрошення
-            </button>
+            <div class="lobby-glass" style="display:flex;flex-direction:column;gap:16px">
 
-            <div style="font-size:13px;font-weight:700;color:#004494;margin-bottom:6px;text-align:left;display:flex;justify-content:space-between;align-items:center">
-                <span>Гравці в кімнаті:</span>
-                <span id="lobby-player-count" style="background:#0057b7;color:white;padding:2px 10px;border-radius:20px;font-size:12px">0/6</span>
+                <!-- Код кімнати -->
+                <div class="wait-code-box">
+                    <div class="wait-code-label">Код кімнати</div>
+                    <div class="wait-code-value" id="room-code-display">——</div>
+                    <div class="wait-code-hint">Інші гравці вводять цей код</div>
+                </div>
+
+                <button id="copy-link-btn" class="lobby-btn lobby-btn-outline"
+                        onclick="copyInviteLink()" style="font-size:14px;padding:11px">
+                    📋 Копіювати посилання-запрошення
+                </button>
+
+                <!-- Список гравців -->
+                <div>
+                    <div class="wait-players-header">
+                        <span>Гравці в кімнаті</span>
+                        <span id="lobby-player-count">0/6</span>
+                    </div>
+                    <div id="lobby-players-list"></div>
+                </div>
+
+                <!-- Кнопки дій -->
+                <button id="start-btn" class="lobby-btn lobby-btn-primary hidden" onclick="startGame()">
+                    🚀 Почати гру
+                </button>
+
+                <button class="lobby-btn lobby-btn-outline" onclick="leaveRoom()"
+                        style="border-color:rgba(229,57,53,0.5);color:rgba(239,154,154,0.9)">
+                    🚪 Вийти з кімнати
+                </button>
+
+                <p id="waiting-hint" style="text-align:center;font-size:12px;color:rgba(255,255,255,0.3);margin:0">
+                    Хост бачить кнопку старту · Мінімум 2 гравці
+                </p>
+
             </div>
-            <div id="lobby-players-list"></div>
-
-            <button id="start-btn" class="lobby-btn lobby-btn-primary hidden" onclick="startGame()">
-                🚀 Почати гру
-            </button>
-            <button class="lobby-btn" onclick="leaveRoom()"
-                    style="background:none;border:2px solid #e53935;color:#e53935;margin-top:4px;font-size:14px;padding:10px">
-                🚪 Вийти з кімнати
-            </button>
-            <p id="waiting-hint" style="font-size:12px;color:#888">
-                Хост побачить кнопку старту. Потрібно мінімум 2 гравці.
-            </p>
         </div>
     </div>
 
