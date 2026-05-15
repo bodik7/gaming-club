@@ -6,12 +6,78 @@ const express = require('express');
 const http    = require('http');
 const { Server } = require('socket.io');
 const path    = require('path');
+const fs      = require('fs');
+const bcrypt  = require('bcryptjs');
+const jwt     = require('jsonwebtoken');
 
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server);
 
+const JWT_SECRET = process.env.JWT_SECRET || 'monopolia-dev-secret-change-in-prod';
+const USERS_FILE = path.join(__dirname, 'users.json');
+
+// ── Зберігання користувачів (JSON-файл) ──────
+function loadUsers() {
+    try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); }
+    catch { return {}; }
+}
+function saveUsers(users) {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+}
+
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ── REST Auth API ─────────────────────────────
+app.post('/api/register', async (req, res) => {
+    const { username, password } = req.body || {};
+    if (!username || !password)
+        return res.status(400).json({ error: 'Заповніть усі поля' });
+    if (!/^[a-zA-Zа-яА-ЯіІїЇєЄ0-9_]{3,20}$/.test(username))
+        return res.status(400).json({ error: 'Логін: 3–20 символів (літери, цифри, _)' });
+    if (password.length < 6)
+        return res.status(400).json({ error: 'Пароль: мінімум 6 символів' });
+
+    const users = loadUsers();
+    if (users[username.toLowerCase()])
+        return res.status(409).json({ error: 'Цей логін вже зайнятий' });
+
+    const hash = await bcrypt.hash(password, 10);
+    users[username.toLowerCase()] = { username, hash, createdAt: new Date().toISOString() };
+    saveUsers(users);
+
+    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, username });
+});
+
+app.post('/api/login', async (req, res) => {
+    const { username, password } = req.body || {};
+    if (!username || !password)
+        return res.status(400).json({ error: 'Заповніть усі поля' });
+
+    const users = loadUsers();
+    const user  = users[username.toLowerCase()];
+    if (!user) return res.status(401).json({ error: 'Невірний логін або пароль' });
+
+    const ok = await bcrypt.compare(password, user.hash);
+    if (!ok) return res.status(401).json({ error: 'Невірний логін або пароль' });
+
+    const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, username: user.username });
+});
+
+app.get('/api/me', (req, res) => {
+    const auth = req.headers.authorization;
+    if (!auth?.startsWith('Bearer '))
+        return res.status(401).json({ error: 'Не авторизовано' });
+    try {
+        const payload = jwt.verify(auth.slice(7), JWT_SECRET);
+        res.json({ username: payload.username });
+    } catch {
+        res.status(401).json({ error: 'Токен недійсний або прострочений' });
+    }
+});
 
 // ── Кімнати: { [code]: Room } ───────────────
 const rooms = {};

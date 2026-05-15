@@ -6,3 +6,4 @@ node_modules/
 *.pdf
 script.js.backup
 test_cells.js
+users.json

@@ -8,21 +8,159 @@ const socket = io();
 // Мій індекс гравця у цій сесії
 let myPlayerIndex = null;
 
-// ── Збереження імені гравця ──────────────────
+// ── Збереження імені гравця (гість) ──────────
 const NAME_KEY = 'monopolia_name';
 function saveName(name) { localStorage.setItem(NAME_KEY, name); }
 function loadName()     { return localStorage.getItem(NAME_KEY) || ''; }
 
-// ── Авто-заповнення лобі при завантаженні ────
-window.addEventListener('DOMContentLoaded', () => {
-    const nameInput = document.getElementById('lobby-name');
-    if (nameInput && loadName()) nameInput.value = loadName();
+// ── Авторизація ───────────────────────────────
+const AUTH_KEY = 'monopolia_auth'; // { token, username }
 
+function saveAuth(token, username) {
+    localStorage.setItem(AUTH_KEY, JSON.stringify({ token, username }));
+}
+function loadAuth() {
+    try { return JSON.parse(localStorage.getItem(AUTH_KEY)); } catch { return null; }
+}
+function clearAuth() { localStorage.removeItem(AUTH_KEY); }
+
+let _isGuest       = false;
+let _authUsername  = '';
+
+async function checkAuth() {
     const joinCode = new URLSearchParams(window.location.search).get('join');
-    if (joinCode) {
-        const codeInput = document.getElementById('lobby-code');
-        if (codeInput) { codeInput.value = joinCode.toUpperCase(); nameInput?.focus(); }
+
+    const auth = loadAuth();
+    if (auth?.token) {
+        try {
+            const res = await fetch('/api/me', {
+                headers: { Authorization: `Bearer ${auth.token}` }
+            });
+            if (res.ok) {
+                const { username } = await res.json();
+                _authUsername = username;
+                _isGuest = false;
+                _enterLobby(username, joinCode);
+                return;
+            }
+        } catch {}
+        clearAuth();
     }
+    // Показуємо екран авторизації
+    document.getElementById('auth-screen').classList.remove('hidden');
+    if (joinCode) {
+        // Запам'ятаємо код — після входу підставимо
+        sessionStorage.setItem('pendingJoin', joinCode);
+    }
+}
+
+function _enterLobby(username, joinCode) {
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('lobby-screen').classList.remove('hidden');
+
+    const nameInput = document.getElementById('lobby-name');
+    if (username) {
+        // Авторизований — ім'я заблоковано
+        if (nameInput) {
+            nameInput.value    = username;
+            nameInput.readOnly = true;
+            nameInput.style.opacity = '0.65';
+            nameInput.title = 'Ім\'я прив\'язане до акаунту';
+        }
+        // Показуємо рядок акаунту
+        const bar = document.getElementById('account-bar');
+        const nameEl = document.getElementById('account-name');
+        if (bar) bar.classList.remove('hidden');
+        if (nameEl) nameEl.textContent = username;
+    } else {
+        // Гість — поле вільне
+        if (nameInput) {
+            nameInput.value    = loadName();
+            nameInput.readOnly = false;
+            nameInput.style.opacity = '1';
+            nameInput.removeAttribute('title');
+        }
+    }
+
+    // Підставляємо код кімнати якщо є
+    const code = joinCode || sessionStorage.getItem('pendingJoin') || '';
+    if (code) {
+        const codeInput = document.getElementById('lobby-code');
+        if (codeInput) codeInput.value = code.toUpperCase();
+        sessionStorage.removeItem('pendingJoin');
+    }
+}
+
+// ── Кнопки авторизації ────────────────────────
+function switchAuthTab(tab) {
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+    const btn = document.getElementById('auth-submit-btn');
+    if (btn) btn.textContent = tab === 'login' ? 'Увійти' : 'Зареєструватись';
+    const err = document.getElementById('auth-error');
+    if (err) err.style.display = 'none';
+}
+
+async function doAuth() {
+    const username = (document.getElementById('auth-username')?.value || '').trim();
+    const password =  document.getElementById('auth-password')?.value || '';
+    const isLogin  = document.getElementById('tab-login')?.classList.contains('active');
+    const errEl    = document.getElementById('auth-error');
+    const btn      = document.getElementById('auth-submit-btn');
+
+    if (errEl) errEl.style.display = 'none';
+    if (!username || !password) {
+        if (errEl) { errEl.textContent = 'Заповніть усі поля'; errEl.style.display = 'block'; }
+        return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
+    try {
+        const res  = await fetch(isLogin ? '/api/login' : '/api/register', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            if (errEl) { errEl.textContent = data.error || 'Помилка'; errEl.style.display = 'block'; }
+            return;
+        }
+        saveAuth(data.token, data.username);
+        _authUsername = data.username;
+        _isGuest = false;
+        _enterLobby(data.username, null);
+    } catch {
+        if (errEl) { errEl.textContent = 'Помилка з\'єднання з сервером'; errEl.style.display = 'block'; }
+    } finally {
+        if (btn) { btn.disabled = false; switchAuthTab(isLogin ? 'login' : 'register'); }
+    }
+}
+
+function playAsGuest() {
+    _isGuest = true;
+    _authUsername = '';
+    _enterLobby('', null);
+}
+
+function logOut() {
+    clearAuth();
+    _isGuest = false;
+    _authUsername = '';
+    // Ховаємо лобі, показуємо auth
+    document.getElementById('lobby-screen').classList.add('hidden');
+    document.getElementById('account-bar')?.classList.add('hidden');
+    document.getElementById('auth-screen').classList.remove('hidden');
+    // Очищаємо поля auth
+    const u = document.getElementById('auth-username');
+    const p = document.getElementById('auth-password');
+    if (u) u.value = '';
+    if (p) p.value = '';
+}
+
+// ── Ініціалізація при завантаженні ───────────
+window.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
 });
 
 // ── Збереження сесії ─────────────────────────
