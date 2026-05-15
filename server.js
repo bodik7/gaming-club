@@ -264,7 +264,7 @@ function drawCard(state, player, type) {
     switch (card.action) {
         case 'addMoney':    player.money += card.amount; break;
         case 'takeMoney':   player.money -= card.amount; break;
-        case 'goToStart':   moveTo(state, player, 0); player.money += 200; break;
+        case 'goToStart':   moveTo(state, player, 0); break; // +200 вже в moveTo (прохід через СТАРТ)
         case 'goToJail':    goToJail(state, player); break;
         case 'jailCard':    player.hasJailCard = true; break;
         case 'moveTo':
