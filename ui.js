@@ -21,7 +21,7 @@ function log(text, type = '') {
     while (content.children.length > 30) content.removeChild(content.lastChild);
 }
 
-function showModal({ title, body, buttons, wide = false }) {
+function showModal({ title, body, buttons, wide = false, onClose = null, dismissable = true }) {
     const titleEl = document.getElementById('modal-title');
     titleEl.innerText = title;
     titleEl.style.display = title ? '' : 'none';
@@ -38,6 +38,19 @@ function showModal({ title, body, buttons, wide = false }) {
     });
     const card = document.querySelector('.modal-card');
     card.style.maxWidth = wide ? '820px' : '';
+    card.style.position = 'relative';
+    card.querySelectorAll('.modal-close-btn').forEach(el => el.remove());
+    if (!dismissable) return document.getElementById('modal').classList.remove('hidden');
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'modal-close-btn';
+    closeBtn.innerHTML = '✕';
+    closeBtn.style.cssText = `position:absolute;top:10px;right:12px;background:none;border:none;
+        font-size:18px;color:#aaa;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px;
+        transition:color 0.15s,background 0.15s;z-index:1`;
+    closeBtn.onmouseover = () => { closeBtn.style.color = '#333'; closeBtn.style.background = '#f0f0f0'; };
+    closeBtn.onmouseout  = () => { closeBtn.style.color = '#aaa'; closeBtn.style.background = 'none'; };
+    closeBtn.onclick = onClose ? () => { closeModal(); onClose(); } : closeModal;
+    card.appendChild(closeBtn);
     document.getElementById('modal').classList.remove('hidden');
 }
 
@@ -125,6 +138,7 @@ function createCellDiv(cell) {
     const div = document.createElement('div');
     div.className = `cell ${place.side}`;
     if (cell.type === 'corner') div.classList.add('corner');
+    if (cell.type === 'casino') div.classList.add('corner', 'casino');
     div.dataset.pos = cell.pos;
     div.style.gridRow = place.row;
     div.style.gridColumn = place.col;
@@ -132,7 +146,16 @@ function createCellDiv(cell) {
     const isNarrow = (place.side === 'left' || place.side === 'right');
     const iconSize = isNarrow ? 17 : 22;
 
-    if (cell.type === 'corner') {
+    if (cell.type === 'casino') {
+        div.innerHTML = `
+            <div class="cell-content casino-content">
+                <div class="casino-suits">♠ ♥ ♦ ♣</div>
+                <div class="casino-icon">🎰</div>
+                <div class="casino-title">КАЗИНО</div>
+                <div class="casino-sub">Зроби ставку!</div>
+            </div>
+        `;
+    } else if (cell.type === 'corner') {
         div.innerHTML = `
             <div class="cell-content">
                 <div class="cell-icon">${renderIcon(cell.icon, 38)}</div>
@@ -1252,6 +1275,82 @@ function showRules() {
 
 
 // ============================================
+// КАЗИНО
+// ============================================
+function showCasinoModal(player) {
+    playSound('card');
+    const bets = [50, 100, 200, 500].filter(b => b <= player.money);
+    const btnsBet = bets.map(b => ({
+        text: `₴${b}`,
+        class: 'btn-primary',
+        action: () => runCasinoBet(player, b)
+    }));
+    const passBtn = { text: 'Пройти мимо', class: 'btn-secondary', action: () => { closeModal(); showEndTurnBtn(); } };
+    showModal({
+        title: '',
+        body: `
+            <div style="margin:-30px -30px 20px;padding:24px;
+                        background:linear-gradient(135deg,#1a1a2e,#16213e);
+                        border-radius:18px 18px 0 0;text-align:center;color:white">
+                <div style="font-size:52px;margin-bottom:8px">🎰</div>
+                <div style="font-size:22px;font-weight:900;letter-spacing:1px">КАЗИНО</div>
+                <div style="font-size:13px;opacity:0.7;margin-top:4px">Спробуй свою удачу!</div>
+            </div>
+            <div style="background:#f8f9fa;border-radius:12px;padding:14px;margin-bottom:14px;font-size:13px">
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                    <span>🎲 Дубль (1+1, 2+2...)</span><b style="color:#2e7d32">Виграш ×3</b>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                    <span>✅ Сума ≥ 8</span><b style="color:#1565c0">Виграш ×2</b>
+                </div>
+                <div style="display:flex;justify-content:space-between">
+                    <span>❌ Сума ≤ 7</span><b style="color:#c62828">Програш ставки</b>
+                </div>
+            </div>
+            <div style="text-align:center;font-size:13px;color:#666;margin-bottom:8px">
+                Ваша готівка: <b>₴${player.money}</b> — Оберіть ставку:
+            </div>
+            ${bets.length === 0 ? '<p style="color:#c62828;text-align:center">Недостатньо коштів (мінімум ₴50)</p>' : ''}`,
+        buttons: bets.length > 0 ? [...btnsBet, passBtn] : [passBtn],
+        onClose: () => showEndTurnBtn()
+    });
+}
+
+function showCasinoSpinModal() {
+    showModal({
+        title: '',
+        body: `<div style="text-align:center;padding:30px">
+            <div style="font-size:60px;animation:roll 1s ease-in-out infinite">🎰</div>
+            <div style="font-size:16px;margin-top:16px;color:#666">Кубики летять...</div>
+        </div>`,
+        buttons: [],
+        dismissable: false
+    });
+}
+
+function showCasinoResult(effect) {
+    playSound(effect.delta > 0 ? 'buy' : 'rent');
+    const win = effect.delta > 0;
+    const color = effect.isDouble ? '#2e7d32' : win ? '#1565c0' : '#c62828';
+    const icon  = effect.isDouble ? '🎉' : win ? '✅' : '❌';
+    showModal({
+        title: '',
+        body: `
+            <div style="text-align:center;padding:16px 0">
+                <div style="font-size:56px;margin-bottom:12px">${icon}</div>
+                <div style="font-size:32px;font-weight:900;margin-bottom:8px">
+                    ${effect.d1} + ${effect.d2} = ${effect.sum}
+                    ${effect.isDouble ? '<br><span style="font-size:16px;color:#2e7d32">ДУБЛЬ!</span>' : ''}
+                </div>
+                <div style="font-size:20px;font-weight:700;color:${color};margin-bottom:8px">${effect.result}</div>
+                <div style="font-size:14px;color:#888">Ставка: ₴${effect.bet}</div>
+            </div>`,
+        buttons: [{ text: 'OK', class: 'btn-primary', action: () => { closeModal(); showEndTurnBtn(); } }],
+        onClose: () => showEndTurnBtn()
+    });
+}
+
+// ============================================
 // СПЛИВАЮЧЕ ВІКНО АРЕШТУ
 // ============================================
 function showJailArrestModal(reason) {
@@ -1271,9 +1370,9 @@ function showJailArrestModal(reason) {
         </div>`;
 
     showModal({
-        title: '',
-        body,
-        buttons: [{ text: '😔 Зрозуміло', class: 'btn-danger', action: () => { closeModal(); showEndTurnBtn(); } }]
+        title: '', body,
+        buttons: [{ text: '😔 Зрозуміло', class: 'btn-danger', action: () => { closeModal(); showEndTurnBtn(); } }],
+        onClose: showEndTurnBtn,
     });
 }
 
@@ -1403,9 +1502,9 @@ function showTaxModal(cell, reason) {
         </div>`;
 
     showModal({
-        title: '',
-        body,
-        buttons: [{ text: '😤 Зрозуміло', class: 'btn-primary', action: () => { closeModal(); showEndTurnBtn(); } }]
+        title: '', body,
+        buttons: [{ text: '😤 Зрозуміло', class: 'btn-primary', action: () => { closeModal(); showEndTurnBtn(); } }],
+        onClose: showEndTurnBtn,
     });
 }
 
@@ -1601,7 +1700,8 @@ function renderRentModal() {
     showModal({
         title: '',
         body: banner + ownerBlock + heroRent + balanceBlock + mortgageHTML,
-        buttons
+        buttons,
+        dismissable: false,
     });
 }
 

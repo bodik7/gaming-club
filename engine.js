@@ -100,7 +100,7 @@ function rollDice() {
         const total = d1 + d2;
         const isDouble = d1 === d2;
 
-        log(`🎲 ${player.name} кинув ${d1} + ${d2} = ${total}${isDouble ? ' (дубль!)' : ''}`);
+        log(`🎲 ${player.name} кинув(ла) ${d1} + ${d2} = ${total}${isDouble ? ' (дубль!)' : ''}`);
 
         if (player.inJail) {
             handleJailRoll(player, d1, d2);
@@ -131,7 +131,7 @@ function movePlayerSteps(player, steps) {
     if (oldPos + steps >= 40 && oldPos !== 0) {
         // Пройшли через СТАРТ
         addMoney(player, 200);
-        log(`💰 ${player.name} пройшов через СТАРТ. +₴200`, 'success');
+        log(`💰 ${player.name} пройшов(ла) через СТАРТ. +₴200`, 'success');
     }
     animateTokenTo(player, newPos);
 }
@@ -160,7 +160,7 @@ function animateTokenTo(player, newPos) {
 
 function handleLanding(player) {
     const cell = BOARD[player.position];
-    log(`📍 ${player.name} зупинився на: ${cell.name}`);
+    log(`📍 ${player.name} зупинив(ла)ся на: ${cell.name}`);
 
     if (cell.type === 'property' || cell.type === 'railway' || cell.type === 'utility') {
         const state = cellState[cell.pos];
@@ -185,23 +185,32 @@ function handleLanding(player) {
             `🌿 Сусід поскаржився що трава у ${player.name} зеленіша ніж у нього. Введено податок на надмірну зеленість. ₴${cell.amount}`,
             `🐈 ${player.name} має трьох котів. Держава порахувала. Податок на щастя. ₴${cell.amount}`,
             `☀️ Податкова помітила що у ${player.name} надто гарний настрій для понеділка. Підозріло. ₴${cell.amount}`,
-            `🥣 ${player.name} їв вівсянку на сніданок замість пшоняної каші. ДФС кваліфікує це як імпорт культури. ₴${cell.amount}`,
-            `📸 ${player.name} зробив фото їжі в ресторані. Податок на блогерство. ₴${cell.amount}`,
+            `🥣 ${player.name} їв(ла) вівсянку на сніданок замість пшоняної каші. ДФС кваліфікує це як імпорт культури. ₴${cell.amount}`,
+            `📸 ${player.name} зробив(ла) фото їжі в ресторані. Податок на блогерство. ₴${cell.amount}`,
             `🧦 ${player.name} носить різні шкарпетки. Митниця оцінила це як ввезення авангардної моди. ₴${cell.amount}`,
-            `🌧️ ${player.name} поскаржився на погоду. Нараховано збір за незадоволення кліматом. ₴${cell.amount}`,
-            `🏋️ ${player.name} записався до спортзалу в січні і кинув у лютому. Штраф за нереалізовані амбіції. ₴${cell.amount}`,
+            `🌧️ ${player.name} поскаржив(ла)ся на погоду. Нараховано збір за незадоволення кліматом. ₴${cell.amount}`,
+            `🏋️ ${player.name} записав(ла)ся до спортзалу в січні і кинув у лютому. Штраф за нереалізовані амбіції. ₴${cell.amount}`,
             `🐕 Собака ${player.name} гавкав о 6 ранку. Сусіди об'єднались. Колективний позов. ₴${cell.amount}`,
+            `📝 ${player.name} надіслав(ла) листівку Азарову на день народження «суто з поваги». ДФС вивчила зв'язки. ₴${cell.amount}`,
+            `🍯 ${player.name} відмовив(ла)ся від меду «від Ющенка» і замовив(ла) турецький. Пасічники зафіксували зраду. ₴${cell.amount}`,
+            `🪅 ${player.name} купив(ла) матрьошку «для іронії». Митниця не зрозуміла іронії. Штраф. ₴${cell.amount}`,
+            `🗣️ ${player.name} спробував(ла) відтворити вимову Азарова «для сміху». Записали на відео. Тепер це доказ. ₴${cell.amount}`,
+            `🏚️ ${player.name} назвав(ла) «Межигір'я» просто «дачею». Оцінювачі нерухомості вимагають компенсацію за образу. ₴${cell.amount}`,
         ] : [
-            `💎 ${player.name} придбав п'яту пару взуття цього місяця. Податок на розкіш активовано. ₴${cell.amount}`,
-            `✈️ ${player.name} літав бізнес-класом і попросив додаткову подушку. Зафіксовано. Сплатіть ₴${cell.amount}`,
-            `🧴 ${player.name} купив крем для обличчя дорожче ніж середня зарплата по країні. Розкішний податок. ₴${cell.amount}`,
+            `💎 ${player.name} придбав(ла) п'яту пару взуття цього місяця. Податок на розкіш активовано. ₴${cell.amount}`,
+            `✈️ ${player.name} літав(ла) бізнес-класом і попросив додаткову подушку. Зафіксовано. Сплатіть ₴${cell.amount}`,
+            `🧴 ${player.name} купив(ла) крем для обличчя дорожче ніж середня зарплата по країні. Розкішний податок. ₴${cell.amount}`,
             `🍾 На вечірці у ${player.name} відкрили шампанське у неділю до 18:00. Порушення гламурного кодексу. ₴${cell.amount}`,
-            `🚗 ${player.name} помив машину, а наступного дня пішов дощ. Карма і податкова діють узгоджено. ₴${cell.amount}`,
-            `🛥️ ${player.name} орендував яхту на годину і весь час говорив про це. Податок на хвастощі. ₴${cell.amount}`,
-            `🥩 ${player.name} замовив стейк прожарки medium rare і залишив офіціанту коментар про прожарку. Штраф за гастрономічний снобізм. ₴${cell.amount}`,
-            `🏌️ ${player.name} грав у гольф хоча ніхто не просив. Розкішний збір від заздрісних сусідів. ₴${cell.amount}`,
-            `👜 ${player.name} купив брендову сумку і носить її тільки додому з магазину. Податок на невикористану розкіш. ₴${cell.amount}`,
-            `🍣 ${player.name} їв суші паличками хоча виделка лежала поряд. Претензії від виделочного лобі. ₴${cell.amount}`,
+            `🚗 ${player.name} помив(ла) машину, а наступного дня пішов(ла) дощ. Карма і податкова діють узгоджено. ₴${cell.amount}`,
+            `🛥️ ${player.name} орендував(ла) яхту на годину і весь час говорив про це. Податок на хвастощі. ₴${cell.amount}`,
+            `🥩 ${player.name} замовив(ла) стейк прожарки medium rare і залишив(ла) офіціанту коментар про прожарку. Штраф за гастрономічний снобізм. ₴${cell.amount}`,
+            `🏌️ ${player.name} грав(ла) у гольф хоча ніхто не просив. Розкішний збір від заздрісних сусідів. ₴${cell.amount}`,
+            `👜 ${player.name} купив(ла) брендову сумку і носить її тільки додому з магазину. Податок на невикористану розкіш. ₴${cell.amount}`,
+            `🍣 ${player.name} їв(ла) суші паличками хоча виделка лежала поряд. Претензії від виделочного лобі. ₴${cell.amount}`,
+            `🍯 ${player.name} замовив(ла) бочку меду «від Ющенка» і підписав(ла) як «інвестиція в демократію». Бухгалтер не погодився. ₴${cell.amount}`,
+            `💇 ${player.name} найняв(ла) перукаря «зробити косу як у Тимошенко». Перукар взяв подвійний тариф. Коса розпалась через годину. ₴${cell.amount}`,
+            `🥂 ${player.name} заборонив(ла) на вечірці будь-яку музику пов'язану з рашкою. DJ узяв доплату за «неповний репертуар». ₴${cell.amount}`,
+            `🎸 ${player.name} пішов(ла) на концерт «легенди 90-х» — виявилось що «легенда» нещодавно виступала в окупованому Маріуполі. Репутаційний збиток. ₴${cell.amount}`,
         ];
         const reason = taxReasons[Math.floor(Math.random() * taxReasons.length)];
         log(`💸 ${reason}`, 'warn');
@@ -212,27 +221,38 @@ function handleLanding(player) {
     } else if (cell.type === 'card') {
         flashCell(cell.pos, 'card');
         drawCard(player, cell.cardType);
+    } else if (cell.type === 'casino') {
+        showCasinoModal(player);
     } else if (cell.pos === 0) {
         showEndTurnBtn();
-    } else if (cell.pos === 10 || cell.pos === 20) {
+    } else if (cell.pos === 10) {
         showEndTurnBtn();
     } else if (cell.pos === 30) {
         const jailReasons = [
             `🎵 ${player.name} впіймали за прослуховуванням російської музики. До В'ЯЗНИЦІ!`,
-            `🗣️ У Львові хтось почув, як ${player.name} хвалив Януковича. В'ЯЗНИЦЯ чекає!`,
+            `🗣️ У Львові хтось почув, як ${player.name} хвалив(ла) Януковича. В'ЯЗНИЦЯ чекає!`,
             `🪆 На митниці у ${player.name} знайшли матрьошку. «Це сувенір» — не врятувало. В'ЯЗНИЦЯ!`,
-            `📺 ${player.name} дивився «Кіно» замість «Слуги народу». Художній смак покараний. До В'ЯЗНИЦІ!`,
-            `🥟 ${player.name} назвав вареники пельменями. Сусіди подали скаргу. В'ЯЗНИЦЯ!`,
-            `🌊 ${player.name} сказав що Крим — «просто півострів». Вирушайте до В'ЯЗНИЦІ!`,
-            `🚗 ${player.name} припаркувався на місці для інвалідів біля магазину і пішов «на хвилинку». В'ЯЗНИЦЯ!`,
-            `📱 ${player.name} надіслав голосове повідомлення на 10 хвилин замість того щоб зателефонувати. Злочин! В'ЯЗНИЦЯ!`,
-            `🐈 ${player.name} не погладив сусідського кота. Кіт поскаржився особисто. В'ЯЗНИЦЯ!`,
-            `🧂 ${player.name} посолив борщ до того як скуштував. Господиня не пробачила. До В'ЯЗНИЦІ!`,
-            `🫖 ${player.name} заварив чай у мікрохвильовці. Британці написали ноту протесту. В'ЯЗНИЦЯ!`,
-            `🤳 ${player.name} ліз на Потьомкінські сходи для сторіс і заважав усім. До В'ЯЗНИЦІ!`,
-            `🌭 ${player.name} назвав хот-дог із Сільпо вечерею. Рідня дізналась. В'ЯЗНИЦЯ!`,
+            `📺 ${player.name} дивив(ла)ся «Кіно» замість «Слуги народу». Художній смак покараний. До В'ЯЗНИЦІ!`,
+            `🥟 ${player.name} назвав(ла) вареники пельменями. Сусіди подали скаргу. В'ЯЗНИЦЯ!`,
+            `🌊 ${player.name} сказав(ла) що Крим — «просто півострів». Вирушайте до В'ЯЗНИЦІ!`,
+            `🚗 ${player.name} припаркував(ла)ся на місці для інвалідів біля магазину і пішов(ла) «на хвилинку». В'ЯЗНИЦЯ!`,
+            `📱 ${player.name} надіслав(ла) голосове повідомлення на 10 хвилин замість того щоб зателефонувати. Злочин! В'ЯЗНИЦЯ!`,
+            `🐈 ${player.name} не погладив(ла) сусідського кота. Кіт поскаржився особисто. В'ЯЗНИЦЯ!`,
+            `🧂 ${player.name} посолив(ла) борщ до того як скуштував. Господиня не пробачила. До В'ЯЗНИЦІ!`,
+            `🫖 ${player.name} заварив(ла) чай у мікрохвильовці. Британці написали ноту протесту. В'ЯЗНИЦЯ!`,
+            `🤳 ${player.name} ліз(ла) на Потьомкінські сходи для сторіс і заважав усім. До В'ЯЗНИЦІ!`,
+            `🌭 ${player.name} назвав(ла) хот-дог із Сільпо вечерею. Рідня дізналась. В'ЯЗНИЦЯ!`,
             `🦟 ${player.name} не вбив комара вночі і той розбудив весь будинок. Мешканці вирішили колегіально. До В'ЯЗНИЦІ!`,
             `🎻 ${player.name} сказав що Скрябін — це лише Андрій Кузьменко і не знав про гурт. Фани не пробачили. В'ЯЗНИЦЯ!`,
+            `🗣️ ${player.name} процитував(ла) Азарова «украінска язик нєпрімітівна». Рідні зніяковіли. Філологи написали заяву. В'ЯЗНИЦЯ!`,
+            `🏆 ${player.name} сказав(ла) що Янукович «непоганий менеджер». Майдан зачув. До В'ЯЗНИЦІ!`,
+            `🍯 ${player.name} відмовився купити мед «від Ющенка» — «і так солодко живу». Пасічники образились колективно. В'ЯЗНИЦЯ!`,
+            `💇 ${player.name} назвав косу Тимошенко «трохи пафосною». Коса подала позов особисто. До В'ЯЗНИЦІ!`,
+            `📝 ${player.name} написав «Азаров» у тесті на знання прем'єрів як «видатний лінгвіст». Вчитель не оцінив. В'ЯЗНИЦЯ!`,
+            `📺 ${player.name} сказав(ла) «ну не всі росіяни» саме коли прилетіла ракета. Неймовірний тайминг. В'ЯЗНИЦЯ!`,
+            `🎸 ${player.name} поставив(ла) Z-виконавця на вечірці «бо ретро». Гості пішли. Посуд залишився. До В'ЯЗНИЦІ!`,
+            `🌻 ${player.name} захищав(ла) Азарова — «ну він намагався вчити мову». Сам Азаров не намагався. В'ЯЗНИЦЯ!`,
+            `🥊 ${player.name} сказав(ла) що у Януковича «непоганий смак» — маючи на увазі золоті унітази. Суд не зрозумів іронії. До В'ЯЗНИЦІ!`,
         ];
         const reason = jailReasons[Math.floor(Math.random() * jailReasons.length)];
         log(`👮 ${reason}`, 'warn');
@@ -250,7 +270,7 @@ function buyProperty(player, cell) {
     takeMoney(player, cell.price);
     cellState[cell.pos].owner = player.id;
     player.properties.push(cell.pos);
-    log(`🏆 ${player.name} придбав "${cell.name}" за ₴${cell.price}`, 'success');
+    log(`🏆 ${player.name} придбав(ла) "${cell.name}" за ₴${cell.price}`, 'success');
     playSound('buy');
     flashCell(cell.pos, 'buy');
     renderPlayers();
@@ -312,7 +332,7 @@ function goToJail(player) {
 function handleJailRoll(player, d1, d2) {
     // hasRolled вже встановлено в true у rollDice. Тут не робимо повторного кидка з тюрми.
     if (d1 === d2) {
-        log(`🔓 ${player.name} викинув дубль і виходить з В'язниці!`, 'success');
+        log(`🔓 ${player.name} викинув(ла) дубль і виходить з В'язниці!`, 'success');
         player.inJail = false;
         // НЕ збільшуємо doublesCount — дубль для виходу не рахується
         movePlayerSteps(player, d1 + d2);
@@ -346,20 +366,54 @@ function drawCard(player, type) {
     log(`🃏 ${player.name} взяв картку: "${card.text}"`, 'success');
     player.stats.cardsTotal++;
     playSound('card');
+    const doCardAction = () => {
+        closeModal();
+        card.action(player);
+        renderPlayers();
+        placeTokens();
+        if (!modalOpen()) showEndTurnBtn();
+    };
     showModal({
         title: type === 'chance' ? '❓ ШАНС' : '🗺️ ЕКСКУРСІЯ',
         body: `<p style="font-size:18px;text-align:center;padding:20px 0">${card.text}</p>`,
         buttons: [
-            { text: 'Ок', class: 'btn-primary', action: () => {
-                closeModal();
-                card.action(player);
-                renderPlayers();
-                placeTokens();
-                if (!modalOpen()) showEndTurnBtn();
-            }}
-        ]
+            { text: 'Ок', class: 'btn-primary', action: doCardAction }
+        ],
+        onClose: doCardAction
     });
     deck.push(cardIdx); // картку повертаємо донизу колоди
+}
+
+// ============================================
+// КАЗИНО
+// ============================================
+function runCasinoBet(player, amount) {
+    const d1 = Math.floor(Math.random() * 6) + 1;
+    const d2 = Math.floor(Math.random() * 6) + 1;
+    const sum = d1 + d2;
+    const isDouble = d1 === d2;
+    let result, delta;
+    if (isDouble) {
+        delta = amount * 3;
+        result = `🎉 ДУБЛЬ ${d1}+${d2}! Виграш ×3 → +₴${delta}`;
+        addMoney(player, delta);
+    } else if (sum >= 8) {
+        delta = amount * 2;
+        result = `✅ ${d1}+${d2}=${sum} — виграш ×2 → +₴${delta}`;
+        addMoney(player, delta);
+    } else {
+        delta = -amount;
+        result = `❌ ${d1}+${d2}=${sum} — програш → -₴${amount}`;
+        takeMoney(player, amount);
+    }
+    log(`🎰 ${player.name}: ставка ₴${amount}. ${result}`, isDouble || sum >= 8 ? 'success' : 'warn');
+    renderPlayers();
+    saveGame();
+    showCasinoSpinModal();
+    setTimeout(() => {
+        showCasinoResult({ d1, d2, sum, isDouble, bet: amount, delta, result });
+        setTimeout(() => { if (!modalOpen()) showEndTurnBtn(); }, 100);
+    }, 1200);
 }
 
 // допоміжні дії карток
@@ -553,13 +607,14 @@ function executeTrade(me, target, fromProps, toProps, fromCash, toCash) {
 // БАНКРУТСТВО, ПЕРЕМОЖЕЦЬ, КАПІТАЛ
 // ============================================
 function declareBankrupt(player, creditor, amount) {
-    log(`💀 ${player.name} оголосив банкрутство!`, 'error');
+    log(`💀 ${player.name} оголосив(ла) банкрутство!`, 'error');
     playSound('error');
     if (creditor) {
         addMoney(creditor, player.money);
-        // передати власність кредитору
+        // передати власність кредитору (будинки скидаються)
         player.properties.forEach(pos => {
             cellState[pos].owner = creditor.id;
+            cellState[pos].houses = 0;
             creditor.properties.push(pos);
             updateBoardCell(pos);
         });
@@ -634,9 +689,11 @@ function endTurn() {
 
         doublesCount = 0;
         hasRolled = false;
+        let _steps = 0;
         do {
             currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
-        } while (players[currentPlayerIndex].bankrupt);
+            _steps++;
+        } while (players[currentPlayerIndex].bankrupt && _steps < players.length);
         renderPlayers();
         updateCurrentPlayerInfo();
         showEndTurnBtn();
