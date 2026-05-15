@@ -116,10 +116,38 @@ function renderTOpponents(s) {
     }).join('');
 }
 
+// ── Прикуп (стопка карт сорочкою) ────────────
+function talonPileHTML(count) {
+    const cards = Array.from({ length: count }, (_, i) =>
+        `<div class="t-card-back" style="position:absolute;top:${i*8}px;left:${i*5}px;z-index:${i}">🌻</div>`
+    ).join('');
+    return `<div style="position:relative;width:${46+(count-1)*5}px;height:${66+(count-1)*8}px">${cards}</div>`;
+}
+
 // ── Взятка ────────────────────────────────────
 function renderTTrick(s) {
     const el = document.getElementById('t-trick');
     if (!el) return;
+
+    // Під час торгів — показуємо прикуп сорочкою
+    if (s.phase === 'auction' && s.talonCount) {
+        const n = s.players.length;
+        const pilesHTML = n === 2
+            ? `<div style="display:flex;gap:24px;align-items:flex-end">
+                   ${talonPileHTML(2)}${talonPileHTML(2)}
+               </div>`
+            : talonPileHTML(3);
+        el.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+                <div style="font-size:10px;color:rgba(245,230,200,0.35);letter-spacing:2px;font-family:sans-serif">ПРИКУП</div>
+                ${pilesHTML}
+                <div style="font-size:10px;color:rgba(245,230,200,0.35);font-style:italic;font-family:sans-serif">
+                    ${n === 2 ? '2 × 2 карти' : '3 карти'}
+                </div>
+            </div>`;
+        return;
+    }
+
     if (!s.trick || s.trick.cards.length === 0) {
         el.innerHTML = '<div class="t-trick-empty">— стіл порожній —</div>';
         return;
@@ -224,9 +252,26 @@ function renderTActions(s) {
                 <div class="t-wait">Роздає:<br><b style="color:#e8c547">${s.players[s.auction?.winner]?.name}</b></div>`;
             return;
         }
-        const opponents   = s.players.filter(p => p.id !== tMyIdx);
+        const opponents    = s.players.filter(p => p.id !== tMyIdx);
         const alreadyGiven = s.givenCards || [];
+        const minBid       = s.auction.current;
+        const curBid       = s.declaredBid || minBid;
         el.innerHTML = `
+            <div class="t-section-title">Ваша ставка</div>
+            <div class="t-auction-cur" style="font-size:28px">${curBid}</div>
+            <div style="font-size:10px;color:rgba(245,230,200,0.4);text-align:center;font-family:sans-serif;margin:-4px 0 6px">
+                мін. ${minBid}
+            </div>
+            <div class="t-bid-row" style="margin-bottom:4px">
+                ${[10,20,50].map(d =>
+                    `<button class="t-btn primary" onclick="tSetBidAmount(${curBid+d})">+${d}</button>`
+                ).join('')}
+            </div>
+            <div class="t-bid-custom" style="margin-bottom:10px">
+                <input type="number" id="t-set-bid-input" min="${minBid}" step="10" value="${curBid}">
+                <button class="t-btn gold" onclick="tSetBidCustom()">OK</button>
+            </div>
+
             <div class="t-section-title">Роздайте картки</div>
             <div class="t-talon-ui">
                 ${opponents.map(p => {
@@ -301,6 +346,13 @@ function tPass() {
 function tBidCustom() {
     const val = parseInt(document.getElementById('t-bid-input')?.value) || 0;
     socket.emit('action', { type: 'tBid', data: { amount: val } });
+}
+function tSetBidAmount(amount) {
+    socket.emit('action', { type: 'tSetBid', data: { amount } });
+}
+function tSetBidCustom() {
+    const val = parseInt(document.getElementById('t-set-bid-input')?.value) || 0;
+    socket.emit('action', { type: 'tSetBid', data: { amount: val } });
 }
 function tGiveCard(toPlayer) {
     if (!tSelectedCard) return;

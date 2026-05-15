@@ -949,7 +949,7 @@ function processTysyachaAction(state, type, data, pidx) {
             const opponents = state.players.map((_,i)=>i).filter(i=>i!==pidx);
             const allReceived = opponents.every(i => state.givenCards.filter(g=>g===i).length >= 1);
             if (allReceived) {
-                state.declaredBid = state.auction.current;
+                if (!state.declaredBid) state.declaredBid = state.auction.current;
                 state.phase = 'playing';
                 state.currentPlayer = state.auction.winner;
                 state.trick.leader = state.auction.winner;
@@ -1098,6 +1098,7 @@ function sanitizeTysyacha(state, forIdx) {
             handCount: p.hand.length,
             hand: i === forIdx ? p.hand : null,
         })),
+        talonCount: state.talon.length,
         talon: state.phase === 'talon' && forIdx === state.auction.winner
             ? state.talon : null,
         dealer: state.dealer, round: state.round,
