@@ -17,8 +17,23 @@ function initTysyacha(state, myIdx) {
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('tysyacha-screen').classList.remove('hidden');
     setQuitBtn(true);
+    if (typeof switchViewport === 'function') switchViewport('tysyacha');
+    tCheckOrientation();
     renderTysyacha();
 }
+
+function tCheckOrientation() {
+    const hint = document.getElementById('t-portrait-hint');
+    if (!hint) return;
+    // Показуємо тільки на мобільних пристроях у портретному режимі
+    const isMobile  = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isPortrait = window.innerHeight > window.innerWidth;
+    hint.classList.toggle('hidden', !(isMobile && isPortrait));
+}
+
+// Слухаємо зміну орієнтації
+window.addEventListener('orientationchange', () => setTimeout(tCheckOrientation, 150));
+window.addEventListener('resize', tCheckOrientation);
 
 function updateTysyacha(state, sideEffect) {
     if (sideEffect?.event === 'trickComplete') {

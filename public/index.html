@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=1100, height=700">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <title>Монополія України</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="games/tysyacha/tysyacha.css">
@@ -488,6 +488,18 @@
     </div>
 
     <!-- ===== ТИСЯЧА — ігровий екран ===== -->
+    <!-- Підказка повороту телефону (тільки для Тисячі) -->
+    <div id="t-portrait-hint" class="hidden">
+        <div class="t-ph-icon">📱</div>
+        <div class="t-ph-title">Поверніть телефон</div>
+        <div class="t-ph-sub">Тисяча краще виглядає в горизонтальному режимі</div>
+        <button onclick="document.getElementById('t-portrait-hint').classList.add('hidden')"
+                style="margin-top:16px;background:rgba(255,255,255,0.12);color:white;border:1px solid rgba(255,255,255,0.25);
+                       border-radius:8px;padding:8px 20px;font-size:14px;cursor:pointer">
+            Все одно грати →
+        </button>
+    </div>
+
     <div id="tysyacha-screen" class="hidden">
         <div class="t-topbar">
             <div class="t-title">🃏 Тисяча</div>
@@ -533,8 +545,18 @@
     <script src="games/tysyacha/tysyacha.js"></script>
 
     <script>
-        // Ініціалізація дошки при старті гри
+        // Перемикання viewport між desktop (Монополія) і mobile (Тисяча / лобі)
+        function switchViewport(mode) {
+            const meta = document.querySelector('meta[name="viewport"]');
+            if (!meta) return;
+            meta.content = mode === 'monopoly'
+                ? 'width=1100, height=700'
+                : 'width=device-width, initial-scale=1, maximum-scale=1';
+        }
+
+        // Ініціалізація дошки при старті Монополії
         function showGameScreen() {
+            switchViewport('monopoly');
             document.getElementById('game-screen').classList.remove('hidden');
             setQuitBtn(true);
             buildBoard();
