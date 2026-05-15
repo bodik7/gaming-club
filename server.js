@@ -1281,6 +1281,142 @@ function emitTysyachaUpdate(room, sideEffect, toast) {
     });
 }
 
+// ════════════════════════════════════════════
+// МАФІЯ
+// ════════════════════════════════════════════
+
+// ── Таблиця балансу ролей ────────────────────
+// citizen | sheriff | deputy | doctor | roleblocker | mafia | don
+const MAFIA_BALANCE = {
+    5:  { citizen:2, sheriff:1, deputy:1, doctor:0, roleblocker:0, mafia:0, don:1 },
+    6:  { citizen:3, sheriff:1, deputy:1, doctor:0, roleblocker:0, mafia:0, don:1 },
+    7:  { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:0, mafia:1, don:1 },
+    8:  { citizen:3, sheriff:1, deputy:1, doctor:1, roleblocker:0, mafia:1, don:1 },
+    9:  { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1 },
+    10: { citizen:3, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1 },
+    11: { citizen:4, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1 },
+    12: { citizen:4, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:3, don:1 },
+    13: { citizen:4, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:3, don:1 },
+    14: { citizen:5, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:3, don:1 },
+    15: { citizen:5, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:4, don:1 },
+};
+
+const MAFIA_ROLE_LABELS = {
+    citizen:    { ua: 'Мирний житель', icon: '👤', faction: 'town' },
+    sheriff:    { ua: 'Комісар',       icon: '🔍', faction: 'town' },
+    deputy:     { ua: 'Помічник',      icon: '🛡️', faction: 'town' },
+    doctor:     { ua: 'Лікар',         icon: '💊', faction: 'town' },
+    roleblocker:{ ua: 'Повія',         icon: '🚫', faction: 'town' },
+    mafia:      { ua: 'Мафія',         icon: '🔫', faction: 'mafia' },
+    don:        { ua: 'Дон',           icon: '👑', faction: 'mafia' },
+};
+
+function createMafiaState(roomPlayers) {
+    const n = roomPlayers.length;
+    const balance = MAFIA_BALANCE[n] || MAFIA_BALANCE[5];
+
+    // Генеруємо пул ролей
+    const rolePool = [];
+    Object.entries(balance).forEach(([role, count]) => {
+        for (let i = 0; i < count; i++) rolePool.push(role);
+    });
+    // Перемішуємо і призначаємо
+    const shuffled = shuffle([...rolePool]);
+
+    const players = roomPlayers.map((rp, i) => ({
+        id:         i,
+        socketId:   rp.socketId,
+        name:       rp.name,
+        role:       shuffled[i],
+        isAlive:    true,
+        isSilenced: false,
+        skippedVotes: 0, // лічильник AFK-голосувань
+    }));
+
+    const mafiaIds = players.filter(p => p.role === 'mafia' || p.role === 'don').map(p => p.id);
+
+    return {
+        gameType:   'mafia',
+        phase:      'role_reveal', // role_reveal → night → morning → day_discussion → day_voting → gameover
+        round:      1,
+        players,
+        mafiaIds,              // список id мафіозі (для приватного чату)
+        nightActions: {},      // зібрані нічні дії { sheriff, doctor, roleblocker, mafia:[], don }
+        votes:      {},        // { voterId: targetId } для денного голосування
+        lastDeaths: [],        // хто помер останньої ночі/голосування
+        winner:     null,
+        log:        [],
+    };
+}
+
+function sanitizeMafia(state, forIdx) {
+    const me = state.players[forIdx];
+    const myRole = me?.role;
+    const myFaction = MAFIA_ROLE_LABELS[myRole]?.faction;
+
+    return {
+        gameType:   'mafia',
+        phase:      state.phase,
+        round:      state.round,
+        winner:     state.winner,
+        lastDeaths: state.lastDeaths,
+        log:        state.log.slice(0, 30),
+        players: state.players.map(p => ({
+            id:         p.id,
+            name:       p.name,
+            isAlive:    p.isAlive,
+            isSilenced: p.isSilenced,
+            // Роль видна: собі завжди; мафія бачить мафію; gameover всі
+            role: (p.id === forIdx || state.phase === 'gameover' ||
+                   (myFaction === 'mafia' && MAFIA_ROLE_LABELS[p.role]?.faction === 'mafia'))
+                ? p.role : null,
+        })),
+        // Мої особисті дані
+        myId:       forIdx,
+        myRole,
+        myFaction,
+        myRoleLabel: MAFIA_ROLE_LABELS[myRole] || null,
+        // Список id мафіозі — тільки для мафії (приватний чат)
+        mafiaIds: myFaction === 'mafia' ? state.mafiaIds : null,
+        votes: state.phase === 'day_voting' ? state.votes : {},
+    };
+}
+
+function emitMafiaUpdate(room, sideEffect) {
+    room.players.forEach(rp => {
+        io.to(rp.socketId).emit('stateUpdate', {
+            state: sanitizeMafia(room.state, rp.index),
+            sideEffect: sideEffect || null,
+        });
+    });
+}
+
+// ── Перевірка умов перемоги ──────────────────
+function checkMafiaWin(state) {
+    const alive       = state.players.filter(p => p.isAlive);
+    const aliveMafia  = alive.filter(p => MAFIA_ROLE_LABELS[p.role]?.faction === 'mafia').length;
+    const aliveTown   = alive.filter(p => MAFIA_ROLE_LABELS[p.role]?.faction === 'town').length;
+
+    if (aliveMafia === 0) {
+        state.winner = 'town';
+        state.phase  = 'gameover';
+        state.log.unshift('🏆 Місто перемогло! Уся мафія знешкоджена.');
+        return true;
+    }
+    if (aliveMafia >= aliveTown) {
+        state.winner = 'mafia';
+        state.phase  = 'gameover';
+        state.log.unshift('🔫 Мафія перемогла! Мирних залишилось менше.');
+        return true;
+    }
+    return false;
+}
+
+// ── Обробка дій від клієнта (Мафія) ─────────
+function processMafiaAction(state, type, data, pidx) {
+    // Буде розширено у наступних пунктах
+}
+
 // ── Таймер ходу ──────────────────────────────
 function clearTurnTimer(room) {
     if (room.turnTimer) { clearTimeout(room.turnTimer); room.turnTimer = null; }
@@ -1391,7 +1527,7 @@ io.on('connection', (socket) => {
         const room = rooms[code];
         if (!room)        return cb({ error: 'Кімнату не знайдено' });
         if (room.started) return cb({ error: 'Гра вже почалась' });
-        const maxPlayers = room.gameType === 'tysyacha' ? 3 : 6;
+        const maxPlayers = room.gameType === 'tysyacha' ? 3 : room.gameType === 'mafia' ? 15 : 6;
         if (room.players.length >= maxPlayers) return cb({ error: `Кімната повна (макс ${maxPlayers})` });
 
         const idx = room.players.length;
@@ -1551,7 +1687,19 @@ io.on('connection', (socket) => {
         const room = rooms[socket.roomCode];
         if (!room || socket.playerIndex !== 0) return;
 
-        if (room.gameType === 'tysyacha') {
+        if (room.gameType === 'mafia') {
+            const n = room.players.length;
+            if (!MAFIA_BALANCE[n])
+                return io.to(socket.id).emit('error', `Мафія: потрібно 5–15 гравців (зараз ${n})`);
+            room.started = true;
+            room.state = createMafiaState(room.players);
+            room.players.forEach(rp => {
+                io.to(rp.socketId).emit('gameStarted', {
+                    state: sanitizeMafia(room.state, rp.index),
+                    gameType: 'mafia',
+                });
+            });
+        } else if (room.gameType === 'tysyacha') {
             if (room.players.length < 2 || room.players.length > 3)
                 return io.to(socket.id).emit('error', 'Тисяча: потрібно 2 або 3 гравці');
             room.started = true;
@@ -1577,6 +1725,23 @@ io.on('connection', (socket) => {
         const room = rooms[socket.roomCode];
         if (!room?.state) return;
         const state = room.state;
+
+        // ── Мафія ──
+        if (state.gameType === 'mafia') {
+            room.lastActivityAt = Date.now();
+            processMafiaAction(state, type, data || {}, socket.playerIndex);
+            if (state.phase === 'gameover') {
+                room.players.forEach(rp => {
+                    io.to(rp.socketId).emit('gameOver', {
+                        state: sanitizeMafia(state, rp.index),
+                        gameType: 'mafia',
+                    });
+                });
+            } else {
+                emitMafiaUpdate(room, null);
+            }
+            return;
+        }
 
         // ── Тисяча ──
         if (state.gameType === 'tysyacha') {
