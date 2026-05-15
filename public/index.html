@@ -286,6 +286,15 @@
                 <div class="t-right-panel">
                     <div id="t-actions"></div>
                     <div id="t-log"></div>
+                    <div class="t-chat">
+                        <div class="t-chat-title">💬 Чат</div>
+                        <div id="t-chat-messages"></div>
+                        <div class="t-chat-input-row">
+                            <input id="t-chat-input" type="text" placeholder="Написати…" maxlength="120"
+                                   onkeydown="if(event.key==='Enter')sendTysyachaChat()">
+                            <button onclick="sendTysyachaChat()">➤</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div id="t-hand"></div>

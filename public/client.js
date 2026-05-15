@@ -175,15 +175,22 @@ const _esc = s => String(s).replace(/[&<>"']/g, c =>
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
 socket.on('chatMessage', ({ playerIndex, icon, name, color, text }) => {
-    const container = document.getElementById('chat-messages');
-    if (!container) return;
-    const msg = document.createElement('div');
-    msg.className = 'chat-message';
-    msg.style.borderLeftColor = _esc(color);
-    msg.innerHTML = `<span class="chat-author" style="color:${_esc(color)}">${_esc(icon)} ${_esc(name)}:</span>${_esc(text)}`;
-    container.appendChild(msg);
-    container.scrollTop = container.scrollHeight;
-    while (container.children.length > 60) container.removeChild(container.firstChild);
+    // Монополія і Тисяча — різні контейнери, оновлюємо той що є
+    const targets = [
+        { id: 'chat-messages',   msgClass: 'chat-message',  authorClass: 'chat-author' },
+        { id: 't-chat-messages', msgClass: 't-chat-msg',    authorClass: 't-chat-author' },
+    ];
+    targets.forEach(({ id, msgClass, authorClass }) => {
+        const container = document.getElementById(id);
+        if (!container) return;
+        const msg = document.createElement('div');
+        msg.className = msgClass;
+        msg.style.borderLeftColor = _esc(color);
+        msg.innerHTML = `<span class="${authorClass}" style="color:${_esc(color)}">${_esc(icon)} ${_esc(name)}:</span> ${_esc(text)}`;
+        container.appendChild(msg);
+        container.scrollTop = container.scrollHeight;
+        while (container.children.length > 60) container.removeChild(container.firstChild);
+    });
 });
 
 // ── Заглушки функцій engine.js (сервер все обробляє) ─

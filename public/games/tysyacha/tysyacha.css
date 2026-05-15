@@ -543,10 +543,9 @@
 
 /* ─ Лог ─ */
 #t-log {
-    flex: 1;
     overflow-y: auto;
-    min-height: 80px;
-    max-height: 220px;
+    min-height: 60px;
+    max-height: 140px;
     background: rgba(0,0,0,0.45);
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 10px;
@@ -580,6 +579,87 @@
 .t-log-entry.gold    { border-left-color: #c9a227; background: rgba(201,162,39,0.1); color: #ffe082; }
 .t-log-entry.info    { border-left-color: #1e88e5; background: rgba(30,136,229,0.08);color: #90caf9; }
 .t-log-entry.warn    { border-left-color: #ff9800; background: rgba(255,152,0,0.08); color: #ffcc80; }
+
+/* ─ Чат ─ */
+.t-chat {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.t-chat-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--folk-gold);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-family: sans-serif;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(201,162,39,0.25);
+}
+
+#t-chat-messages {
+    max-height: 90px;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.4);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.07);
+    padding: 5px 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.t-chat-msg {
+    font-size: 11px;
+    color: rgba(245,230,200,0.75);
+    font-family: sans-serif;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.t-chat-author {
+    font-weight: 700;
+    margin-right: 2px;
+}
+
+.t-chat-input-row {
+    display: flex;
+    gap: 4px;
+}
+
+.t-chat-input-row input {
+    flex: 1;
+    padding: 5px 8px;
+    background: rgba(245,230,200,0.92);
+    border: 2px solid var(--folk-red);
+    border-radius: 5px;
+    font-size: 12px;
+    color: #1a0800;
+    font-family: Georgia, serif;
+    min-width: 0;
+    outline: none;
+}
+
+.t-chat-input-row input:focus {
+    border-color: var(--folk-gold);
+}
+
+.t-chat-input-row button {
+    background: var(--folk-red);
+    color: var(--folk-cream);
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+
+.t-chat-input-row button:hover { background: var(--folk-red-l); }
 
 /* ─ Адаптив ─ */
 @media (max-width: 700px) {

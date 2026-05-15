@@ -450,6 +450,24 @@ function tPlayCard(marriage) {
     tSelectedCard = null;
 }
 
+// ── Чат ──────────────────────────────────────
+// Іконки і кольори гравців Тисячі (за індексом)
+const T_PLAYER_ICONS  = ['♠', '♥', '♣'];
+const T_PLAYER_COLORS = ['#0d47a1', '#b71c1c', '#1b5e20'];
+
+function sendTysyachaChat() {
+    const input = document.getElementById('t-chat-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    const me    = tState?.players[tMyIdx];
+    const icon  = T_PLAYER_ICONS[tMyIdx]  ?? '🃏';
+    const color = T_PLAYER_COLORS[tMyIdx] ?? '#c9a227';
+    socket.emit('chatMessage', { text, icon, name: me?.name || 'Гравець', color });
+    input.value = '';
+    input.focus();
+}
+
 // ── Хелпери карт ─────────────────────────────
 function tIsRed(card)  { return card.endsWith('♦') || card.endsWith('♥'); }
 
