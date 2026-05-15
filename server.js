@@ -1415,9 +1415,210 @@ function checkMafiaWin(state) {
     return false;
 }
 
+// ── Нічна фаза ───────────────────────────────
+function startNightPhase(room) {
+    const state = room.state;
+    state.phase = 'night';
+    state.nightActions = {
+        mafiaVotes:       {},   // { [voterId]: targetId }
+        donCheck:         null, // { actorId, targetId }
+        sheriffCheck:     null, // { actorId, targetId }
+        doctorHeal:       null, // { actorId, targetId }
+        roleblockerBlock: null, // { actorId, targetId }
+    };
+    // Скидаємо isSilenced з попереднього раунду
+    state.players.forEach(p => { p.isSilenced = false; });
+    state.nightDeadline = Date.now() + state.nightDuration * 1000;
+    addLog(state, `🌙 Ніч ${state.round} — місто засинає...`);
+    emitMafiaUpdate(room, { event: 'nightStart', deadline: state.nightDeadline });
+    clearTimeout(room.nightTimer);
+    room.nightTimer = setTimeout(() => resolveNight(room), state.nightDuration * 1000);
+}
+
+function resolveNight(room) {
+    clearTimeout(room.nightTimer);
+    const state = room.state;
+    const acts  = state.nightActions;
+    const ps    = state.players;
+
+    // 1. Roleblocker: блокуємо ціль (їх дія цієї ночі анулюється, вдень мовчать)
+    const nightBlocked = new Set();
+    if (acts.roleblockerBlock) {
+        const tid = acts.roleblockerBlock.targetId;
+        nightBlocked.add(tid);
+        ps[tid].isSilenced = true;
+    }
+
+    // 2. Doctor: захищаємо ціль (якщо лікар не заблокований)
+    const protected_ = new Set();
+    if (acts.doctorHeal && !nightBlocked.has(acts.doctorHeal.actorId)) {
+        protected_.add(acts.doctorHeal.targetId);
+    }
+
+    // 3. Sheriff/Deputy: результат перевірки
+    let sheriffResult = null;
+    if (acts.sheriffCheck && !nightBlocked.has(acts.sheriffCheck.actorId)) {
+        const t = ps[acts.sheriffCheck.targetId];
+        sheriffResult = {
+            targetId:   acts.sheriffCheck.targetId,
+            targetName: t.name,
+            isBad: MAFIA_ROLE_LABELS[t.role]?.faction === 'mafia',
+        };
+    }
+
+    // 4. Don: перевірка чи є ціль Комісаром
+    let donResult = null;
+    if (acts.donCheck && !nightBlocked.has(acts.donCheck.actorId)) {
+        const t = ps[acts.donCheck.targetId];
+        donResult = {
+            targetId:   acts.donCheck.targetId,
+            targetName: t.name,
+            isSheriff: t.role === 'sheriff' || t.role === 'deputy',
+        };
+    }
+
+    // 5. Mafia kill: голос Дона вирішальний якщо він не заблокований
+    let mafiaTarget = null;
+    const don = ps.find(p => p.role === 'don' && p.isAlive);
+    if (don && acts.mafiaVotes[don.id] !== undefined && !nightBlocked.has(don.id)) {
+        mafiaTarget = acts.mafiaVotes[don.id];
+    } else {
+        const voteCounts = {};
+        Object.entries(acts.mafiaVotes).forEach(([vid, tid]) => {
+            if (!nightBlocked.has(+vid)) voteCounts[tid] = (voteCounts[tid] || 0) + 1;
+        });
+        const maxV = Math.max(...Object.values(voteCounts), 0);
+        if (maxV > 0) mafiaTarget = +Object.keys(voteCounts).find(k => voteCounts[k] === maxV);
+    }
+
+    // Застосовуємо вбивства
+    state.lastDeaths = [];
+    if (mafiaTarget !== null && mafiaTarget !== undefined && !protected_.has(mafiaTarget)) {
+        ps[mafiaTarget].isAlive = false;
+        state.lastDeaths.push(mafiaTarget);
+    }
+
+    // Наступник Комісара
+    if (state.lastDeaths.some(id => ps[id].role === 'sheriff')) {
+        const dep = ps.find(p => p.role === 'deputy' && p.isAlive);
+        if (dep) {
+            dep.role = 'sheriff';
+            addLog(state, `👮 Помічник займає місце Комісара`);
+        }
+    }
+
+    startMorningPhase(room, sheriffResult, donResult);
+}
+
+function startMorningPhase(room, sheriffResult, donResult) {
+    const state = room.state;
+    state.phase = 'morning';
+
+    if (state.lastDeaths.length === 0) {
+        addLog(state, '🌅 Місто прокинулось — ніхто не загинув.');
+    } else {
+        state.lastDeaths.forEach(id => {
+            const p = state.players[id];
+            addLog(state, `💀 Вночі загинув(ла) ${p.name} (${MAFIA_ROLE_LABELS[p.role]?.ua || p.role})`);
+        });
+    }
+
+    if (checkMafiaWin(state)) {
+        room.players.forEach(rp => io.to(rp.socketId).emit('gameOver', {
+            state: sanitizeMafia(state, rp.index), gameType: 'mafia',
+        }));
+        return;
+    }
+
+    // Персоналізовані результати нічних перевірок
+    room.players.forEach(rp => {
+        const p = state.players[rp.index];
+        let sideEffect = null;
+        if (sheriffResult && (p.role === 'sheriff' || p.role === 'deputy'))
+            sideEffect = { event: 'sheriffResult', ...sheriffResult };
+        if (donResult && p.role === 'don')
+            sideEffect = { event: 'donResult', ...donResult };
+        io.to(rp.socketId).emit('stateUpdate', {
+            state: sanitizeMafia(state, rp.index),
+            sideEffect,
+        });
+    });
+
+    // Через 6 секунд → денне обговорення (реалізується в п.3)
+    setTimeout(() => startDayPhase(room), 6000);
+}
+
+// Заглушка — буде реалізована в п.3
+function startDayPhase(room) {
+    const state = room.state;
+    state.phase = 'day_discussion';
+    addLog(state, `☀️ День ${state.round} — місто обговорює...`);
+    emitMafiaUpdate(room, { event: 'dayStart' });
+}
+
 // ── Обробка дій від клієнта (Мафія) ─────────
 function processMafiaAction(state, type, data, pidx) {
-    // Буде розширено у наступних пунктах
+    const player = state.players[pidx];
+    if (!player?.isAlive) return;
+
+    switch (type) {
+
+        // Гравець переглянув роль → готовий
+        case 'mafiaReady': {
+            if (state.phase !== 'role_reveal') break;
+            if (!state._ready) state._ready = new Set();
+            state._ready.add(pidx);
+            if (state._ready.size >= state.players.length) state._shouldStartNight = true;
+            break;
+        }
+
+        // Голос мафії за жертву
+        case 'mafiaVote': {
+            if (state.phase !== 'night') break;
+            if (player.role !== 'mafia' && player.role !== 'don') break;
+            const { targetId: mvt } = data;
+            if (!state.players[mvt]?.isAlive || mvt === pidx) break;
+            state.nightActions.mafiaVotes[pidx] = mvt;
+            break;
+        }
+
+        // Перевірка Дона (чи ціль Комісар?)
+        case 'donCheck': {
+            if (state.phase !== 'night' || player.role !== 'don') break;
+            const { targetId: dct } = data;
+            if (!state.players[dct]?.isAlive) break;
+            state.nightActions.donCheck = { actorId: pidx, targetId: dct };
+            break;
+        }
+
+        // Перевірка Комісара / Помічника
+        case 'sheriffCheck': {
+            if (state.phase !== 'night') break;
+            if (player.role !== 'sheriff' && player.role !== 'deputy') break;
+            const { targetId: sct } = data;
+            if (!state.players[sct]?.isAlive || sct === pidx) break;
+            state.nightActions.sheriffCheck = { actorId: pidx, targetId: sct };
+            break;
+        }
+
+        // Лікування Лікаря
+        case 'doctorHeal': {
+            if (state.phase !== 'night' || player.role !== 'doctor') break;
+            const { targetId: dht } = data;
+            if (!state.players[dht]?.isAlive) break;
+            state.nightActions.doctorHeal = { actorId: pidx, targetId: dht };
+            break;
+        }
+
+        // Блокування Повії
+        case 'roleblockerBlock': {
+            if (state.phase !== 'night' || player.role !== 'roleblocker') break;
+            const { targetId: rbt } = data;
+            if (!state.players[rbt]?.isAlive || rbt === pidx) break;
+            state.nightActions.roleblockerBlock = { actorId: pidx, targetId: rbt };
+            break;
+        }
+    }
 }
 
 // ── Таймер ходу ──────────────────────────────
@@ -1642,6 +1843,21 @@ io.on('connection', (socket) => {
         });
     });
 
+    // Приватний чат мафії
+    socket.on('mafiaChat', ({ text }) => {
+        const room = rooms[socket.roomCode];
+        if (!room?.state || room.state.gameType !== 'mafia') return;
+        const player = room.state.players[socket.playerIndex];
+        if (!player || MAFIA_ROLE_LABELS[player.role]?.faction !== 'mafia') return;
+        const esc = s => String(s).replace(/[&<>"']/g, c =>
+            ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+        io.to(`${socket.roomCode}_mafia`).emit('mafiaChat', {
+            playerId: socket.playerIndex,
+            name: esc(player.name),
+            text: esc(String(text || '').slice(0, 200)),
+        });
+    });
+
     // Отримати список вільних кімнат
     socket.on('getRooms', (cb) => {
         const available = Object.values(rooms)
@@ -1702,10 +1918,13 @@ io.on('connection', (socket) => {
             if (!MAFIA_BALANCE[n])
                 return io.to(socket.id).emit('error', `Мафія: потрібно 5–15 гравців (зараз ${n})`);
             room.started = true;
-            // Зберігаємо settings з клієнта або з попереднього updateSettings
             if (settings) room.settings = { ...(room.settings || {}), ...settings };
             room.state = createMafiaState(room.players, room.settings || {});
+            // Мафіозі приєднуються до приватної sub-room
+            const mafiaIds = room.state.mafiaIds;
             room.players.forEach(rp => {
+                const s = io.sockets.sockets.get(rp.socketId);
+                if (s && mafiaIds.includes(rp.index)) s.join(`${room.code}_mafia`);
                 io.to(rp.socketId).emit('gameStarted', {
                     state: sanitizeMafia(room.state, rp.index),
                     gameType: 'mafia',
@@ -1742,6 +1961,11 @@ io.on('connection', (socket) => {
         if (state.gameType === 'mafia') {
             room.lastActivityAt = Date.now();
             processMafiaAction(state, type, data || {}, socket.playerIndex);
+            if (state._shouldStartNight) {
+                delete state._shouldStartNight;
+                startNightPhase(room); // запускає таймер і emitMafiaUpdate
+                return;
+            }
             if (state.phase === 'gameover') {
                 room.players.forEach(rp => {
                     io.to(rp.socketId).emit('gameOver', {

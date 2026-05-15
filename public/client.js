@@ -205,7 +205,7 @@ function clearSession() {
 }
 
 function setQuitBtn(visible) {
-    ['quit-btn-monopoly', 'quit-btn-tysyacha'].forEach(id => {
+    ['quit-btn-monopoly', 'quit-btn-tysyacha', 'quit-btn-mafia'].forEach(id => {
         document.getElementById(id)?.classList.toggle('hidden', !visible);
     });
 }
@@ -898,6 +898,10 @@ socket.on('gameStarted', ({ state, gameType }) => {
     document.getElementById('waiting-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.add('hidden');
     setQuitBtn(true);
+    if (gameType === 'mafia' || state?.gameType === 'mafia') {
+        initMafia(state, myPlayerIndex);
+        return;
+    }
     if (gameType === 'tysyacha' || state?.gameType === 'tysyacha') {
         initTysyacha(state, myPlayerIndex);
         return;
@@ -908,6 +912,10 @@ socket.on('gameStarted', ({ state, gameType }) => {
 });
 
 socket.on('stateUpdate', ({ state, sideEffect, toast }) => {
+    if (state?.gameType === 'mafia') {
+        updateMafia(state, sideEffect);
+        return;
+    }
     if (state?.gameType === 'tysyacha') {
         updateTysyacha(state, sideEffect);
         return;
@@ -928,6 +936,10 @@ socket.on('stateUpdate', ({ state, sideEffect, toast }) => {
 
 socket.on('gameOver', ({ winner, state }) => {
     clearSession();
+    if (state?.gameType === 'mafia') {
+        updateMafia(state, null);
+        return;
+    }
     if (state?.gameType === 'tysyacha') {
         updateTysyacha(state);
         return;

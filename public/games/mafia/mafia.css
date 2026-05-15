@@ -1,34 +1,260 @@
 /* ============================================
-   МАФІЯ — стилі
-   Темна тематика: ніч / день / ролі
+   МАФІЯ — стилі (п.2: нічна фаза)
    ============================================ */
-
 :root {
-    --m-bg:        #0a0a0f;
-    --m-night:     #0d0d1a;
-    --m-day:       #1a1200;
-    --m-surface:   rgba(255,255,255,0.05);
-    --m-border:    rgba(255,255,255,0.1);
-    --m-text:      #e8edf5;
-    --m-subtext:   rgba(232,237,245,0.5);
-    --m-red:       #c62828;
-    --m-gold:      #ffd700;
-    --m-blue:      #1565c0;
-    --m-green:     #2e7d32;
-
-    /* Кольори фракцій */
-    --m-citizen:   #1565c0;
-    --m-mafia:     #c62828;
-    --m-neutral:   #6a1b9a;
+    --m-bg:       #080a12;
+    --m-surface:  rgba(255,255,255,0.05);
+    --m-border:   rgba(255,255,255,0.09);
+    --m-text:     #e8edf5;
+    --m-sub:      rgba(232,237,245,0.45);
+    --m-red:      #c62828;
+    --m-gold:     #ffd700;
+    --m-blue:     #1565c0;
+    --m-green:    #2e7d32;
 }
 
 #mafia-screen {
-    display: none;
     height: 100vh;
-    background: var(--m-bg);
+    background: radial-gradient(ellipse at 30% 20%, rgba(198,40,40,0.18) 0%, transparent 55%),
+                radial-gradient(ellipse at 80% 80%, rgba(21,101,192,0.12) 0%, transparent 50%),
+                var(--m-bg);
     color: var(--m-text);
     font-family: 'Segoe UI', sans-serif;
-    overflow: hidden;
+    display: none;
     flex-direction: column;
+    overflow: hidden;
 }
 #mafia-screen.visible { display: flex; }
+
+/* ── Топбар ── */
+.m-topbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 20px;
+    background: rgba(0,0,0,0.6);
+    border-bottom: 2px solid var(--m-red);
+    flex-shrink: 0;
+}
+.m-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--m-gold);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+#m-phase-info {
+    flex: 1;
+    font-size: 13px;
+    color: var(--m-sub);
+    text-align: center;
+}
+.m-quit-btn {
+    background: rgba(198,40,40,0.7);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.m-quit-btn:hover { background: var(--m-red); }
+
+/* ── Layout ── */
+.m-layout {
+    flex: 1;
+    display: flex;
+    gap: 0;
+    overflow: hidden;
+}
+
+/* ── Бокова панель: гравці + лог ── */
+.m-sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--m-border);
+    padding: 14px 12px;
+    gap: 8px;
+    overflow-y: auto;
+}
+.m-sidebar-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--m-sub);
+    margin-bottom: 4px;
+}
+
+/* ── Гравці ── */
+.m-player {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: var(--m-surface);
+    font-size: 13px;
+    margin-bottom: 3px;
+    transition: opacity 0.2s;
+}
+.m-player.dead { opacity: 0.35; text-decoration: line-through; }
+.m-player.me   { background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.25); }
+.m-player-icon { font-size: 16px; flex-shrink: 0; }
+.m-player-name { flex: 1; font-weight: 600; }
+.m-silenced    { font-size: 12px; }
+.m-dead-label  { font-size: 11px; }
+.m-role-badge  {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    color: white;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* ── Лог ── */
+.m-log {
+    flex: 1;
+    overflow-y: auto;
+    margin-top: 8px;
+    border-top: 1px solid var(--m-border);
+    padding-top: 8px;
+}
+.m-log-entry {
+    font-size: 11px;
+    color: var(--m-sub);
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    line-height: 1.4;
+}
+.m-log-empty { font-size: 11px; color: rgba(255,255,255,0.2); font-style: italic; }
+
+/* ── Панель дій ── */
+.m-actions {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Розкриття ролі ── */
+.m-role-reveal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    max-width: 400px;
+    text-align: center;
+}
+.m-role-reveal-icon { font-size: 72px; line-height: 1; }
+.m-role-reveal-name {
+    font-size: 28px;
+    font-weight: 900;
+    color: white;
+    letter-spacing: 0.5px;
+}
+.m-role-reveal-desc {
+    font-size: 14px;
+    color: var(--m-sub);
+    line-height: 1.6;
+    max-width: 340px;
+}
+.m-role-allies {
+    font-size: 13px;
+    color: #ef9a9a;
+    background: rgba(198,40,40,0.15);
+    border: 1px solid rgba(198,40,40,0.3);
+    border-radius: 8px;
+    padding: 8px 16px;
+}
+
+/* ── Нічні дії ── */
+.m-night-action {
+    width: 100%;
+    max-width: 420px;
+    margin-bottom: 20px;
+}
+.m-night-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--m-sub);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+}
+.m-target-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.m-target-btn {
+    padding: 9px 16px;
+    background: var(--m-surface);
+    border: 1.5px solid var(--m-border);
+    border-radius: 8px;
+    color: var(--m-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.m-target-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+.m-target-btn.selected {
+    border-color: var(--m-gold);
+    background: rgba(255,215,0,0.12);
+    color: var(--m-gold);
+}
+
+/* ── Результат ранку ── */
+.m-morning { text-align: center; }
+.m-morning-title { font-size: 22px; font-weight: 900; color: white; margin-bottom: 10px; }
+.m-morning-sub { font-size: 14px; color: var(--m-sub); }
+.m-morning-victim {
+    font-size: 15px;
+    color: #ef9a9a;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.m-check-result {
+    margin-top: 14px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+}
+.m-check-result.bad  { background: rgba(198,40,40,0.15); border: 1px solid rgba(198,40,40,0.35); }
+.m-check-result.good { background: rgba(46,125,50,0.15);  border: 1px solid rgba(46,125,50,0.35); }
+
+/* ── Кінець гри ── */
+.m-gameover { text-align: center; }
+.m-gameover-title { font-size: 28px; font-weight: 900; color: var(--m-gold); margin-bottom: 20px; }
+
+/* ── Очікування ── */
+.m-wait {
+    font-size: 14px;
+    color: var(--m-sub);
+    font-style: italic;
+    text-align: center;
+}
+
+/* ── Кнопки ── */
+.m-btn {
+    padding: 11px 22px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Segoe UI', sans-serif;
+}
+.m-btn.primary { background: linear-gradient(135deg,#ffd700,#ffaa00); color: #1a0a00; }
+.m-btn.primary:hover { filter: brightness(1.1); transform: translateY(-1px); }

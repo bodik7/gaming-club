@@ -6,6 +6,7 @@
     <title>Монополія України</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="games/tysyacha/tysyacha.css">
+    <link rel="stylesheet" href="games/mafia/mafia.css">
     <style>
     /* ═══════════════════════════════════════════════
        ЛОБІ — повний редизайн
@@ -831,6 +832,23 @@
         </button>
     </div>
 
+    <!-- ===== МАФІЯ — ігровий екран ===== -->
+    <div id="mafia-screen" class="hidden">
+        <div class="m-topbar">
+            <div class="m-title">🔫 Мафія</div>
+            <div id="m-phase-info"></div>
+            <button id="quit-btn-mafia" class="hidden m-quit-btn" onclick="confirmAbandonGame()">🚪 Вийти</button>
+        </div>
+        <div class="m-layout">
+            <div class="m-sidebar">
+                <div class="m-sidebar-label">Гравці</div>
+                <div id="m-players"></div>
+                <div id="m-log" class="m-log"></div>
+            </div>
+            <div id="m-actions" class="m-actions"></div>
+        </div>
+    </div>
+
     <div id="tysyacha-screen" class="hidden">
         <div class="t-topbar">
             <div class="t-title">🃏 Тисяча</div>
@@ -874,6 +892,7 @@
     <script src="client.js"></script>
     <!-- Тисяча клієнт -->
     <script src="games/tysyacha/tysyacha.js"></script>
+    <script src="games/mafia/mafia.js"></script>
 
     <script>
         // Перемикання viewport між desktop (Монополія) і mobile (Тисяча / лобі)
