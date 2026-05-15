@@ -272,22 +272,20 @@
 
     <!-- ===== ТИСЯЧА — ігровий екран ===== -->
     <div id="tysyacha-screen" class="hidden">
-        <div class="t-header">
-            <h2>🃏 Тисяча</h2>
+        <div class="t-topbar">
+            <div class="t-title">🃏 Тисяча</div>
             <div id="t-phase-info"></div>
+            <div id="t-scores"></div>
         </div>
-        <div class="t-layout">
-            <div style="display:flex;flex-direction:column;gap:8px">
-                <div id="t-scores"></div>
-                <div id="t-log" style="flex:1;overflow-y:auto"></div>
-            </div>
-            <div class="t-center">
-                <div id="t-opponents"></div>
+        <div class="t-game-area">
+            <div id="t-opponents"></div>
+            <div class="t-table-zone">
                 <div id="t-trick"></div>
-                <div id="t-hand"></div>
+                <div id="t-actions"></div>
             </div>
-            <div id="t-actions"></div>
+            <div id="t-hand"></div>
         </div>
+        <div id="t-log"></div>
     </div>
 
     <!-- Socket.io (автоматично підключається до сервера) -->
