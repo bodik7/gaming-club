@@ -367,7 +367,7 @@ function renderActionButtons() {
         <button onclick="showStatsMenu()">📊 Статистика</button>
         <button onclick="toggleSounds()" id="sound-toggle">🔊 Звук: увімк</button>
         <button onclick="showRules()">📖 Правила</button>
-        <button onclick="endGameVote()" style="border-color:#e53935;color:#e53935">🏁 Завершити гру</button>
+        <button onclick="confirmAbandonGame()" style="border-color:#e53935;color:#e53935">🏳️ Здатись</button>
     `;
 }
 

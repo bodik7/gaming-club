@@ -243,16 +243,7 @@
 
             <!-- Права панель: дії та лог -->
             <aside class="actions-panel">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                    <span style="font-size:12px;font-weight:700;color:#004494">⚙️ Дії</span>
-                    <button id="quit-btn-monopoly" class="hidden" onclick="confirmAbandonGame()"
-                            style="background:#e53935;color:white;border:none;border-radius:6px;
-                                   padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;
-                                   transition:background 0.2s" onmouseover="this.style.background='#c62828'"
-                            onmouseout="this.style.background='#e53935'">
-                        🚪 Здатись
-                    </button>
-                </div>
+                <div id="quit-btn-monopoly" class="hidden"></div>
                 <div class="action-buttons" id="action-buttons"></div>
                 <div class="log" id="log">
                     <h3 style="display:flex;justify-content:space-between;align-items:center">
