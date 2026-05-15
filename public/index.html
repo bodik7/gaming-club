@@ -296,6 +296,100 @@
     /* Приховуємо старий .lobby-card якщо де залишився */
     .lobby-card { display: none; }
 
+    /* ── Split-лейаут лобі ── */
+    .lobby-split {
+        display: flex;
+        width: 100%;
+        max-width: 960px;
+        height: 100vh;
+        gap: 0;
+        overflow: hidden;
+    }
+
+    /* Ліва колонка: ігри (скролиться всередині) */
+    .lobby-left {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 28px 24px 24px;
+        overflow-y: auto;
+        border-right: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .lobby-header-compact {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+        flex-shrink: 0;
+    }
+    .lobby-header-compact-logo { font-size: 36px; line-height: 1; }
+    .lobby-header-compact-title {
+        font-size: 20px;
+        font-weight: 900;
+        color: #fff;
+        letter-spacing: 0.5px;
+    }
+    .lobby-header-compact-sub {
+        font-size: 11px;
+        color: rgba(255,255,255,0.35);
+        margin-top: 1px;
+    }
+
+    .lobby-left-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: rgba(255,255,255,0.35);
+        margin-bottom: 12px;
+        flex-shrink: 0;
+    }
+
+    /* Перевизначаємо grid для лівої колонки */
+    .lobby-left .game-grid {
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 10px;
+    }
+
+    /* Права колонка: форма (фіксована висота, не скролиться) */
+    .lobby-right {
+        width: 280px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 28px 20px 24px;
+        justify-content: center;
+    }
+
+    /* Мобільний: стек вертикально */
+    @media (max-width: 680px) {
+        .lobby-split {
+            flex-direction: column;
+            height: auto;
+            min-height: 100vh;
+            overflow-y: auto;
+        }
+        .lobby-left {
+            border-right: none;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            padding: 20px 16px 16px;
+            overflow-y: visible;
+        }
+        .lobby-left .game-grid {
+            /* Горизонтальний скрол на мобільному */
+            grid-template-columns: repeat(3, minmax(150px, 1fr));
+            overflow-x: auto;
+        }
+        .lobby-right {
+            width: auto;
+            padding: 20px 16px 24px;
+        }
+    }
+
+    /* Скриваємо старий .lobby-wrapper якщо де залишився */
+    .lobby-wrapper { display: none !important; }
+
     /* ── Картка «В розробці» ── */
     .game-card.wip {
         opacity: 0.6;
@@ -432,83 +526,89 @@
 
     <!-- ===== ЛОБІ ===== -->
     <div id="lobby-screen" class="lobby-screen hidden">
-        <div class="lobby-wrapper">
+        <div class="lobby-split">
 
-            <!-- Хедер -->
-            <div class="lobby-header">
-                <div class="lobby-header-logo">🇺🇦</div>
-                <h1 class="lobby-header-title">Ігровий Клуб</h1>
-                <p class="lobby-header-sub">Онлайн мультиплеєр · Оберіть гру та запросіть друзів</p>
-            </div>
-
-            <!-- Рядок акаунту (видимий тільки для авторизованих) -->
-            <div id="account-bar" class="lobby-account-bar hidden">
-                <span>👤 <b id="account-name"></b></span>
-                <button onclick="logOut()">Вийти</button>
-            </div>
-
-            <!-- Картки ігор -->
-            <div class="game-grid">
-                <button id="game-btn-monopoly" class="game-card active" onclick="selectGame('monopoly')">
-                    <div class="game-card-icon">🏦</div>
-                    <div class="game-card-name">Монополія України</div>
-                    <div class="game-card-desc">Купуй міста, будуй готелі,<br>стань монополістом</div>
-                    <span class="game-card-badge">👥 2–6 гравців</span>
-                </button>
-                <button id="game-btn-tysyacha" class="game-card" onclick="selectGame('tysyacha')">
-                    <div class="game-card-icon">🃏</div>
-                    <div class="game-card-name">Тисяча</div>
-                    <div class="game-card-desc">Карткова гра зі шлюбами,<br>козирями і торгами</div>
-                    <span class="game-card-badge">👥 2–3 гравці</span>
-                </button>
-                <div class="game-card wip">
-                    <div class="game-card-icon">🔫</div>
-                    <div class="game-card-name">Мафія</div>
-                    <div class="game-card-desc">Мирні проти мафії —<br>знайди зрадника серед своїх</div>
-                    <span class="game-card-badge">👥 5–15 гравців</span>
-                    <span class="game-card-wip-badge">🚧 В розробці</span>
-                </div>
-            </div>
-
-            <!-- Форма: ім'я + дії -->
-            <div class="lobby-glass" style="display:flex;flex-direction:column;gap:14px">
-
-                <div>
-                    <label class="lobby-label" for="lobby-name">Ваше ім'я</label>
-                    <input id="lobby-name" class="lobby-input" type="text"
-                           placeholder="Введіть нікнейм" maxlength="20"
-                           onkeydown="if(event.key==='Enter')createRoom()">
-                </div>
-
-                <button class="lobby-btn lobby-btn-primary" onclick="createRoom()">
-                    🏠 Створити кімнату
-                </button>
-
-                <div class="lobby-divider">або приєднатись до існуючої</div>
-
-                <button class="lobby-btn lobby-btn-outline" onclick="findRoom()">
-                    🔍 Знайти вільну кімнату
-                </button>
-
-                <!-- Прихований input — використовується тільки при відкритті ?join= посилання -->
-                <input id="lobby-code" type="hidden" maxlength="15">
-
-            </div>
-
-                <!-- Банер запрошення (з'являється тільки коли є ?join= в URL) -->
-                <div id="join-invite-banner" class="hidden"
-                     style="background:rgba(0,87,183,0.15);border:1px solid rgba(0,87,183,0.4);
-                            border-radius:12px;padding:14px 18px;text-align:center">
-                    <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:6px">
-                        Вас запрошено до кімнати
+            <!-- ── Ліва колонка: хедер + ігри ── -->
+            <div class="lobby-left">
+                <div class="lobby-header-compact">
+                    <span class="lobby-header-compact-logo">🇺🇦</span>
+                    <div>
+                        <div class="lobby-header-compact-title">Ігровий Клуб</div>
+                        <div class="lobby-header-compact-sub">Онлайн мультиплеєр</div>
                     </div>
-                    <div style="font-size:20px;font-weight:900;color:#ffd700;letter-spacing:3px;margin-bottom:12px"
-                         id="join-invite-code"></div>
-                    <button class="lobby-btn lobby-btn-blue" onclick="joinRoom()"
-                            style="padding:11px">🔗 Приєднатись</button>
+                    <div id="account-bar" class="lobby-account-bar hidden" style="margin-left:auto">
+                        <span>👤 <b id="account-name"></b></span>
+                        <button onclick="logOut()">Вийти</button>
+                    </div>
                 </div>
 
-            <div id="rejoin-error"></div>
+                <div class="lobby-left-label">Оберіть гру</div>
+
+                <div class="game-grid">
+                    <button id="game-btn-monopoly" class="game-card active" onclick="selectGame('monopoly')">
+                        <div class="game-card-icon">🏦</div>
+                        <div class="game-card-name">Монополія України</div>
+                        <div class="game-card-desc">Купуй міста, будуй готелі,<br>стань монополістом</div>
+                        <span class="game-card-badge">👥 2–6 гравців</span>
+                    </button>
+                    <button id="game-btn-tysyacha" class="game-card" onclick="selectGame('tysyacha')">
+                        <div class="game-card-icon">🃏</div>
+                        <div class="game-card-name">Тисяча</div>
+                        <div class="game-card-desc">Карткова гра зі шлюбами,<br>козирями і торгами</div>
+                        <span class="game-card-badge">👥 2–3 гравці</span>
+                    </button>
+                    <div class="game-card wip">
+                        <div class="game-card-icon">🔫</div>
+                        <div class="game-card-name">Мафія</div>
+                        <div class="game-card-desc">Мирні проти мафії —<br>знайди зрадника серед своїх</div>
+                        <span class="game-card-badge">👥 5–15 гравців</span>
+                        <span class="game-card-wip-badge">🚧 В розробці</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Права колонка: форма дій ── -->
+            <div class="lobby-right">
+                <div class="lobby-glass" style="display:flex;flex-direction:column;gap:14px;height:100%;box-sizing:border-box">
+
+                    <div style="text-align:center;padding-bottom:4px">
+                        <div style="font-size:22px;font-weight:900;color:#fff;letter-spacing:0.5px">Приєднатись</div>
+                        <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:2px">введіть ім'я і оберіть дію</div>
+                    </div>
+
+                    <div>
+                        <label class="lobby-label" for="lobby-name">Ваше ім'я</label>
+                        <input id="lobby-name" class="lobby-input" type="text"
+                               placeholder="Введіть нікнейм" maxlength="20"
+                               onkeydown="if(event.key==='Enter')createRoom()">
+                    </div>
+
+                    <button class="lobby-btn lobby-btn-primary" onclick="createRoom()">
+                        🏠 Створити кімнату
+                    </button>
+
+                    <div class="lobby-divider">або приєднатись до існуючої</div>
+
+                    <button class="lobby-btn lobby-btn-outline" onclick="findRoom()">
+                        🔍 Знайти вільну кімнату
+                    </button>
+
+                    <input id="lobby-code" type="hidden" maxlength="15">
+
+                    <div id="join-invite-banner" class="hidden"
+                         style="background:rgba(0,87,183,0.15);border:1px solid rgba(0,87,183,0.4);
+                                border-radius:12px;padding:14px 18px;text-align:center">
+                        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:6px">Вас запрошено</div>
+                        <div style="font-size:20px;font-weight:900;color:#ffd700;letter-spacing:3px;margin-bottom:10px"
+                             id="join-invite-code"></div>
+                        <button class="lobby-btn lobby-btn-blue" onclick="joinRoom()"
+                                style="padding:10px">🔗 Приєднатись</button>
+                    </div>
+
+                    <div id="rejoin-error"></div>
+
+                </div>
+            </div>
 
         </div>
     </div>
