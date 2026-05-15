@@ -226,15 +226,36 @@ function renderTHand(s) {
         return sd !== 0 ? sd : tRankOrder(a) - tRankOrder(b);
     });
 
+    // Визначаємо обмеження масті (тільки коли мій хід і взятка вже почата)
+    const myTurn   = s.phase === 'playing' && s.currentPlayer === tMyIdx;
+    const trickStarted = myTurn && (s.trick?.cards?.length ?? 0) > 0;
+    const leadSuit = trickStarted ? s.trick.cards[0].card.slice(-1) : null;
+    const mustFollowSuit = leadSuit != null && me.hand.some(c => c.slice(-1) === leadSuit);
+
     el.innerHTML = sorted.map(card => {
         const rank = card.slice(0, -1);
         const suit = card.slice(-1);
-        const color    = tSuitColor(card);
-        const sel      = card === tSelectedCard;
-        const canPlay  = s.phase === 'playing' && s.currentPlayer === tMyIdx;
-        const hasPartner = tHasMarriagePartner(card, me.hand);
+        const color = tSuitColor(card);
+        const sel   = card === tSelectedCard;
+
+        // Чи може ця карта бути зіграна прямо зараз
+        const isLeadSuit    = leadSuit != null && suit === leadSuit;
+        const canPlayThisCard = myTurn && (!mustFollowSuit || isLeadSuit);
+
+        // CSS класи
+        const classes = [
+            't-card',
+            sel             ? 'selected'   : '',
+            canPlayThisCard ? 'playable'   : '',
+            myTurn && isLeadSuit && mustFollowSuit ? 'lead-suit' : '',
+            myTurn && mustFollowSuit && !isLeadSuit ? 'cant-play' : '',
+        ].filter(Boolean).join(' ');
+
+        // Значок шлюбу — лише коли веду (немає карт у взятці)
+        const canMarry = myTurn && !trickStarted && tHasMarriagePartner(card, me.hand);
+
         return `
-        <div class="t-card ${sel ? 'selected' : ''} ${canPlay ? 'playable' : ''}"
+        <div class="${classes}"
              style="border-top-color:${color}"
              onclick="tSelectCard('${card}')"
              title="${tCardTitle(card)}">
@@ -247,7 +268,7 @@ function renderTHand(s) {
                 <div class="t-card-rank">${rank}</div>
                 <div class="t-card-suit-sm">${suit}</div>
             </div>
-            ${hasPartner && canPlay ? '<div class="t-marriage-badge">💍</div>' : ''}
+            ${canMarry ? '<div class="t-marriage-badge">💍</div>' : ''}
         </div>`;
     }).join('');
 }
@@ -386,6 +407,13 @@ function renderTActions(s) {
 
 // ── Дії гравця ───────────────────────────────
 function tSelectCard(card) {
+    const s = tState;
+    if (s && s.phase === 'playing' && s.currentPlayer === tMyIdx && (s.trick?.cards?.length ?? 0) > 0) {
+        const leadSuit   = s.trick.cards[0].card.slice(-1);
+        const me         = s.players[tMyIdx];
+        const mustFollow = me?.hand?.some(c => c.slice(-1) === leadSuit);
+        if (mustFollow && card.slice(-1) !== leadSuit) return; // не можна обрати
+    }
     tSelectedCard = tSelectedCard === card ? null : card;
     renderTHand(tState);
     renderTActions(tState);
