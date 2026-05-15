@@ -8,7 +8,7 @@
 
 body {
     min-height: 100vh;
-    background: url('ya-21688.jpg') center center / cover fixed;
+    background: url('assets/ya-21688.jpg') center center / cover fixed;
     overflow-x: hidden;
 }
 
@@ -133,7 +133,7 @@ body {
     height: 100vh;
     padding: 8px;
     overflow: hidden;
-    background: url('ya-21688.jpg') center center / cover fixed;
+    background: url('assets/ya-21688.jpg') center center / cover fixed;
 }
 
 .game-layout {
@@ -642,7 +642,7 @@ body {
     grid-row: 2 / 11;
     background:
         linear-gradient(rgba(0, 20, 70, 0.52), rgba(0, 20, 70, 0.52)),
-        url('1803.webp') center / contain no-repeat #0038a8;
+        url('assets/1803.webp') center / contain no-repeat #0038a8;
     display: flex;
     flex-direction: column;
     align-items: center;
