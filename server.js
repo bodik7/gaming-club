@@ -67,6 +67,15 @@ app.post('/api/login', async (req, res) => {
     res.json({ token, username: user.username });
 });
 
+app.get('/api/rooms/count', (req, res) => {
+    const counts = {};
+    Object.values(rooms).forEach(r => {
+        const t = r.gameType || 'monopoly';
+        counts[t] = (counts[t] || 0) + 1;
+    });
+    res.json(counts);
+});
+
 app.get('/api/me', (req, res) => {
     const auth = req.headers.authorization;
     if (!auth?.startsWith('Bearer '))

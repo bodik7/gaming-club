@@ -392,6 +392,21 @@
     /* Скриваємо старий .lobby-wrapper якщо де залишився */
     .lobby-wrapper { display: none !important; }
 
+    /* ── Лічильник кімнат на картці гри ── */
+    .game-rooms-badge {
+        display: none;
+        align-items: center;
+        gap: 4px;
+        margin-top: 2px;
+        font-size: 11px;
+        color: rgba(255,255,255,0.45);
+        font-family: sans-serif;
+    }
+    .game-rooms-badge.has-rooms {
+        display: inline-flex;
+        color: #81c784;
+    }
+
     /* ── Картка «В розробці» ── */
     .game-card.wip {
         opacity: 0.6;
@@ -552,12 +567,14 @@
                         <div class="game-card-name">Монополія України</div>
                         <div class="game-card-desc">Купуй міста, будуй готелі,<br>стань монополістом</div>
                         <span class="game-card-badge">👥 2–6 гравців</span>
+                        <span class="game-rooms-badge" id="rooms-monopoly"></span>
                     </button>
                     <button id="game-btn-tysyacha" class="game-card" onclick="selectGame('tysyacha')">
                         <div class="game-card-icon">🃏</div>
                         <div class="game-card-name">Тисяча</div>
                         <div class="game-card-desc">Карткова гра зі шлюбами,<br>козирями і торгами</div>
                         <span class="game-card-badge">👥 2–3 гравці</span>
+                        <span class="game-rooms-badge" id="rooms-tysyacha"></span>
                     </button>
                     <div class="game-card wip">
                         <div class="game-card-icon">🔫</div>

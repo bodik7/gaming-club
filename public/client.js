@@ -165,9 +165,32 @@ function logOut() {
     if (p) p.value = '';
 }
 
+// ── Лічильник кімнат ─────────────────────────
+async function fetchRoomCounts() {
+    try {
+        const res = await fetch('/api/rooms/count');
+        if (!res.ok) return;
+        const counts = await res.json();
+        ['monopoly', 'tysyacha', 'mafia'].forEach(type => {
+            const el = document.getElementById(`rooms-${type}`);
+            if (!el) return;
+            const n = counts[type] || 0;
+            if (n > 0) {
+                el.textContent = `🏠 ${n} ${n === 1 ? 'кімната' : n < 5 ? 'кімнати' : 'кімнат'}`;
+                el.classList.add('has-rooms');
+            } else {
+                el.textContent = '';
+                el.classList.remove('has-rooms');
+            }
+        });
+    } catch {}
+}
+
 // ── Ініціалізація при завантаженні ───────────
 window.addEventListener('DOMContentLoaded', () => {
     checkAuth();
+    fetchRoomCounts();
+    setInterval(fetchRoomCounts, 15000); // оновлення кожні 15с
 });
 
 // ── Збереження сесії ─────────────────────────
@@ -417,6 +440,7 @@ function showLobbyWaiting(code) {
     document.getElementById('waiting-screen').classList.remove('hidden');
     document.getElementById('room-code-display').innerText = code;
     document.getElementById('start-btn').classList.toggle('hidden', myPlayerIndex !== 0);
+    fetchRoomCounts(); // оновлюємо після створення кімнати
 }
 
 function leaveRoom() {
