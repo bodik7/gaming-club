@@ -1568,7 +1568,7 @@ io.on('connection', (socket) => {
             room.state = createGameState(room.players);
             addLog(room.state, `🎮 Гра почалась! Перший хід: ${room.state.players[0].name}`, 'success');
             startTurnTimer(room);
-            io.to(socket.roomCode).emit('gameStarted', { state: sanitize(room.state) });
+            io.to(socket.roomCode).emit('gameStarted', { state: sanitize(room.state), gameType: 'monopoly' });
         }
     });
 
