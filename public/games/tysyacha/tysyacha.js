@@ -5,7 +5,10 @@ let tState = null;
 let tMyIdx = null;
 let tSelectedCard = null;
 
-const T_MARRIAGE = { '♠': 40, '♣': 60, '♦': 80, '♥': 100 };
+const T_MARRIAGE    = { '♠': 40, '♣': 60, '♦': 80, '♥': 100 };
+const T_SUIT_COLORS = { '♠': '#0d47a1', '♣': '#1b5e20', '♦': '#e65100', '♥': '#b71c1c' };
+
+function tSuitColor(card) { return T_SUIT_COLORS[card.slice(-1)] || '#1a1a1a'; }
 
 // ── Ініціалізація ─────────────────────────────
 function initTysyacha(state, myIdx) {
@@ -100,7 +103,7 @@ function renderTOpponents(s) {
         const count = p.handCount || 0;
         // карти з ефектом фану (перекриваються)
         const cards = Array.from({ length: count }, (_, i) =>
-            `<div class="t-card-back" style="margin-left:${i > 0 ? '-20px' : '0'};z-index:${i}">🂠</div>`
+            `<div class="t-card-back" style="margin-left:${i > 0 ? '-20px' : '0'};z-index:${i}">🌻</div>`
         ).join('');
         return `
         <div class="t-opponent ${isActive ? 'active' : ''}">
@@ -121,15 +124,17 @@ function renderTTrick(s) {
         el.innerHTML = '<div class="t-trick-empty">— стіл порожній —</div>';
         return;
     }
-    const winnerId = s.trick.winnerId; // встановлено лише під час показу trickComplete
+    const winnerId = s.trick.winnerId;
     el.innerHTML = s.trick.cards.map(({ playerId, card }) => {
         const rank = card.slice(0, -1);
         const suit = card.slice(-1);
+        const color = tSuitColor(card);
         const isWinner = winnerId !== undefined && playerId === winnerId;
+        const winnerStyle = isWinner ? 'box-shadow:0 0 0 3px #c9a227,0 4px 14px rgba(0,0,0,0.65)' : '';
         return `
         <div class="t-trick-slot">
-            <div class="t-card-table ${tIsRed(card) ? 'red' : ''}"
-                 style="${isWinner ? 'box-shadow:0 0 0 3px #c9a227,0 4px 14px rgba(0,0,0,0.65)' : ''}">
+            <div class="t-card-table"
+                 style="border-top-color:${color};color:${color};${winnerStyle}">
                 <div class="t-rank">${rank}</div>
                 <div class="t-suit">${suit}</div>
             </div>
@@ -155,19 +160,21 @@ function renderTHand(s) {
     el.innerHTML = sorted.map(card => {
         const rank = card.slice(0, -1);
         const suit = card.slice(-1);
+        const color    = tSuitColor(card);
         const sel      = card === tSelectedCard;
         const canPlay  = s.phase === 'playing' && s.currentPlayer === tMyIdx;
         const hasPartner = tHasMarriagePartner(card, me.hand);
         return `
-        <div class="t-card ${tIsRed(card) ? 'red' : ''} ${sel ? 'selected' : ''} ${canPlay ? 'playable' : ''}"
+        <div class="t-card ${sel ? 'selected' : ''} ${canPlay ? 'playable' : ''}"
+             style="border-top-color:${color}"
              onclick="tSelectCard('${card}')"
              title="${tCardTitle(card)}">
-            <div class="t-card-corner-tl">
+            <div class="t-card-corner-tl" style="color:${color}">
                 <div class="t-card-rank">${rank}</div>
                 <div class="t-card-suit-sm">${suit}</div>
             </div>
-            <div class="t-card-center">${suit}</div>
-            <div class="t-card-corner-br">
+            <div class="t-card-center" style="color:${color}">${suit}</div>
+            <div class="t-card-corner-br" style="color:${color}">
                 <div class="t-card-rank">${rank}</div>
                 <div class="t-card-suit-sm">${suit}</div>
             </div>
