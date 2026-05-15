@@ -296,6 +296,32 @@
     /* Приховуємо старий .lobby-card якщо де залишився */
     .lobby-card { display: none; }
 
+    /* ── Картка «В розробці» ── */
+    .game-card.wip {
+        opacity: 0.6;
+        cursor: not-allowed;
+        border-style: dashed;
+    }
+    .game-card.wip:hover {
+        transform: none;
+        background: rgba(255,255,255,0.05);
+        border-color: rgba(255,255,255,0.1);
+    }
+    .game-card-wip-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 4px;
+        background: rgba(255,165,0,0.18);
+        border: 1px solid rgba(255,165,0,0.4);
+        border-radius: 20px;
+        padding: 2px 10px;
+        font-size: 11px;
+        color: #ffb74d;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+    }
+
     /* ── Авторизація ── */
     .auth-tabs {
         display: flex;
@@ -435,6 +461,13 @@
                     <div class="game-card-desc">Карткова гра зі шлюбами,<br>козирями і торгами</div>
                     <span class="game-card-badge">👥 2–3 гравці</span>
                 </button>
+                <div class="game-card wip">
+                    <div class="game-card-icon">🔫</div>
+                    <div class="game-card-name">Мафія</div>
+                    <div class="game-card-desc">Мирні проти мафії —<br>знайди зрадника серед своїх</div>
+                    <span class="game-card-badge">👥 5–15 гравців</span>
+                    <span class="game-card-wip-badge">🚧 В розробці</span>
+                </div>
             </div>
 
             <!-- Форма: ім'я + дії -->

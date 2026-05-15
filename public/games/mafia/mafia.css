@@ -1,0 +1,34 @@
+/* ============================================
+   МАФІЯ — стилі
+   Темна тематика: ніч / день / ролі
+   ============================================ */
+
+:root {
+    --m-bg:        #0a0a0f;
+    --m-night:     #0d0d1a;
+    --m-day:       #1a1200;
+    --m-surface:   rgba(255,255,255,0.05);
+    --m-border:    rgba(255,255,255,0.1);
+    --m-text:      #e8edf5;
+    --m-subtext:   rgba(232,237,245,0.5);
+    --m-red:       #c62828;
+    --m-gold:      #ffd700;
+    --m-blue:      #1565c0;
+    --m-green:     #2e7d32;
+
+    /* Кольори фракцій */
+    --m-citizen:   #1565c0;
+    --m-mafia:     #c62828;
+    --m-neutral:   #6a1b9a;
+}
+
+#mafia-screen {
+    display: none;
+    height: 100vh;
+    background: var(--m-bg);
+    color: var(--m-text);
+    font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
+    flex-direction: column;
+}
+#mafia-screen.visible { display: flex; }
