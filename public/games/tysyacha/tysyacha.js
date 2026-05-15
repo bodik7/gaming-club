@@ -16,8 +16,7 @@ function initTysyacha(state, myIdx) {
     tMyIdx  = myIdx;
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('tysyacha-screen').classList.remove('hidden');
-    const qb = document.getElementById('quit-game-btn');
-    if (qb) qb.classList.remove('hidden');
+    setQuitBtn(true);
     renderTysyacha();
 }
 
@@ -84,11 +83,25 @@ function renderTPhaseInfo(s) {
 }
 
 // ── Лог ──────────────────────────────────────
+function tLogType(entry) {
+    if (entry.includes('✅') || entry.includes('🏆')) return 'success';
+    if (entry.includes('❌') || entry.includes('−'))  return 'error';
+    if (entry.includes('💍') || entry.includes('📢') || entry.includes('👑')) return 'gold';
+    if (entry.includes('🃏') || entry.includes('бере'))  return 'info';
+    if (entry.includes('⚠️'))  return 'warn';
+    return '';
+}
+
 function renderTLog(s) {
     const el = document.getElementById('t-log');
     if (!el) return;
-    el.innerHTML = (s.log || []).slice(0, 6).map(l =>
-        `<div class="t-log-entry">${l}</div>`
+    const entries = (s.log || []).slice(0, 20);
+    if (!entries.length) {
+        el.innerHTML = '<div class="t-log-empty">Лог порожній</div>';
+        return;
+    }
+    el.innerHTML = entries.map(l =>
+        `<div class="t-log-entry ${tLogType(l)}">${l}</div>`
     ).join('');
 }
 

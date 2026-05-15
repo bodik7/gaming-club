@@ -243,6 +243,16 @@
 
             <!-- Права панель: дії та лог -->
             <aside class="actions-panel">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                    <span style="font-size:12px;font-weight:700;color:#004494">⚙️ Дії</span>
+                    <button id="quit-btn-monopoly" class="hidden" onclick="confirmAbandonGame()"
+                            style="background:#e53935;color:white;border:none;border-radius:6px;
+                                   padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;
+                                   transition:background 0.2s" onmouseover="this.style.background='#c62828'"
+                            onmouseout="this.style.background='#e53935'">
+                        🚪 Здатись
+                    </button>
+                </div>
                 <div class="action-buttons" id="action-buttons"></div>
                 <div class="log" id="log">
                     <h3 style="display:flex;justify-content:space-between;align-items:center">
@@ -276,16 +286,19 @@
             <div class="t-title">🃏 Тисяча</div>
             <div id="t-phase-info"></div>
             <div id="t-scores"></div>
+            <button id="quit-btn-tysyacha" class="hidden t-quit-btn" onclick="confirmAbandonGame()">🚪 Вийти</button>
         </div>
         <div class="t-game-area">
             <div id="t-opponents"></div>
             <div class="t-table-zone">
                 <div id="t-trick"></div>
-                <div id="t-actions"></div>
+                <div class="t-right-panel">
+                    <div id="t-actions"></div>
+                    <div id="t-log"></div>
+                </div>
             </div>
             <div id="t-hand"></div>
         </div>
-        <div id="t-log"></div>
     </div>
 
     <!-- Socket.io (автоматично підключається до сервера) -->
@@ -303,21 +316,11 @@
     <!-- Тисяча клієнт -->
     <script src="games/tysyacha/tysyacha.js"></script>
 
-    <!-- Кнопка виходу під час гри (обидва режими) -->
-    <button id="quit-game-btn" class="hidden" onclick="confirmAbandonGame()"
-            style="position:fixed;bottom:14px;left:14px;z-index:1000;
-                   background:rgba(150,30,30,0.85);color:white;border:none;
-                   border-radius:8px;padding:7px 13px;font-size:13px;font-weight:700;
-                   cursor:pointer;backdrop-filter:blur(6px);transition:all 0.2s;
-                   box-shadow:0 2px 8px rgba(0,0,0,0.4)">
-        🚪 Вийти з гри
-    </button>
-
     <script>
         // Ініціалізація дошки при старті гри
         function showGameScreen() {
             document.getElementById('game-screen').classList.remove('hidden');
-            document.getElementById('quit-game-btn').classList.remove('hidden');
+            setQuitBtn(true);
             buildBoard();
             renderActionButtons();
         }

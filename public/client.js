@@ -36,6 +36,12 @@ function clearSession() {
     localStorage.removeItem(SESSION_KEY);
 }
 
+function setQuitBtn(visible) {
+    ['quit-btn-monopoly', 'quit-btn-tysyacha'].forEach(id => {
+        document.getElementById(id)?.classList.toggle('hidden', !visible);
+    });
+}
+
 function tryRejoin() {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return;
@@ -53,7 +59,7 @@ function tryRejoin() {
         if (started && state) {
             // Гра вже йде — відновлюємо ігровий екран
             document.getElementById('lobby-screen').classList.add('hidden');
-            document.getElementById('quit-game-btn').classList.remove('hidden');
+            setQuitBtn(true);
             if (state.gameType === 'tysyacha') {
                 initTysyacha(state, myPlayerIndex);
                 return;
@@ -322,7 +328,7 @@ socket.on('gameAbandoned', ({ reason }) => {
     closeModal();
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('tysyacha-screen').classList.add('hidden');
-    document.getElementById('quit-game-btn').classList.add('hidden');
+    setQuitBtn(false);
     document.getElementById('lobby-screen').classList.remove('hidden');
     showRejoinError(`🚪 ${reason}`);
 });
@@ -332,7 +338,7 @@ socket.on('surrendered', () => {
     myPlayerIndex = null;
     closeModal();
     document.getElementById('game-screen').classList.add('hidden');
-    document.getElementById('quit-game-btn').classList.add('hidden');
+    setQuitBtn(false);
     document.getElementById('lobby-screen').classList.remove('hidden');
     showRejoinError('🏳️ Ви здались. Ваша власність повернута банку. Інші гравці продовжують.');
 });
@@ -686,7 +692,7 @@ socket.on('kicked', ({ reason }) => {
 socket.on('gameStarted', ({ state, gameType }) => {
     document.getElementById('waiting-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.add('hidden');
-    document.getElementById('quit-game-btn').classList.remove('hidden');
+    setQuitBtn(true);
     if (gameType === 'tysyacha' || state?.gameType === 'tysyacha') {
         initTysyacha(state, myPlayerIndex);
         return;
