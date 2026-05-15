@@ -334,6 +334,7 @@
 /* ─ Картки на столі ─ */
 .t-card-table {
     background: var(--folk-cream);
+    color: #1a1a1a;
     border-radius: 7px;
     width: 58px;
     height: 84px;
