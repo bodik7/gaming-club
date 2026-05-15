@@ -821,8 +821,34 @@ function quickJoin(code) {
     });
 }
 
+// ── Налаштування гри ─────────────────────────
+const _gameSettings = { nightDuration: 90, dayDuration: 120 };
+
+function setSetting(key, value) {
+    _gameSettings[key] = value;
+    // Підсвічуємо активну кнопку
+    document.querySelectorAll(`[data-setting="${key}"]`).forEach(btn => {
+        btn.classList.toggle('active', +btn.dataset.value === value);
+    });
+    // Надсилаємо хосту на сервер одразу
+    socket.emit('updateSettings', { [key]: value });
+}
+
+function updateGameSettings(gameType) {
+    const panel = document.getElementById('game-settings');
+    const nightRow = document.getElementById('settings-night-timer');
+    const dayRow   = document.getElementById('settings-day-timer');
+    const isHost   = myPlayerIndex === 0;
+    if (!panel) return;
+    // Налаштування показуємо тільки хосту і тільки для Мафії
+    const showPanel = isHost && gameType === 'mafia';
+    panel.classList.toggle('hidden', !showPanel);
+    if (nightRow) nightRow.classList.toggle('hidden', gameType !== 'mafia');
+    if (dayRow)   dayRow.classList.toggle('hidden',   gameType !== 'mafia');
+}
+
 function startGame() {
-    socket.emit('startGame');
+    socket.emit('startGame', { settings: _gameSettings });
 }
 
 // ── Отримання оновлень від сервера ───────────
@@ -846,11 +872,14 @@ socket.on('lobbyUpdate', ({ players, gameType }) => {
             </button>` : ''}
         </div>`;
     }).join('');
+    const maxMap = { tysyacha: 3, mafia: 15, monopoly: 6 };
     const counter = document.getElementById('lobby-player-count');
-    if (counter) counter.textContent = `${players.length}/${_selectedGame === 'tysyacha' ? 3 : 6}`;
+    if (counter) counter.textContent = `${players.length}/${maxMap[_selectedGame] || 6}`;
     // Хост може змінитись після kick — оновлюємо видимість кнопки старту
     const startBtn = document.getElementById('start-btn');
     if (startBtn) startBtn.classList.toggle('hidden', myPlayerIndex !== 0);
+    // Показуємо панель налаштувань якщо хост і Мафія
+    updateGameSettings(_selectedGame);
 });
 
 function kickPlayer(index) {

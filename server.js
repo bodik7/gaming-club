@@ -1311,7 +1311,7 @@ const MAFIA_ROLE_LABELS = {
     don:        { ua: 'Дон',           icon: '👑', faction: 'mafia' },
 };
 
-function createMafiaState(roomPlayers) {
+function createMafiaState(roomPlayers, settings = {}) {
     const n = roomPlayers.length;
     const balance = MAFIA_BALANCE[n] || MAFIA_BALANCE[5];
 
@@ -1346,6 +1346,9 @@ function createMafiaState(roomPlayers) {
         lastDeaths: [],        // хто помер останньої ночі/голосування
         winner:     null,
         log:        [],
+        // Налаштування (передані хостом)
+        nightDuration: settings.nightDuration || 90,
+        dayDuration:   settings.dayDuration   || 120,
     };
 }
 
@@ -1683,7 +1686,14 @@ io.on('connection', (socket) => {
     });
 
     // Почати гру (тільки хост — index 0)
-    socket.on('startGame', () => {
+    // Хост оновлює налаштування до старту
+    socket.on('updateSettings', (newSettings) => {
+        const room = rooms[socket.roomCode];
+        if (!room || socket.playerIndex !== 0) return;
+        room.settings = { ...(room.settings || {}), ...newSettings };
+    });
+
+    socket.on('startGame', ({ settings } = {}) => {
         const room = rooms[socket.roomCode];
         if (!room || socket.playerIndex !== 0) return;
 
@@ -1692,7 +1702,9 @@ io.on('connection', (socket) => {
             if (!MAFIA_BALANCE[n])
                 return io.to(socket.id).emit('error', `Мафія: потрібно 5–15 гравців (зараз ${n})`);
             room.started = true;
-            room.state = createMafiaState(room.players);
+            // Зберігаємо settings з клієнта або з попереднього updateSettings
+            if (settings) room.settings = { ...(room.settings || {}), ...settings };
+            room.state = createMafiaState(room.players, room.settings || {});
             room.players.forEach(rp => {
                 io.to(rp.socketId).emit('gameStarted', {
                     state: sanitizeMafia(room.state, rp.index),

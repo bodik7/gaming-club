@@ -390,6 +390,50 @@
     }
 
 
+    /* ── Налаштування у залі очікування ── */
+    .wait-settings-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: rgba(255,255,255,0.35);
+        margin-bottom: 10px;
+    }
+    .wait-setting-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    .wait-setting-label {
+        font-size: 13px;
+        color: rgba(255,255,255,0.65);
+        white-space: nowrap;
+    }
+    .wait-setting-options {
+        display: flex;
+        gap: 4px;
+    }
+    .wait-setting-btn {
+        padding: 5px 12px;
+        border: 1.5px solid rgba(255,255,255,0.15);
+        background: transparent;
+        color: rgba(255,255,255,0.45);
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-family: 'Segoe UI', sans-serif;
+    }
+    .wait-setting-btn:hover { border-color: rgba(255,255,255,0.35); color: rgba(255,255,255,0.8); }
+    .wait-setting-btn.active {
+        border-color: #ffd700;
+        background: rgba(255,215,0,0.12);
+        color: #ffd700;
+    }
+
     /* ── Лічильник кімнат на картці гри ── */
     .game-rooms-badge {
         display: none;
@@ -661,6 +705,27 @@
                         <span id="lobby-player-count">0/6</span>
                     </div>
                     <div id="lobby-players-list"></div>
+                </div>
+
+                <!-- Налаштування гри (тільки хост, тільки для певних ігор) -->
+                <div id="game-settings" class="hidden">
+                    <div class="wait-settings-title">⚙️ Налаштування</div>
+                    <div id="settings-night-timer" class="wait-setting-row hidden">
+                        <span class="wait-setting-label">🌙 Тривалість ночі</span>
+                        <div class="wait-setting-options">
+                            <button class="wait-setting-btn" data-setting="nightDuration" data-value="60"  onclick="setSetting('nightDuration',60)">60с</button>
+                            <button class="wait-setting-btn active" data-setting="nightDuration" data-value="90"  onclick="setSetting('nightDuration',90)">90с</button>
+                            <button class="wait-setting-btn" data-setting="nightDuration" data-value="120" onclick="setSetting('nightDuration',120)">2хв</button>
+                        </div>
+                    </div>
+                    <div id="settings-day-timer" class="wait-setting-row hidden">
+                        <span class="wait-setting-label">☀️ Тривалість дня</span>
+                        <div class="wait-setting-options">
+                            <button class="wait-setting-btn" data-setting="dayDuration" data-value="60"  onclick="setSetting('dayDuration',60)">1хв</button>
+                            <button class="wait-setting-btn active" data-setting="dayDuration" data-value="120" onclick="setSetting('dayDuration',120)">2хв</button>
+                            <button class="wait-setting-btn" data-setting="dayDuration" data-value="180" onclick="setSetting('dayDuration',180)">3хв</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Кнопки дій -->
