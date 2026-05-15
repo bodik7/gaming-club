@@ -1002,12 +1002,15 @@ function processTysyachaAction(state, type, data, pidx) {
                 const pts = trick.cards.reduce((s,c) => s + tPts(c.card), 0);
                 state.players[winnerId].trickPts += pts;
                 state.log.unshift(`🃏 ${state.players[winnerId].name} бере (+${pts})`);
+                const completedCards = [...trick.cards]; // зберігаємо ПЕРЕД очисткою
 
                 if (state.players[0].hand.length === 0) {
                     return tFinishRound(state);
                 }
                 state.trick = { cards: [], leader: winnerId };
                 state.currentPlayer = winnerId;
+                // повертаємо завершену взятку як sideEffect — клієнт покаже її 1.3с
+                return { event: 'trickComplete', cards: completedCards, winnerId, pts };
             } else {
                 state.currentPlayer = (pidx + 1) % n;
             }

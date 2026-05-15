@@ -17,6 +17,18 @@ function initTysyacha(state, myIdx) {
 }
 
 function updateTysyacha(state) {
+    const se = state.sideEffect;
+    if (se?.event === 'trickComplete') {
+        // Показуємо завершену взятку 1.3 с, потім переходимо до чистого стану
+        tState = { ...state, trick: { cards: se.cards, winnerId: se.winnerId } };
+        tSelectedCard = null;
+        renderTysyacha();
+        setTimeout(() => {
+            tState = state;
+            renderTysyacha();
+        }, 1300);
+        return;
+    }
     tState = state;
     tSelectedCard = null;
     renderTysyacha();
@@ -108,16 +120,21 @@ function renderTTrick(s) {
         el.innerHTML = '<div class="t-trick-empty">— стіл порожній —</div>';
         return;
     }
+    const winnerId = s.trick.winnerId; // встановлено лише під час показу trickComplete
     el.innerHTML = s.trick.cards.map(({ playerId, card }) => {
         const rank = card.slice(0, -1);
         const suit = card.slice(-1);
+        const isWinner = winnerId !== undefined && playerId === winnerId;
         return `
         <div class="t-trick-slot">
-            <div class="t-card-table ${tIsRed(card) ? 'red' : ''}">
+            <div class="t-card-table ${tIsRed(card) ? 'red' : ''}"
+                 style="${isWinner ? 'box-shadow:0 0 0 3px #c9a227,0 4px 14px rgba(0,0,0,0.65)' : ''}">
                 <div class="t-rank">${rank}</div>
                 <div class="t-suit">${suit}</div>
             </div>
-            <div class="t-trick-label">${s.players[playerId]?.name || ''}</div>
+            <div class="t-trick-label" style="${isWinner ? 'color:#e8c547;font-weight:700' : ''}">
+                ${isWinner ? '🏆 ' : ''}${s.players[playerId]?.name || ''}
+            </div>
         </div>`;
     }).join('');
 }
