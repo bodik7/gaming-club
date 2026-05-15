@@ -46,10 +46,12 @@ async function checkAuth() {
         } catch {}
         clearAuth();
     }
-    // Показуємо екран авторизації
-    document.getElementById('auth-screen').classList.remove('hidden');
+    // AUTH вимкнено — вмикається коли потрібно (замінити рядок нижче)
+    // document.getElementById('auth-screen').classList.remove('hidden');
+    playAsGuest();
     if (joinCode) {
-        sessionStorage.setItem('pendingJoin', joinCode);
+        const codeInput = document.getElementById('lobby-code');
+        if (codeInput) codeInput.value = joinCode.toUpperCase();
     }
 }
 
