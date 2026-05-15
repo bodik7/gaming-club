@@ -820,10 +820,14 @@ function applyState(state, diceRolled, landingPos, onDone) {
     }
 
     // Після застави/продажу будинку — перемальовуємо модал оренди через showRentModalOnline
-    // (вона правильно патчить кнопку "Сплатити" — без ризику локального stub onclick)
     if (pendingRent && state.pendingAction === 'payRent' && myPlayerIndex === state.currentPlayerIndex) {
         const { cell, rent, owner } = pendingRent;
         showRentModalOnline(players[currentPlayerIndex], cell, rent, owner);
+    }
+
+    // Борг після примусового списання (податок, картка, в'язниця)
+    if (state.pendingAction === 'coverDebt' && myPlayerIndex === state.currentPlayerIndex) {
+        showCoverDebtModal(state.pendingData?.shortfall || 0);
     }
 
     // Угода скасована сервером (таймаут) — закриваємо попап у отримувача

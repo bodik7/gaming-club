@@ -1527,6 +1527,70 @@ function showTaxModal(cell, reason, onDismiss) {
 }
 
 // ============================================
+// ПОКРИТТЯ БОРГУ (податок / картка / в'язниця → мінус)
+// ============================================
+function showCoverDebtModal(shortfall) {
+    const player   = players[_myIdx()];
+    const sellable = player.properties.filter(pos => (cellState[pos]?.houses || 0) > 0);
+    const mortgage = player.properties.filter(pos => !cellState[pos]?.mortgaged && (cellState[pos]?.houses || 0) === 0);
+
+    let sellHTML = '';
+    if (sellable.length) {
+        sellHTML = `<div style="margin-top:12px">
+            <div style="font-size:10px;font-weight:700;color:#2e7d32;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🏠 Продати будинки</div>
+            ${sellable.map(pos => {
+                const c = BOARD[pos]; const s = cellState[pos];
+                const val = Math.floor(c.housePrice * 0.9);
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:#f5f5f5;border-radius:4px;margin:2px 0;border-left:4px solid ${c.color||'#888'}">
+                    <span style="font-size:12px">${c.name} (${s.houses === 5 ? '🏨' : '🏠×' + s.houses})</span>
+                    <button class="big-btn green" style="font-size:11px;padding:2px 9px" onclick="sellHouseForRent(${pos})">+₴${val}</button>
+                </div>`;
+            }).join('')}
+        </div>`;
+    }
+
+    let mortgageHTML = '';
+    if (mortgage.length) {
+        mortgageHTML = `<div style="margin-top:10px">
+            <div style="font-size:10px;font-weight:700;color:#e07820;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">🏷️ Заставити ділянки</div>
+            ${mortgage.map(pos => {
+                const c = BOARD[pos];
+                const val = Math.floor(c.price / 2);
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:#f5f5f5;border-radius:4px;margin:2px 0;border-left:4px solid ${c.color||'#888'}">
+                    <span style="font-size:12px">${c.name}</span>
+                    <button class="big-btn orange" style="font-size:11px;padding:2px 9px" onclick="mortgageForRent(${pos})">+₴${val}</button>
+                </div>`;
+            }).join('')}
+        </div>`;
+    }
+
+    showModal({
+        title: '',
+        dismissable: false,
+        body: `
+        <div style="margin:-30px -30px 18px;padding:18px 24px 14px;
+                    background:linear-gradient(135deg,#b71c1c,#7f0000);
+                    border-radius:18px 18px 0 0;text-align:center;color:white">
+            <div style="font-size:44px;margin-bottom:6px">💸</div>
+            <div style="font-size:18px;font-weight:900">НЕ ВИСТАЧАЄ КОШТІВ</div>
+        </div>
+        <div style="text-align:center;padding:10px 0 6px">
+            <div style="font-size:13px;color:#555;margin-bottom:4px">Ваш баланс від'ємний. Потрібно зібрати:</div>
+            <div style="font-size:36px;font-weight:900;color:#b71c1c">₴${shortfall}</div>
+        </div>
+        ${sellHTML}${mortgageHTML}
+        ${!sellable.length && !mortgage.length
+            ? '<p style="text-align:center;color:#888;font-size:13px;margin-top:10px">Немає активів для продажу.</p>'
+            : ''}`,
+        buttons: [
+            { text: '💀 Оголосити банкрутство', class: 'btn-danger', action: () => {
+                closeModal(); sendAction('declareBankrupt');
+            }}
+        ]
+    });
+}
+
+// ============================================
 // СПЛИВАЮЧЕ ВІКНО ОРЕНДИ
 // ============================================
 let pendingRent = null;

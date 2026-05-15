@@ -196,6 +196,36 @@ function addLog(state, text, type = '') {
 }
 
 // ── Ігрова логіка ─────────────────────────────
+
+// Викликається після будь-якого вимушеного списання (податок, картка, в'язниця).
+// Якщо гравець у мінусі і немає активів — оголошує банкрутство банку.
+// Повертає true якщо настало банкрутство.
+function checkForcedDebt(state, player) {
+    if (player.money >= 0) return false;
+    const netWorth = calcNetWorth(state, player);
+    if (netWorth <= 0) {
+        // Нічого продати — одразу банкрут
+        addLog(state, `💀 ${player.name} не може покрити борг і оголошує банкрутство!`, 'error');
+        player.properties.forEach(pos => {
+            state.cellState[pos].owner = null;
+            state.cellState[pos].houses = 0;
+            state.cellState[pos].mortgaged = false;
+        });
+        player.money = 0;
+        player.bankrupt = true;
+        player.properties = [];
+        state.pendingAction = null;
+        state.pendingData = null;
+        return true;
+    }
+    // Є активи — вимагаємо покрити борг (можна продати будинки / заставити)
+    const shortfall = -player.money;
+    addLog(state, `⚠️ ${player.name} у мінусі ₴${shortfall} — продайте майно або оголосіть банкрутство`, 'error');
+    state.pendingAction = 'coverDebt';
+    state.pendingData = { shortfall };
+    return false;
+}
+
 function calcNetWorth(state, player) {
     let total = player.money;
     player.properties.forEach(pos => {
@@ -263,7 +293,10 @@ function drawCard(state, player, type) {
 
     switch (card.action) {
         case 'addMoney':    player.money += card.amount; break;
-        case 'takeMoney':   player.money -= card.amount; break;
+        case 'takeMoney':
+            player.money -= card.amount;
+            checkForcedDebt(state, player);
+            break;
         case 'goToStart':   moveTo(state, player, 0); break; // +200 вже в moveTo (прохід через СТАРТ)
         case 'goToJail':    goToJail(state, player); break;
         case 'jailCard':    player.hasJailCard = true; break;
@@ -326,6 +359,7 @@ function handleLanding(state, player) {
     } else if (cell.type === 'tax') {
         player.money -= cell.amount;
         player.stats.taxesPaid += cell.amount;
+        checkForcedDebt(state, player);
         const taxReasons = cell.pos === 4 ? [
             `🍺 ${player.name} сплачує податок за розпиття пива «Опілля» на вулицях Львова без дозволу міської ради. ₴${cell.amount}`,
             `🌿 Сусід поскаржився що трава у ${player.name} зеленіша ніж у нього. Введено податок на надмірну зеленість. ₴${cell.amount}`,
@@ -406,6 +440,11 @@ function handleLanding(state, player) {
 }
 
 function nextPlayer(state) {
+    // Очищаємо будь-яку незавершену дію попереднього гравця
+    // (наприклад, казино яке обійшли через прямий endTurn до фіксу)
+    state.pendingAction = null;
+    state.pendingData   = null;
+
     // зменшуємо лічильник кредиту поточного гравця
     const cur = state.players[state.currentPlayerIndex];
     if (cur.loan > 0 && cur.loanTurnsLeft > 0) cur.loanTurnsLeft--;
@@ -491,6 +530,7 @@ function processAction(state, type, data, room) {
                         player.money -= 50;
                         player.inJail = false;
                         addLog(state, `💸 ${player.name} сплатив(ла) ₴50 і вийшов(ла) з В'язниці`, 'warn');
+                        checkForcedDebt(state, player);
                     } else {
                         state.hasRolled = true;
                         addLog(state, `🔒 ${player.name} залишається у В'язниці (хід ${player.jailTurns}/3)`, 'warn');
@@ -529,6 +569,7 @@ function processAction(state, type, data, room) {
             const { pos } = state.pendingData || {};
             const cell = BOARD[pos];
             if (!cell || state.cellState[pos].owner !== null) break;
+            if (player.money < cell.price) break; // недостатньо коштів
             player.money -= cell.price;
             state.cellState[pos].owner = player.id;
             player.properties.push(pos);
@@ -796,6 +837,7 @@ function processAction(state, type, data, room) {
 
         case 'endTurn': {
             if (!state.hasRolled) break;
+            if (state.pendingAction) break; // не можна завершити хід з невирішеною дією (оренда, казино, купівля)
             sideEffect = nextPlayer(state);
             break;
         }
@@ -819,6 +861,12 @@ function processAction(state, type, data, room) {
             if (!trade || data.callerIdx !== trade.toIdx) break;
             const from = state.players[trade.fromIdx];
             const to   = state.players[trade.toIdx];
+            // Повторна перевірка: баланс міг змінитись між offerTrade і acceptTrade
+            if (from.money < trade.offerMoney || to.money < trade.requestMoney) {
+                addLog(state, `❌ Угоду скасовано — умови більше не діють (недостатньо коштів)`, 'error');
+                state.pendingTrade = null;
+                break;
+            }
             from.money -= trade.offerMoney;  to.money   += trade.offerMoney;
             from.money += trade.requestMoney; to.money  -= trade.requestMoney;
             for (const pos of trade.offerProps) {
