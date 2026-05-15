@@ -237,6 +237,94 @@
 .m-gameover { text-align: center; }
 .m-gameover-title { font-size: 28px; font-weight: 900; color: var(--m-gold); margin-bottom: 20px; }
 
+.m-gameover-ui {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 540px;
+    padding: 10px 0;
+}
+
+.m-gameover-banner {
+    width: 100%;
+    border-radius: 14px;
+    padding: 22px 28px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.m-gameover-banner.town {
+    background: linear-gradient(135deg, rgba(21,101,192,0.35) 0%, rgba(46,125,50,0.2) 100%);
+    border: 1.5px solid rgba(21,101,192,0.5);
+}
+.m-gameover-banner.mafia {
+    background: linear-gradient(135deg, rgba(198,40,40,0.35) 0%, rgba(136,14,79,0.2) 100%);
+    border: 1.5px solid rgba(198,40,40,0.5);
+}
+.m-gameover-big-icon { font-size: 56px; line-height: 1; }
+.m-gameover-headline { font-size: 26px; font-weight: 900; color: white; letter-spacing: 0.5px; }
+.m-gameover-sub { font-size: 14px; color: var(--m-sub); }
+
+.m-result-list {
+    width: 100%;
+    background: var(--m-surface);
+    border: 1px solid var(--m-border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.m-result-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--m-sub);
+    border-bottom: 1px solid var(--m-border);
+    background: rgba(0,0,0,0.3);
+}
+.m-result-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 1fr 1fr;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.15s;
+}
+.m-result-row:last-child { border-bottom: none; }
+.m-result-row.winner { background: rgba(255,215,0,0.06); }
+.m-result-row.loser  { background: transparent; }
+.m-result-row.dead   { opacity: 0.5; }
+.m-result-row.me     { border-left: 2px solid var(--m-gold); }
+.m-result-icon  { font-size: 16px; }
+.m-result-name  { font-weight: 600; }
+.m-result-role  { font-size: 12px; }
+.m-result-status { font-size: 12px; color: var(--m-sub); }
+
+.m-gameover-stats {
+    font-size: 13px;
+    color: var(--m-sub);
+    background: var(--m-surface);
+    border: 1px solid var(--m-border);
+    border-radius: 20px;
+    padding: 6px 20px;
+}
+.m-gameover-stats b { color: var(--m-text); }
+
+.m-btn-wide { width: 100%; max-width: 320px; padding: 13px 0; font-size: 15px; }
+
+@keyframes confetti-fall {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+}
+
 /* ── Очікування ── */
 .m-wait {
     font-size: 14px;

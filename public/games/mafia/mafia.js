@@ -188,12 +188,104 @@ function mRenderActions() {
 
     // ── Кінець гри
     if (s.phase === 'gameover') {
-        const winnerMap = { town: '🏙️ Місто перемогло!', mafia: '🔫 Мафія перемогла!' };
-        el.innerHTML = `
-            <div class="m-gameover">
-                <div class="m-gameover-title">${winnerMap[s.winner] || '🏁 Гра завершена'}</div>
-                <button class="m-btn primary" onclick="location.reload()">🔄 Нова гра</button>
-            </div>`;
+        el.innerHTML = mGameoverUI(s);
+        mSpawnConfetti(s.winner);
+        return;
+    }
+}
+
+function mGameoverUI(s) {
+    const isTown   = s.winner === 'town';
+    const isMafia  = s.winner === 'mafia';
+    const myFaction = M_ROLE_LABELS[s.players[mMyIdx]?.role]?.faction;
+    const iWon     = (isTown && myFaction === 'town') || (isMafia && myFaction === 'mafia');
+
+    const bannerClass = isTown ? 'town' : 'mafia';
+    const bannerIcon  = isTown ? '🏙️' : '🔫';
+    const bannerText  = isTown ? 'Місто перемогло!' : 'Мафія перемогла!';
+
+    // Групуємо гравців: спочатку переможці, потім решта
+    const sorted = [...s.players].sort((a, b) => {
+        const aWin = (isTown && M_ROLE_LABELS[a.role]?.faction === 'town') ||
+                     (isMafia && M_ROLE_LABELS[a.role]?.faction === 'mafia');
+        const bWin = (isTown && M_ROLE_LABELS[b.role]?.faction === 'town') ||
+                     (isMafia && M_ROLE_LABELS[b.role]?.faction === 'mafia');
+        if (aWin && !bWin) return -1;
+        if (!aWin && bWin) return  1;
+        return a.isAlive ? -1 : 1;
+    });
+
+    const playerRows = sorted.map(p => {
+        const rl = M_ROLE_LABELS[p.role] || { ua: p.role, icon: '?', faction: 'town', color: '#888' };
+        const won = (isTown && rl.faction === 'town') || (isMafia && rl.faction === 'mafia');
+        return `
+        <div class="m-result-row ${won ? 'winner' : 'loser'} ${!p.isAlive ? 'dead' : ''} ${p.id === mMyIdx ? 'me' : ''}">
+            <span class="m-result-icon">${rl.icon}</span>
+            <span class="m-result-name">${p.name}${p.id === mMyIdx ? ' (ви)' : ''}</span>
+            <span class="m-result-role" style="color:${rl.color}">${rl.ua}</span>
+            <span class="m-result-status">${p.isAlive ? '✅ живий' : '💀 загинув'}</span>
+        </div>`;
+    }).join('');
+
+    return `
+        <div class="m-gameover-ui">
+            <div class="m-gameover-banner ${bannerClass}">
+                <div class="m-gameover-big-icon">${bannerIcon}</div>
+                <div class="m-gameover-headline">${bannerText}</div>
+                <div class="m-gameover-sub">${iWon ? '🎉 Ви у команді переможців!' : '😔 Ваша команда програла.'}</div>
+            </div>
+
+            <div class="m-result-list">
+                <div class="m-result-header">
+                    <span>Гравець</span><span>Роль</span><span>Статус</span>
+                </div>
+                ${playerRows}
+            </div>
+
+            <div class="m-gameover-stats">
+                Раундів зіграно: <b>${s.round}</b> ·
+                Вижило: <b>${s.players.filter(p => p.isAlive).length}</b> /
+                <b>${s.players.length}</b>
+            </div>
+
+            <button class="m-btn primary m-btn-wide" onclick="mReturnToLobby()">
+                🏠 Повернутись у лобі
+            </button>
+        </div>`;
+}
+
+function mReturnToLobby() {
+    clearSession();
+    document.getElementById('mafia-screen').classList.add('hidden');
+    document.getElementById('mafia-screen').classList.remove('visible');
+    document.getElementById('lobby-screen').classList.remove('hidden');
+    setQuitBtn(false);
+    if (typeof switchViewport === 'function') switchViewport('lobby');
+    fetchRoomCounts();
+}
+
+function mSpawnConfetti(winner) {
+    const myFaction = M_ROLE_LABELS[mState?.players[mMyIdx]?.role]?.faction;
+    const iWon = (winner === 'town' && myFaction === 'town') ||
+                 (winner === 'mafia' && myFaction === 'mafia');
+    if (!iWon) return;
+
+    const colors = winner === 'mafia'
+        ? ['#c62828','#e53935','#ff7043','#ffd700','#880e4f']
+        : ['#1565c0','#0288d1','#ffd700','#4caf50','#81d4fa'];
+
+    for (let i = 0; i < 80; i++) {
+        const el = document.createElement('div');
+        const size = 6 + Math.random() * 8;
+        el.style.cssText = `
+            position:fixed;top:-12px;left:${Math.random()*100}vw;
+            width:${size}px;height:${size}px;
+            background:${colors[Math.floor(Math.random()*colors.length)]};
+            border-radius:${Math.random()>.5?'50%':'2px'};
+            animation:confetti-fall ${2+Math.random()*3}s linear ${Math.random()*1.5}s forwards;
+            z-index:9999;pointer-events:none`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 6000);
     }
 }
 
