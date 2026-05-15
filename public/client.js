@@ -962,6 +962,10 @@ function showCardModalOnline(state, effect, teleportFn) {
     const icon     = isChance ? '❓' : '🗺️';
     const title    = isChance ? 'КАРТКА ШАНСУ' : 'ЕКСКУРСІЯ';
 
+    const dismiss = () => {
+        teleportFn?.();
+        if (effect.nextEffect) setTimeout(() => handleSideEffect(state, effect.nextEffect, null), 400);
+    };
     showModal({
         title: '',
         body: `
@@ -976,15 +980,13 @@ function showCardModalOnline(state, effect, teleportFn) {
                         color:#333;text-align:center">
                 ${effect.text}
             </div>`,
+        onClose: dismiss, // ✕ теж виконує teleport
         buttons: [{
             text: '👍 Зрозуміло',
             class: 'btn-primary',
             action: () => {
                 closeModal();
-                teleportFn?.(); // телепортуємо токен якщо картка переміщала
-                if (effect.nextEffect) {
-                    setTimeout(() => handleSideEffect(state, effect.nextEffect, null), 400);
-                }
+                dismiss();
             }
         }]
     });

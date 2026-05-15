@@ -21,7 +21,7 @@ function log(text, type = '') {
     while (content.children.length > 30) content.removeChild(content.lastChild);
 }
 
-function showModal({ title, body, buttons, wide = false }) {
+function showModal({ title, body, buttons, wide = false, onClose = null, dismissable = true }) {
     const titleEl = document.getElementById('modal-title');
     titleEl.innerText = title;
     titleEl.style.display = title ? '' : 'none';
@@ -40,8 +40,9 @@ function showModal({ title, body, buttons, wide = false }) {
     card.style.maxWidth = wide ? '820px' : '';
     card.style.position = 'relative';
 
-    // Кнопка ✕ — одна на весь модал, не дублюється
+    // Кнопка ✕
     card.querySelectorAll('.modal-close-btn').forEach(el => el.remove());
+    if (!dismissable) return document.getElementById('modal').classList.remove('hidden');
     const closeBtn = document.createElement('button');
     closeBtn.className = 'modal-close-btn';
     closeBtn.innerHTML = '✕';
@@ -50,7 +51,8 @@ function showModal({ title, body, buttons, wide = false }) {
         transition:color 0.15s,background 0.15s;z-index:1`;
     closeBtn.onmouseover = () => { closeBtn.style.color = '#333'; closeBtn.style.background = '#f0f0f0'; };
     closeBtn.onmouseout  = () => { closeBtn.style.color = '#aaa'; closeBtn.style.background = 'none'; };
-    closeBtn.onclick = closeModal;
+    // onClose — виконує потрібні дії при закритті (teleport тощо)
+    closeBtn.onclick = onClose ? () => { closeModal(); onClose(); } : closeModal;
     card.appendChild(closeBtn);
 
     document.getElementById('modal').classList.remove('hidden');
@@ -1379,10 +1381,11 @@ function showJailArrestModal(reason, onDismiss) {
             Вирушаєте прямо до В'язниці. Не проходите через СТАРТ. Не отримуєте ₴200.
         </div>`;
 
+    const dismiss = () => { onDismiss?.(); showEndTurnBtn(); };
     showModal({
-        title: '',
-        body,
-        buttons: [{ text: '😔 Зрозуміло', class: 'btn-danger', action: () => { closeModal(); onDismiss?.(); showEndTurnBtn(); } }]
+        title: '', body,
+        buttons: [{ text: '😔 Зрозуміло', class: 'btn-danger', action: () => { closeModal(); dismiss(); } }],
+        onClose: dismiss,  // ✕ теж виконує teleport/endTurn
     });
 }
 
@@ -1511,10 +1514,11 @@ function showTaxModal(cell, reason, onDismiss) {
             <span style="font-size:22px;font-weight:900;color:#cc1f1f">₴${cell.amount}</span>
         </div>`;
 
+    const dismiss = () => { onDismiss?.(); showEndTurnBtn(); };
     showModal({
-        title: '',
-        body,
-        buttons: [{ text: '😤 Зрозуміло', class: 'btn-primary', action: () => { closeModal(); onDismiss?.(); showEndTurnBtn(); } }]
+        title: '', body,
+        buttons: [{ text: '😤 Зрозуміло', class: 'btn-primary', action: () => { closeModal(); dismiss(); } }],
+        onClose: dismiss,  // ✕ теж виконує teleport/endTurn
     });
 }
 
@@ -1734,7 +1738,8 @@ function renderRentModal() {
     showModal({
         title: '',
         body: banner + ownerBlock + heroRent + balanceBlock + sellHTML + mortgageHTML,
-        buttons
+        buttons,
+        dismissable: false, // не можна закрити без оплати/застави
     });
 }
 
