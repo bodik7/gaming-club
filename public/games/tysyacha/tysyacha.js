@@ -18,11 +18,10 @@ function initTysyacha(state, myIdx) {
     renderTysyacha();
 }
 
-function updateTysyacha(state) {
-    const se = state.sideEffect;
-    if (se?.event === 'trickComplete') {
+function updateTysyacha(state, sideEffect) {
+    if (sideEffect?.event === 'trickComplete') {
         // Показуємо завершену взятку 1.3 с, потім переходимо до чистого стану
-        tState = { ...state, trick: { cards: se.cards, winnerId: se.winnerId } };
+        tState = { ...state, trick: { cards: sideEffect.cards, winnerId: sideEffect.winnerId } };
         tSelectedCard = null;
         renderTysyacha();
         setTimeout(() => {

@@ -698,7 +698,7 @@ socket.on('gameStarted', ({ state, gameType }) => {
 
 socket.on('stateUpdate', ({ state, sideEffect, toast }) => {
     if (state?.gameType === 'tysyacha') {
-        updateTysyacha(state);
+        updateTysyacha(state, sideEffect);
         return;
     }
     const [d1, d2] = state.lastDiceRoll;
