@@ -490,18 +490,23 @@
                     🔍 Знайти вільну кімнату
                 </button>
 
-                <div class="lobby-divider">або за кодом</div>
-
-                <div class="lobby-row">
-                    <input id="lobby-code" class="lobby-input" type="text"
-                           placeholder="KYIV-1234"
-                           style="text-transform:uppercase;letter-spacing:2px;flex:1"
-                           maxlength="15" onkeydown="if(event.key==='Enter')joinRoom()">
-                    <button class="lobby-btn lobby-btn-blue" onclick="joinRoom()"
-                            style="width:auto;padding:13px 20px">🔗 Увійти</button>
-                </div>
+                <!-- Прихований input — використовується тільки при відкритті ?join= посилання -->
+                <input id="lobby-code" type="hidden" maxlength="15">
 
             </div>
+
+                <!-- Банер запрошення (з'являється тільки коли є ?join= в URL) -->
+                <div id="join-invite-banner" class="hidden"
+                     style="background:rgba(0,87,183,0.15);border:1px solid rgba(0,87,183,0.4);
+                            border-radius:12px;padding:14px 18px;text-align:center">
+                    <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:6px">
+                        Вас запрошено до кімнати
+                    </div>
+                    <div style="font-size:20px;font-weight:900;color:#ffd700;letter-spacing:3px;margin-bottom:12px"
+                         id="join-invite-code"></div>
+                    <button class="lobby-btn lobby-btn-blue" onclick="joinRoom()"
+                            style="padding:11px">🔗 Приєднатись</button>
+                </div>
 
             <div id="rejoin-error"></div>
 

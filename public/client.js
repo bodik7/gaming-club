@@ -83,12 +83,18 @@ function _enterLobby(username, joinCode) {
         }
     }
 
-    // Підставляємо код кімнати якщо є
+    // Показуємо банер запрошення якщо є код у URL або sessionStorage
     const code = joinCode || sessionStorage.getItem('pendingJoin') || '';
+    const banner  = document.getElementById('join-invite-banner');
+    const codeEl  = document.getElementById('join-invite-code');
+    const codeInp = document.getElementById('lobby-code');
     if (code) {
-        const codeInput = document.getElementById('lobby-code');
-        if (codeInput) codeInput.value = code.toUpperCase();
+        if (codeInp) codeInp.value = code.toUpperCase();
+        if (codeEl)  codeEl.textContent = code.toUpperCase();
+        if (banner)  banner.classList.remove('hidden');
         sessionStorage.removeItem('pendingJoin');
+    } else {
+        if (banner) banner.classList.add('hidden');
     }
 }
 
