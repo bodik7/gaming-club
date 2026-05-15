@@ -46,13 +46,10 @@ async function checkAuth() {
         } catch {}
         clearAuth();
     }
-    // AUTH_ENABLED=false: одразу заходимо як гість, auth-екран прихований
-    // Коли будемо підключати акаунти (Мафія тощо) — замінити на:
-    //   document.getElementById('auth-screen').classList.remove('hidden');
-    playAsGuest();
+    // Показуємо екран авторизації
+    document.getElementById('auth-screen').classList.remove('hidden');
     if (joinCode) {
-        const codeInput = document.getElementById('lobby-code');
-        if (codeInput) codeInput.value = joinCode.toUpperCase();
+        sessionStorage.setItem('pendingJoin', joinCode);
     }
 }
 
