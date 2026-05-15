@@ -1374,14 +1374,21 @@ function sanitizeMafia(state, forIdx) {
                    (myFaction === 'mafia' && MAFIA_ROLE_LABELS[p.role]?.faction === 'mafia'))
                 ? p.role : null,
         })),
-        // Мої особисті дані
-        myId:       forIdx,
+        myId:        forIdx,
         myRole,
         myFaction,
         myRoleLabel: MAFIA_ROLE_LABELS[myRole] || null,
-        // Список id мафіозі — тільки для мафії (приватний чат)
-        mafiaIds: myFaction === 'mafia' ? state.mafiaIds : null,
-        votes: state.phase === 'day_voting' ? state.votes : {},
+        mafiaIds:    myFaction === 'mafia' ? state.mafiaIds : null,
+        // Голосування — власний вибір видно, чужі — ні
+        myVote:    state.votes?.[forIdx] ?? null,
+        voteCount: state.phase === 'day_voting'
+            ? state.players.filter(p => p.isAlive && !p.isSilenced && state.votes[p.id] !== undefined).length
+            : 0,
+        eligibleVoters: state.players.filter(p => p.isAlive && !p.isSilenced).length,
+        // Дедлайни для відображення таймерів
+        nightDeadline: state.nightDeadline || null,
+        dayDeadline:   state.dayDeadline   || null,
+        voteDeadline:  state.voteDeadline  || null,
     };
 }
 
@@ -1548,12 +1555,72 @@ function startMorningPhase(room, sheriffResult, donResult) {
     setTimeout(() => startDayPhase(room), 6000);
 }
 
-// Заглушка — буде реалізована в п.3
+// ── Денна фаза ───────────────────────────────
 function startDayPhase(room) {
     const state = room.state;
     state.phase = 'day_discussion';
-    addLog(state, `☀️ День ${state.round} — місто обговорює...`);
-    emitMafiaUpdate(room, { event: 'dayStart' });
+    state.votes  = {};
+    state.dayDeadline = Date.now() + state.dayDuration * 1000;
+    addLog(state, `☀️ День ${state.round} — місто обговорює підозрюваних...`);
+    emitMafiaUpdate(room, { event: 'dayStart', deadline: state.dayDeadline });
+    clearTimeout(room.dayTimer);
+    room.dayTimer = setTimeout(() => startVotingPhase(room), state.dayDuration * 1000);
+}
+
+function startVotingPhase(room) {
+    clearTimeout(room.dayTimer);
+    const state = room.state;
+    state.phase = 'day_voting';
+    state.votes  = {};
+    const VOTE_MS = 60000; // 60 секунд на голосування
+    state.voteDeadline = Date.now() + VOTE_MS;
+    addLog(state, `🗳️ Час голосувати! Оберіть підозрюваного або пропустіть.`);
+    emitMafiaUpdate(room, { event: 'votingStart', deadline: state.voteDeadline });
+    clearTimeout(room.voteTimer);
+    room.voteTimer = setTimeout(() => resolveVoting(room), VOTE_MS);
+}
+
+function resolveVoting(room) {
+    clearTimeout(room.voteTimer);
+    const state = room.state;
+
+    // Підраховуємо голоси (заглушені не голосують)
+    const voteCounts = {};
+    let skipCount = 0;
+    Object.entries(state.votes).forEach(([vid, tid]) => {
+        const voter = state.players[+vid];
+        if (!voter?.isAlive || voter.isSilenced) return;
+        if (tid === 'skip') { skipCount++; return; }
+        voteCounts[tid] = (voteCounts[tid] || 0) + 1;
+    });
+
+    const maxV       = Math.max(...Object.values(voteCounts), 0);
+    const topTargets = Object.keys(voteCounts).filter(k => voteCounts[k] === maxV);
+
+    state.lastDeaths = [];
+
+    if (maxV === 0 || topTargets.length > 1) {
+        // Нічия або всі пропустили
+        addLog(state, `⚖️ Нічия — місто нікого не вигнало.`);
+    } else {
+        const eliminated = +topTargets[0];
+        state.players[eliminated].isAlive = false;
+        state.lastDeaths.push(eliminated);
+        const p = state.players[eliminated];
+        addLog(state, `🗳️ ${p.name} вигнаний(а) з міста (${MAFIA_ROLE_LABELS[p.role]?.ua || p.role})`);
+    }
+
+    if (checkMafiaWin(state)) {
+        room.players.forEach(rp => io.to(rp.socketId).emit('gameOver', {
+            state: sanitizeMafia(state, rp.index), gameType: 'mafia',
+        }));
+        return;
+    }
+
+    // Наступна ніч
+    state.round++;
+    emitMafiaUpdate(room, { event: 'votingResolved' });
+    setTimeout(() => startNightPhase(room), 5000);
 }
 
 // ── Обробка дій від клієнта (Мафія) ─────────
@@ -1616,6 +1683,20 @@ function processMafiaAction(state, type, data, pidx) {
             const { targetId: rbt } = data;
             if (!state.players[rbt]?.isAlive || rbt === pidx) break;
             state.nightActions.roleblockerBlock = { actorId: pidx, targetId: rbt };
+            break;
+        }
+
+        // Голосування вдень (targetId або 'skip')
+        case 'dayVote': {
+            if (state.phase !== 'day_voting') break;
+            if (!player.isAlive || player.isSilenced) break;
+            const { targetId: dvt } = data;
+            if (dvt !== 'skip' && (!state.players[dvt]?.isAlive || dvt === pidx)) break;
+            state.votes[pidx] = dvt;
+            // Якщо всі живі (незаглушені) проголосували — вирішуємо одразу
+            const eligible = state.players.filter(p => p.isAlive && !p.isSilenced);
+            const voted    = eligible.filter(p => state.votes[p.id] !== undefined);
+            if (voted.length >= eligible.length) state._resolveVoting = true;
             break;
         }
     }
@@ -1963,7 +2044,12 @@ io.on('connection', (socket) => {
             processMafiaAction(state, type, data || {}, socket.playerIndex);
             if (state._shouldStartNight) {
                 delete state._shouldStartNight;
-                startNightPhase(room); // запускає таймер і emitMafiaUpdate
+                startNightPhase(room);
+                return;
+            }
+            if (state._resolveVoting) {
+                delete state._resolveVoting;
+                resolveVoting(room);
                 return;
             }
             if (state.phase === 'gameover') {

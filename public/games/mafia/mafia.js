@@ -130,9 +130,59 @@ function mRenderActions() {
         return;
     }
 
-    // ── День (заглушка до п.3)
-    if (s.phase === 'day_discussion' || s.phase === 'day_voting') {
-        el.innerHTML = `<div class="m-wait">☀️ Денна фаза — буде у наступному пункті</div>`;
+    // ── Денне обговорення
+    if (s.phase === 'day_discussion') {
+        const timer = mDeadlineTimer(s.dayDeadline, () => renderMafia());
+        el.innerHTML = `
+            <div class="m-day-ui">
+                <div class="m-day-title">☀️ Обговорення</div>
+                <div class="m-day-timer" id="m-day-timer">${timer}</div>
+                <div class="m-day-hint">Обговоріть у чаті та знайдіть мафію.<br>Після таймера — голосування.</div>
+                <div class="m-day-players">
+                    ${s.players.filter(p => p.isAlive).map(p => `
+                        <div class="m-day-player ${p.isSilenced ? 'silenced' : ''} ${p.id === mMyIdx ? 'me' : ''}">
+                            ${p.name}${p.isSilenced ? ' 🔇' : ''}${p.id === mMyIdx ? ' (я)' : ''}
+                        </div>`).join('')}
+                </div>
+            </div>`;
+        mStartTimer('m-day-timer', s.dayDeadline);
+        return;
+    }
+
+    // ── Голосування
+    if (s.phase === 'day_voting') {
+        const me = s.players[mMyIdx];
+        const myVote = s.myVote;
+        const timer = mDeadlineTimer(s.voteDeadline, () => renderMafia());
+        const targets = s.players.filter(p => p.isAlive && p.id !== mMyIdx);
+
+        const canVote = me.isAlive && !me.isSilenced;
+        const alreadyVoted = myVote !== null && myVote !== undefined;
+
+        el.innerHTML = `
+            <div class="m-vote-ui">
+                <div class="m-day-title">🗳️ Голосування</div>
+                <div class="m-day-timer" id="m-vote-timer">${timer}</div>
+                <div class="m-vote-count">${s.voteCount} / ${s.eligibleVoters} проголосували</div>
+
+                ${!canVote
+                    ? `<div class="m-wait">${me.isSilenced ? '🔇 Ви заглушені і не можете голосувати.' : '💀 Ви загинули.'}</div>`
+                    : alreadyVoted
+                    ? `<div class="m-voted-info">
+                            ✅ Ви проголосували: <b>${myVote === 'skip' ? 'пропустити' : s.players[myVote]?.name || '?'}</b>
+                            <button class="m-btn-small" onclick="mDayVote(null)">↩ Змінити</button>
+                        </div>`
+                    : `<div class="m-vote-targets">
+                            ${targets.map(p => `
+                                <button class="m-vote-target-btn" onclick="mDayVote(${p.id})">
+                                    ${p.name}
+                                </button>`).join('')}
+                            <button class="m-vote-skip-btn" onclick="mDayVote('skip')">
+                                ⏭️ Пропустити
+                            </button>
+                        </div>`}
+            </div>`;
+        mStartTimer('m-vote-timer', s.voteDeadline);
         return;
     }
 
@@ -164,11 +214,11 @@ function mNightActions(s, me) {
 
     switch (me.role) {
         case 'mafia':
-            return targetSelect('mafiaVote', '🔫 Оберіть жертву');
+            return targetSelect('mafiaVote', '🔫 Оберіть жертву') + mMafiaChat();
 
         case 'don':
             return targetSelect('mafiaVote', '🔫 Оберіть жертву') +
-                   targetSelect('donCheck', '👁️ Перевірити (Комісар?)');
+                   targetSelect('donCheck', '👁️ Перевірити (Комісар?)') + mMafiaChat();
 
         case 'sheriff':
         case 'deputy':
@@ -208,6 +258,57 @@ function mReady() {
     socket.emit('action', { type: 'mafiaReady', data: {} });
 }
 
+function mDayVote(targetId) {
+    if (targetId === null) {
+        // Скасувати голос — перемалюємо без відправки
+        if (mState) mState.myVote = null;
+        mRenderActions();
+        return;
+    }
+    socket.emit('action', { type: 'dayVote', data: { targetId } });
+}
+
+// ── Приватний чат мафії ───────────────────────
+socket.on('mafiaChat', ({ playerId, name, text }) => {
+    const el = document.getElementById('m-mafia-chat');
+    if (!el) return;
+    const msg = document.createElement('div');
+    msg.className = 'm-chat-msg';
+    msg.innerHTML = `<b>${name}:</b> ${text}`;
+    el.appendChild(msg);
+    el.scrollTop = el.scrollHeight;
+});
+
+function mSendMafiaChat() {
+    const input = document.getElementById('m-mafia-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    socket.emit('mafiaChat', { text });
+    input.value = '';
+}
+
+// ── Таймер відліку ────────────────────────────
+const _mTimers = {};
+function mDeadlineTimer(deadline, onTick) {
+    if (!deadline) return '—';
+    const sec = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return `${m}:${String(s).padStart(2,'0')}`;
+}
+function mStartTimer(elId, deadline) {
+    clearInterval(_mTimers[elId]);
+    if (!deadline) return;
+    _mTimers[elId] = setInterval(() => {
+        const el = document.getElementById(elId);
+        if (!el) { clearInterval(_mTimers[elId]); return; }
+        const sec = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+        const m = Math.floor(sec / 60), s = sec % 60;
+        el.textContent = `${m}:${String(s).padStart(2,'0')}`;
+        if (sec === 0) clearInterval(_mTimers[elId]);
+    }, 500);
+}
+
 function mNightAction(type, targetId) {
     socket.emit('action', { type, data: { targetId } });
     // Візуальний feedback — підсвітити обрану кнопку
@@ -227,6 +328,20 @@ const M_ROLE_LABELS = {
     mafia:       { ua: 'Мафія',         icon: '🔫', faction: 'mafia', color: '#c62828' },
     don:         { ua: 'Дон',           icon: '👑', faction: 'mafia', color: '#b71c1c' },
 };
+
+function mMafiaChat() {
+    return `
+        <div class="m-night-action" style="margin-top:16px">
+            <div class="m-night-label">🔴 Чат мафії (приватний)</div>
+            <div class="m-chat-box" id="m-mafia-chat"></div>
+            <div class="m-chat-input-row">
+                <input id="m-mafia-input" class="m-chat-input" type="text"
+                       placeholder="Написати спільникам…" maxlength="120"
+                       onkeydown="if(event.key==='Enter')mSendMafiaChat()">
+                <button class="m-chat-send" onclick="mSendMafiaChat()">➤</button>
+            </div>
+        </div>`;
+}
 
 function mRoleLabel(role) { return M_ROLE_LABELS[role] || null; }
 function mFactionColor(role) { return M_ROLE_LABELS[role]?.color || '#555'; }

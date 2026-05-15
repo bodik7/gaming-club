@@ -258,3 +258,159 @@
 }
 .m-btn.primary { background: linear-gradient(135deg,#ffd700,#ffaa00); color: #1a0a00; }
 .m-btn.primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+/* ── Денна фаза ── */
+.m-day-ui, .m-vote-ui {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    max-width: 500px;
+}
+.m-day-title {
+    font-size: 24px;
+    font-weight: 900;
+    color: #ffd700;
+    letter-spacing: 0.5px;
+}
+.m-day-timer, #m-vote-timer {
+    font-size: 48px;
+    font-weight: 900;
+    color: white;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 2px 12px rgba(255,215,0,0.3);
+}
+.m-day-hint {
+    font-size: 13px;
+    color: var(--m-sub);
+    text-align: center;
+    line-height: 1.6;
+}
+.m-day-players {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+.m-day-player {
+    padding: 6px 14px;
+    background: var(--m-surface);
+    border: 1px solid var(--m-border);
+    border-radius: 20px;
+    font-size: 13px;
+}
+.m-day-player.me      { border-color: rgba(255,215,0,0.4); color: #ffd700; }
+.m-day-player.silenced { opacity: 0.4; text-decoration: line-through; }
+
+/* ── Голосування ── */
+.m-vote-count {
+    font-size: 13px;
+    color: var(--m-sub);
+    background: var(--m-surface);
+    padding: 4px 14px;
+    border-radius: 20px;
+}
+.m-vote-targets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+.m-vote-target-btn {
+    padding: 12px 22px;
+    background: rgba(198,40,40,0.12);
+    border: 1.5px solid rgba(198,40,40,0.35);
+    border-radius: 10px;
+    color: #ef9a9a;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.m-vote-target-btn:hover {
+    background: rgba(198,40,40,0.25);
+    border-color: var(--m-red);
+    color: white;
+    transform: translateY(-2px);
+}
+.m-vote-skip-btn {
+    padding: 12px 22px;
+    background: var(--m-surface);
+    border: 1.5px solid var(--m-border);
+    border-radius: 10px;
+    color: var(--m-sub);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.m-vote-skip-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+.m-voted-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #a5d6a7;
+    background: rgba(46,125,50,0.15);
+    border: 1px solid rgba(46,125,50,0.3);
+    border-radius: 10px;
+    padding: 10px 18px;
+}
+.m-btn-small {
+    background: none;
+    border: 1px solid var(--m-border);
+    color: var(--m-sub);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.m-btn-small:hover { border-color: rgba(255,255,255,0.3); color: white; }
+
+/* ── Приватний чат мафії ── */
+.m-chat-box {
+    width: 100%;
+    max-height: 110px;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(198,40,40,0.25);
+    border-radius: 8px;
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.m-chat-msg {
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.4;
+}
+.m-chat-input-row {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+}
+.m-chat-input {
+    flex: 1;
+    padding: 6px 10px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(198,40,40,0.3);
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    outline: none;
+}
+.m-chat-input:focus { border-color: var(--m-red); }
+.m-chat-send {
+    background: var(--m-red);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+}
+.m-chat-send:hover { background: #e53935; }
