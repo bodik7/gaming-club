@@ -882,14 +882,30 @@ function createTysyachaState(roomPlayers) {
         })),
         talon: deck.slice(cpp*n),
         dealer: 0, round: 1,
-        phase: 'auction', // auction|talon|playing|scoring|gameover
+        phase: 'auction',
         currentPlayer: 1 % n,
         auction: { current: 100, passed: Array(n).fill(false), winner: null },
         trick: { cards: [], leader: 1 % n },
         trump: null, declaredBid: null,
         marriages: {}, givenCards: [],
+        talonPiles: null,      // 2-player: [[c,c],[c,c]] до вибору
+        leftoverPile: null,    // 2-player: нерозкрита стопка
+        lastTrickWinner: null, // хто взяв останню взятку
         log: [], winner: null,
     };
+}
+
+function tAssignTalon(state, w) {
+    if (state.players.length === 2) {
+        // 2 гравці: розбиваємо на 2 стопки по 2 карти для вибору
+        state.talonPiles = [state.talon.slice(0, 2), state.talon.slice(2, 4)];
+    } else {
+        // 3 гравці: переможець одразу бере всі 3 карти
+        state.players[w].hand.push(...state.talon);
+    }
+    state.talon = [];
+    state.phase = 'talon';
+    state.currentPlayer = w;
 }
 
 function processTysyachaAction(state, type, data, pidx) {
@@ -910,24 +926,17 @@ function processTysyachaAction(state, type, data, pidx) {
             }
             const active = state.players.map((_,i)=>i).filter(i => !state.auction.passed[i]);
             if (active.length === 0) {
-                // Всі спасували — примусово перший гравець бере тялон з мінімальною ставкою
+                // Всі спасували — примусово перший гравець бере тялон
                 const w = (state.dealer + 1) % n;
                 state.auction.passed = Array(n).fill(false);
                 state.auction.winner = w;
                 state.log.unshift(`⚠️ Всі спасували — ${state.players[w].name} бере за ${state.auction.current}`);
-                state.players[w].hand.push(...state.talon);
-                state.talon = [];
-                state.phase = 'talon';
-                state.currentPlayer = w;
+                tAssignTalon(state, w);
             } else if (active.length === 1) {
                 const w = active[0];
                 state.auction.winner = w;
                 state.log.unshift(`🏆 ${state.players[w].name} виграє торги (${state.auction.current})`);
-                // Переможець бере тялон
-                state.players[w].hand.push(...state.talon);
-                state.talon = [];
-                state.phase = 'talon';
-                state.currentPlayer = w;
+                tAssignTalon(state, w);
             } else {
                 let next = (pidx + 1) % n;
                 while (state.auction.passed[next]) next = (next + 1) % n;
@@ -936,8 +945,20 @@ function processTysyachaAction(state, type, data, pidx) {
             break;
         }
 
+        case 'tChoosePile': {
+            if (state.phase !== 'talon' || !state.talonPiles || pidx !== state.auction.winner) break;
+            const { pileIdx } = data;
+            if (pileIdx !== 0 && pileIdx !== 1) break;
+            player.hand.push(...state.talonPiles[pileIdx]);
+            state.leftoverPile = state.talonPiles[1 - pileIdx];
+            state.talonPiles = null;
+            addLog(state, `${player.name} обирає прикуп`);
+            break;
+        }
+
         case 'tGiveCard': {
             if (state.phase !== 'talon' || pidx !== state.auction.winner) break;
+            if (state.talonPiles) break; // 2-player: спочатку треба вибрати стопку
             const { card, toPlayer } = data;
             if (toPlayer === pidx || toPlayer < 0 || toPlayer >= n) break;
             const idx = player.hand.indexOf(card);
@@ -1002,6 +1023,7 @@ function processTysyachaAction(state, type, data, pidx) {
                 const pts = trick.cards.reduce((s,c) => s + tPts(c.card), 0);
                 state.players[winnerId].trickPts += pts;
                 state.log.unshift(`🃏 ${state.players[winnerId].name} бере (+${pts})`);
+                state.lastTrickWinner = winnerId; // завжди оновлюємо — буде останній хто взяв
                 const completedCards = [...trick.cards]; // зберігаємо ПЕРЕД очисткою
 
                 if (state.players[0].hand.length === 0) {
@@ -1019,6 +1041,7 @@ function processTysyachaAction(state, type, data, pidx) {
 
         case 'tSetBid': {
             if (state.phase !== 'talon' || pidx !== state.auction.winner) break;
+            if (state.talonPiles) break; // 2-player: спочатку треба вибрати стопку
             const amt = parseInt(data.amount) || 0;
             if (amt < state.auction.current || amt % 10 !== 0) break;
             state.declaredBid = amt;
@@ -1044,6 +1067,16 @@ function tDetermineWinner(cards, trump) {
 function tFinishRound(state) {
     const n = state.players.length;
     const bidder = state.auction.winner;
+
+    // Нерозкритий прикуп (2-player) → очки йдуть тому хто взяв останню взятку
+    if (state.leftoverPile?.length && state.lastTrickWinner !== null) {
+        const pts = state.leftoverPile.reduce((s, c) => s + tPts(c), 0);
+        state.players[state.lastTrickWinner].trickPts += pts;
+        if (pts > 0) {
+            addLog(state, `🃏 ${state.players[state.lastTrickWinner].name} отримує нерозкритий прикуп зі столу (+${pts})`);
+        }
+    }
+
     // Додаємо очки шлюбів
     Object.entries(state.marriages).forEach(([pid, suits]) => {
         suits.forEach(s => { state.players[+pid].trickPts += T_MARRIAGE[s]; });
@@ -1087,6 +1120,7 @@ function tFinishRound(state) {
     state.trick = { cards: [], leader: (state.dealer + 1) % n };
     state.trump = null; state.declaredBid = null;
     state.marriages = {}; state.givenCards = [];
+    state.talonPiles = null; state.leftoverPile = null; state.lastTrickWinner = null;
     return null;
 }
 
@@ -1098,9 +1132,12 @@ function sanitizeTysyacha(state, forIdx) {
             handCount: p.hand.length,
             hand: i === forIdx ? p.hand : null,
         })),
-        talonCount: state.talon.length,
-        talon: state.phase === 'talon' && forIdx === state.auction.winner
-            ? state.talon : null,
+        talonCount: state.talonPiles
+            ? state.talonPiles.reduce((s, p) => s + p.length, 0)
+            : state.talon.length,
+        talonPiles: state.talonPiles ? state.talonPiles.map(p => p.length) : null,
+        leftoverPileCount: state.leftoverPile?.length || 0,
+        talon: null,
         dealer: state.dealer, round: state.round,
         phase: state.phase, currentPlayer: state.currentPlayer,
         auction: state.auction,

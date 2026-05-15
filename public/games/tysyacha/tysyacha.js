@@ -133,7 +133,7 @@ function renderTTrick(s) {
     if (s.phase === 'auction' && s.talonCount) {
         const n = s.players.length;
         const pilesHTML = n === 2
-            ? `<div style="display:flex;gap:24px;align-items:flex-end">
+            ? `<div style="display:flex;gap:28px;align-items:flex-end">
                    ${talonPileHTML(2)}${talonPileHTML(2)}
                </div>`
             : talonPileHTML(3);
@@ -148,8 +148,36 @@ function renderTTrick(s) {
         return;
     }
 
+    // Вибір стопки (2-player, таlon phase)
+    if (s.phase === 'talon' && s.talonPiles) {
+        const isWinner = s.auction?.winner === tMyIdx;
+        el.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+                <div style="font-size:10px;color:rgba(245,230,200,0.35);letter-spacing:2px;font-family:sans-serif">ОБЕРІТЬ ПРИКУП</div>
+                <div style="display:flex;gap:28px;align-items:flex-end">
+                    ${[0,1].map(i => `
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+                            ${talonPileHTML(s.talonPiles[i])}
+                            ${isWinner
+                                ? `<button class="t-btn gold" style="font-size:12px;padding:5px 10px" onclick="tChoosePile(${i})">Взяти</button>`
+                                : `<div style="font-size:10px;color:rgba(245,230,200,0.3);font-style:italic">2 карти</div>`}
+                        </div>`
+                    ).join('')}
+                </div>
+            </div>`;
+        return;
+    }
+
+    // Нерозкрита стопка під час гри — показуємо як маленький індикатор
+    const leftoverIndicator = s.leftoverPileCount > 0 && s.phase === 'playing'
+        ? `<div style="position:absolute;bottom:8px;right:10px;display:flex;flex-direction:column;align-items:center;gap:3px">
+               ${talonPileHTML(s.leftoverPileCount)}
+               <div style="font-size:9px;color:rgba(245,230,200,0.3);font-family:sans-serif">прикуп</div>
+           </div>`
+        : '';
+
     if (!s.trick || s.trick.cards.length === 0) {
-        el.innerHTML = '<div class="t-trick-empty">— стіл порожній —</div>';
+        el.innerHTML = `<div class="t-trick-empty">— стіл порожній —</div>${leftoverIndicator}`;
         return;
     }
     const winnerId = s.trick.winnerId;
@@ -170,7 +198,7 @@ function renderTTrick(s) {
                 ${isWinner ? '🏆 ' : ''}${s.players[playerId]?.name || ''}
             </div>
         </div>`;
-    }).join('');
+    }).join('') + leftoverIndicator;
 }
 
 // ── Моя рука ─────────────────────────────────
@@ -247,9 +275,22 @@ function renderTActions(s) {
     // ── ТЯЛОН ──
     if (s.phase === 'talon') {
         if (s.auction?.winner !== tMyIdx) {
+            const winnerName = s.players[s.auction?.winner]?.name;
+            el.innerHTML = s.talonPiles
+                ? `<div class="t-section-title">Вибір прикупу</div>
+                   <div class="t-wait"><b style="color:#e8c547">${winnerName}</b><br>обирає стопку</div>`
+                : `<div class="t-section-title">Тялон</div>
+                   <div class="t-wait">Роздає:<br><b style="color:#e8c547">${winnerName}</b></div>`;
+            return;
+        }
+        // Якщо ще не вибрав стопку (2-player)
+        if (s.talonPiles) {
             el.innerHTML = `
-                <div class="t-section-title">Тялон</div>
-                <div class="t-wait">Роздає:<br><b style="color:#e8c547">${s.players[s.auction?.winner]?.name}</b></div>`;
+                <div class="t-section-title">Оберіть прикуп</div>
+                <div class="t-hint" style="margin:8px 0">Натисніть «Взяти»<br>на одній зі стопок</div>
+                <div style="font-size:10px;color:rgba(245,230,200,0.3);font-style:italic;font-family:sans-serif;text-align:center">
+                    Друга стопка залишиться на столі
+                </div>`;
             return;
         }
         const opponents    = s.players.filter(p => p.id !== tMyIdx);
@@ -346,6 +387,9 @@ function tPass() {
 function tBidCustom() {
     const val = parseInt(document.getElementById('t-bid-input')?.value) || 0;
     socket.emit('action', { type: 'tBid', data: { amount: val } });
+}
+function tChoosePile(pileIdx) {
+    socket.emit('action', { type: 'tChoosePile', data: { pileIdx } });
 }
 function tSetBidAmount(amount) {
     socket.emit('action', { type: 'tSetBid', data: { amount } });
