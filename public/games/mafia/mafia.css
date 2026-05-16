@@ -23,8 +23,105 @@
     display: none;
     flex-direction: column;
     overflow: hidden;
+    transition: background 2.5s ease;
 }
 #mafia-screen.visible { display: flex; }
+
+/* ── Фазова атмосфера ── */
+#mafia-screen.phase-night {
+    background: radial-gradient(ellipse at 50% 0%,   rgba(100,0,0,0.15) 0%, transparent 60%),
+                radial-gradient(ellipse at 20% 100%, rgba(0,0,20,0.9)   0%, transparent 60%),
+                #020308;
+}
+#mafia-screen.phase-night .m-topbar  { border-bottom-color: rgba(160,0,0,0.5); }
+#mafia-screen.phase-night .m-sidebar { border-right-color: rgba(255,255,255,0.05); }
+
+#mafia-screen.phase-day {
+    background: radial-gradient(ellipse at 30% 10%, rgba(21,101,192,0.22) 0%, transparent 55%),
+                radial-gradient(ellipse at 80% 90%, rgba(46,125,50,0.08) 0%, transparent 50%),
+                #06091a;
+}
+#mafia-screen.phase-day .m-topbar { border-bottom-color: rgba(21,101,192,0.55); }
+
+/* ── Таймер з прогрес-баром ── */
+.m-timer-track {
+    width: 100%;
+    max-width: 220px;
+    height: 3px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: -6px;
+}
+.m-timer-bar-fill {
+    height: 100%;
+    width: 100%;
+    border-radius: 2px;
+    background: #2e7d32;
+    transition: width 0.4s linear, background-color 0.8s;
+}
+.m-timer-bar-fill.warn   { background: #f9a825; }
+.m-timer-bar-fill.danger { background: #c62828; }
+
+/* ── Смерть гравця ── */
+@keyframes playerDie {
+    0%   { opacity: 1;    transform: scale(1);    filter: none; }
+    40%  { opacity: 0.6;  transform: scale(0.97); filter: grayscale(0.6) brightness(0.7); }
+    100% { opacity: 0.35; transform: scale(1);    filter: grayscale(1)   brightness(0.6); }
+}
+.m-player.dying { animation: playerDie 1.8s ease forwards; }
+
+/* ── Нічна атмосфера для мирних ── */
+.m-night-atmosphere {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    max-width: 440px;
+}
+.m-night-title {
+    font-size: 20px;
+    font-weight: 900;
+    color: rgba(232,237,245,0.4);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+.m-night-timer-row {
+    font-size: 13px;
+    color: var(--m-sub);
+}
+.m-night-timer-row b {
+    font-size: 18px;
+    color: rgba(255,255,255,0.6);
+    font-variant-numeric: tabular-nums;
+}
+.m-night-flavor {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+.m-flavor-msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    color: rgba(232,237,245,0.55);
+    line-height: 1.55;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.025);
+    border-left: 2px solid rgba(255,255,255,0.07);
+    border-radius: 0 6px 6px 0;
+    animation: flavorIn 0.7s ease both;
+}
+.m-flavor-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+@keyframes flavorIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
 
 /* ── Топбар ── */
 .m-topbar {

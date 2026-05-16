@@ -1,16 +1,20 @@
 // ============================================
 // МАФІЯ — клієнт (п.2: нічна фаза)
 // ============================================
-let mState       = null;
-let mMyIdx       = null;
-let mSideEffect  = null;
-let mDeadChatLog = []; // зберігаємо між рендерами
+let mState            = null;
+let mMyIdx            = null;
+let mSideEffect       = null;
+let mDeadChatLog      = [];
+let _mFlavorTimeouts  = [];
+let _mLastNightDL     = 0; // nightDeadline поточної ночі
 
 function initMafia(state, myIdx) {
-    mState       = state;
-    mMyIdx       = myIdx;
-    mSideEffect  = null;
-    mDeadChatLog = [];
+    mState            = state;
+    mMyIdx            = myIdx;
+    mSideEffect       = null;
+    mDeadChatLog      = [];
+    _mFlavorTimeouts  = [];
+    _mLastNightDL     = 0;
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('mafia-screen').classList.remove('hidden');
     document.getElementById('mafia-screen').classList.add('visible');
@@ -50,6 +54,13 @@ function mRenderPhaseInfo() {
         gameover:        '🏁 Кінець гри',
     };
     el.textContent = `${phaseMap[mState.phase] || mState.phase} · Раунд ${mState.round}`;
+    // Фазова атмосфера
+    const scr = document.getElementById('mafia-screen');
+    if (scr) {
+        scr.classList.remove('phase-night','phase-day');
+        if (['night','morning','resolving'].includes(mState.phase)) scr.classList.add('phase-night');
+        else if (['day_discussion','day_voting'].includes(mState.phase)) scr.classList.add('phase-day');
+    }
 }
 
 // ── Список гравців ─────────────────────────────
@@ -57,14 +68,17 @@ function mRenderPlayers() {
     const el = document.getElementById('m-players');
     if (!el) return;
     const isGameover = mState.phase === 'gameover';
+    const isMorning  = mState.phase === 'morning';
+    const newlyDead  = isMorning ? (mState.lastDeaths || []) : [];
     el.innerHTML = mState.players.map(p => {
         const isMe = p.id === mMyIdx;
         const roleLabel = p.role ? mRoleLabel(p.role) : null;
         const showRole  = p.role && (p.id === mMyIdx || isGameover ||
             (mState.myFaction === 'mafia' && roleLabel?.faction === 'mafia'));
         const factionCls = isGameover && roleLabel?.faction ? `faction-${roleLabel.faction}` : '';
+        const dyingCls   = newlyDead.includes(p.id) ? 'dying' : '';
         return `
-        <div class="m-player ${!p.isAlive ? 'dead' : ''} ${isMe ? 'me' : ''} ${factionCls}">
+        <div class="m-player ${!p.isAlive ? 'dead' : ''} ${isMe ? 'me' : ''} ${factionCls} ${dyingCls}">
             <span class="m-player-icon">${roleLabel?.icon || '👤'}</span>
             <span class="m-player-name">${p.name}${isMe ? ' (я)' : ''}</span>
             ${p.isSilenced ? '<span class="m-silenced">🔇</span>' : ''}
@@ -137,6 +151,13 @@ function mRenderActions() {
     if (s.phase === 'night') {
         if (!me.isAlive) { el.innerHTML = mDeadUI(); return; }
         el.innerHTML = mNightActions(s, me);
+        if (me.role === 'citizen') {
+            mStartTimer('m-night-cit-timer', s.nightDeadline);
+            if (s.nightDeadline !== _mLastNightDL) {
+                _mLastNightDL = s.nightDeadline;
+                mStartNightFlavor(s.nightDeadline);
+            }
+        }
         return;
     }
 
@@ -181,6 +202,7 @@ function mRenderActions() {
             <div class="m-day-ui">
                 <div class="m-day-title">☀️ Обговорення</div>
                 <div class="m-day-timer" id="m-day-timer">${timer}</div>
+                <div class="m-timer-track"><div class="m-timer-bar-fill" id="m-day-timer-bar"></div></div>
                 <div class="m-day-players">
                     ${s.players.filter(p => p.isAlive).map(p => `
                         <div class="m-day-player ${p.isSilenced ? 'silenced' : ''} ${p.id === mMyIdx ? 'me' : ''}">
@@ -239,6 +261,7 @@ function mRenderActions() {
             <div class="m-vote-ui">
                 <div class="m-day-title">🗳️ Голосування</div>
                 <div class="m-day-timer" id="m-vote-timer">${timer}</div>
+                <div class="m-timer-track"><div class="m-timer-bar-fill" id="m-vote-timer-bar"></div></div>
                 <div class="m-vote-count">${s.voteCount} / ${s.eligibleVoters} проголосували</div>
                 ${voteLog ? `<div class="m-vote-log">${voteLog}</div>` : ''}
 
@@ -418,7 +441,14 @@ function mNightActions(s, me) {
             return targetSelect('maniacKill', '🔪 Оберіть жертву');
 
         default:
-            return `<div class="m-wait">😴 Ви спите... Зачекайте на ранок.</div>`;
+            return `
+                <div class="m-night-atmosphere">
+                    <div class="m-night-title">🌙 Місто спить</div>
+                    <div class="m-night-timer-row">
+                        Ранок через <b id="m-night-cit-timer">${mDeadlineTimer(s.nightDeadline)}</b>
+                    </div>
+                    <div class="m-night-flavor" id="m-night-flavor"></div>
+                </div>`;
     }
 }
 
@@ -533,6 +563,36 @@ function mSendDayChat() {
     input.value = '';
 }
 
+// ── Нічний флейвор для мирних ─────────────────
+const NIGHT_FLAVOR = [
+    { pct: 0.06, icon: '🌙', text: 'Місто вкрилось тишею. Але не всі лягли спати...' },
+    { pct: 0.20, icon: '🤫', text: 'В темному кварталі — приглушені голоси. Кілька тіней вийшли на вулицю.' },
+    { pct: 0.33, icon: '💊', text: 'У місті загострився грип. Місцевий лікар наповнив саквояж і попрямував до когось із мешканців — для профілактики.' },
+    { pct: 0.46, icon: '🚪', text: 'Хтось зателефонував і замовив нічний візит. Повія зібрала сумочку і вийшла з дому — в когось цієї ночі зіпсуються плани.' },
+    { pct: 0.58, icon: '🔦', text: 'Силует із блокнотом завмер під ліхтарем. Комісар перевіряє підозрюваних — хтось цієї ночі дізнається правду.' },
+    { pct: 0.70, icon: '🔫', text: 'За шторою мигнула тінь. Мафія зібралась на нараду — і обрала жертву.' },
+    { pct: 0.81, icon: '🔪', text: 'У провулку мигнуло щось гостре. Самотній маньяк іде через ніч зі своїми думками.' },
+    { pct: 0.93, icon: '⏰', text: 'Небо на сході починає світлішати. Скоро місто дізнається що трапилось...' },
+];
+
+function mStartNightFlavor(deadline) {
+    _mFlavorTimeouts.forEach(clearTimeout);
+    _mFlavorTimeouts = [];
+    const remaining = Math.max(500, deadline - Date.now());
+    NIGHT_FLAVOR.forEach(({ pct, icon, text }) => {
+        const t = setTimeout(() => {
+            const feed = document.getElementById('m-night-flavor');
+            if (!feed) return;
+            const msg = document.createElement('div');
+            msg.className = 'm-flavor-msg';
+            msg.innerHTML = `<span class="m-flavor-icon">${icon}</span><span>${text}</span>`;
+            feed.appendChild(msg);
+            feed.scrollTop = feed.scrollHeight;
+        }, pct * remaining);
+        _mFlavorTimeouts.push(t);
+    });
+}
+
 // ── Таймер відліку ────────────────────────────
 const _mTimers = {};
 function mDeadlineTimer(deadline, onTick) {
@@ -544,14 +604,21 @@ function mDeadlineTimer(deadline, onTick) {
 function mStartTimer(elId, deadline) {
     clearInterval(_mTimers[elId]);
     if (!deadline) return;
+    const total = Math.max(1, deadline - Date.now());
     _mTimers[elId] = setInterval(() => {
         const el = document.getElementById(elId);
         if (!el) { clearInterval(_mTimers[elId]); return; }
-        const sec = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-        const m = Math.floor(sec / 60), s = sec % 60;
-        el.textContent = `${m}:${String(s).padStart(2,'0')}`;
-        if (sec === 0) clearInterval(_mTimers[elId]);
-    }, 500);
+        const rem = Math.max(0, deadline - Date.now());
+        const sec = Math.ceil(rem / 1000);
+        el.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2,'0')}`;
+        const bar = document.getElementById(elId + '-bar');
+        if (bar) {
+            const pct = rem / total * 100;
+            bar.style.width = pct + '%';
+            bar.className = 'm-timer-bar-fill' + (pct > 40 ? '' : pct > 15 ? ' warn' : ' danger');
+        }
+        if (rem === 0) clearInterval(_mTimers[elId]);
+    }, 300);
 }
 
 function mNightAction(type, targetId) {
