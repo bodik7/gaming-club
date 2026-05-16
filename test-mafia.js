@@ -1,7 +1,11 @@
 // test-mafia.js — node test-mafia.js [N]
 const { io } = require('socket.io-client');
-const N     = parseInt(process.argv[2]) || 5;
-const URL   = 'http://localhost:3000';
+const N       = parseInt(process.argv[2]) || 5;
+const BASE_URL = process.env.URL || 'http://localhost:3000';
+const TIMEOUT  = parseInt(process.env.TIMEOUT) || 2 * 60 * 1000;
+const NIGHT_DUR = parseInt(process.env.NIGHT) || 15;
+const DAY_DUR   = parseInt(process.env.DAY)   || 10;
+const VOTE_DUR  = parseInt(process.env.VOTE)  || 8;
 const NAMES = ['Олег','Ірина','Максим','Катя','Дмитро','Наталя','Борис',
                'Оля','Тарас','Ліна','Влад','Соня','Денис','Аня','Роман'];
 
@@ -11,7 +15,7 @@ let joinedCount = 0, gameStarted = false;
 const log = (n, m) => console.log(`[${n.padEnd(7)}] ${m}`);
 
 function makeBot(name, isHost) {
-    const s = io(URL, { transports: ['websocket'] });
+    const s = io(BASE_URL, { transports: ['websocket'] });
 
     s.on('connect_error', e => { log(name, `connect_error: ${e.message}`); });
 
@@ -34,7 +38,7 @@ function makeBot(name, isHost) {
                         setTimeout(() => {
                             log('SYS', `▶️ start (${N} players)`);
                             global.clients[0].emit('startGame', {
-                                settings: { nightDuration: 15, dayDuration: 10, voteDuration: 8 }
+                                settings: { nightDuration: NIGHT_DUR, dayDuration: DAY_DUR, voteDuration: VOTE_DUR }
                             });
                         }, 400);
                     }
@@ -187,4 +191,4 @@ setTimeout(() => {
     console.log('\n⏱️  2хв таймаут — перевір сервер\n');
     global.clients.forEach(c => c.disconnect());
     process.exit(1);
-}, 2 * 60 * 1000);
+}, TIMEOUT);
