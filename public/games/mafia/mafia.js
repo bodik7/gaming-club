@@ -231,19 +231,24 @@ function mRenderActions() {
 function mGameoverUI(s) {
     const isTown   = s.winner === 'town';
     const isMafia  = s.winner === 'mafia';
+    const isManiac = s.winner === 'maniac';
     const myFaction = M_ROLE_LABELS[s.players[mMyIdx]?.role]?.faction;
-    const iWon     = (isTown && myFaction === 'town') || (isMafia && myFaction === 'mafia');
+    const iWon = (isTown && myFaction === 'town') ||
+                 (isMafia && myFaction === 'mafia') ||
+                 (isManiac && myFaction === 'maniac');
 
-    const bannerClass = isTown ? 'town' : 'mafia';
-    const bannerIcon  = isTown ? '🏙️' : '🔫';
-    const bannerText  = isTown ? 'Місто перемогло!' : 'Мафія перемогла!';
+    const bannerClass = isTown ? 'town' : isMafia ? 'mafia' : 'maniac';
+    const bannerIcon  = isTown ? '🏙️' : isMafia ? '🔫' : '🔪';
+    const bannerText  = isTown ? 'Місто перемогло!' : isMafia ? 'Мафія перемогла!' : 'Маньяк переміг!';
 
     // Групуємо гравців: спочатку переможці, потім решта
     const sorted = [...s.players].sort((a, b) => {
         const aWin = (isTown && M_ROLE_LABELS[a.role]?.faction === 'town') ||
-                     (isMafia && M_ROLE_LABELS[a.role]?.faction === 'mafia');
+                     (isMafia && M_ROLE_LABELS[a.role]?.faction === 'mafia') ||
+                     (isManiac && a.role === 'maniac');
         const bWin = (isTown && M_ROLE_LABELS[b.role]?.faction === 'town') ||
-                     (isMafia && M_ROLE_LABELS[b.role]?.faction === 'mafia');
+                     (isMafia && M_ROLE_LABELS[b.role]?.faction === 'mafia') ||
+                     (isManiac && b.role === 'maniac');
         if (aWin && !bWin) return -1;
         if (!aWin && bWin) return  1;
         return a.isAlive ? -1 : 1;
@@ -306,6 +311,8 @@ function mSpawnConfetti(winner) {
 
     const colors = winner === 'mafia'
         ? ['#c62828','#e53935','#ff7043','#ffd700','#880e4f']
+        : winner === 'maniac'
+        ? ['#6a1b9a','#ab47bc','#ce93d8','#e040fb','#4a148c']
         : ['#1565c0','#0288d1','#ffd700','#4caf50','#81d4fa'];
 
     for (let i = 0; i < 80; i++) {
@@ -363,6 +370,9 @@ function mNightActions(s, me) {
 
         case 'roleblocker':
             return targetSelect('roleblockerBlock', '🚫 Заблокувати гравця');
+
+        case 'maniac':
+            return targetSelect('maniacKill', '🔪 Оберіть жертву');
 
         default:
             return `<div class="m-wait">😴 Ви спите... Зачекайте на ранок.</div>`;
@@ -480,8 +490,9 @@ const M_ROLE_LABELS = {
     deputy:      { ua: 'Помічник',      icon: '🛡️', faction: 'town',  color: '#01579b' },
     doctor:      { ua: 'Лікар',         icon: '💊', faction: 'town',  color: '#2e7d32' },
     roleblocker: { ua: 'Повія',         icon: '🚫', faction: 'town',  color: '#6a1b9a' },
-    mafia:       { ua: 'Мафія',         icon: '🔫', faction: 'mafia', color: '#c62828' },
-    don:         { ua: 'Дон',           icon: '👑', faction: 'mafia', color: '#b71c1c' },
+    mafia:       { ua: 'Мафія',         icon: '🔫', faction: 'mafia',   color: '#c62828' },
+    don:         { ua: 'Дон',           icon: '👑', faction: 'mafia',   color: '#b71c1c' },
+    maniac:      { ua: 'Маньяк',        icon: '🔪', faction: 'maniac',  color: '#6a1b9a' },
 };
 
 function mMafiaChat() {
@@ -510,6 +521,7 @@ function mRoleDesc(role) {
         roleblocker: 'Блокуйте нічні дії будь-якого гравця. Вдень заблокований мовчить.',
         mafia:       'Разом з командою вбивайте мирних щоночі. Виживіть до перемоги.',
         don:         'Лідер мафії. Ваш голос вирішальний. Перевіряйте чи є гравець Комісаром.',
+        maniac:      'Одинак. Кожної ночі вбивайте когось. Виграєте якщо залишитесь єдиним живим.',
     };
     return descs[role] || '';
 }

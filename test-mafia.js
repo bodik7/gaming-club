@@ -1,40 +1,42 @@
 // ─────────────────────────────────────────────
 // test-mafia.js — симулятор N гравців для Мафії
 // Запуск: node test-mafia.js [кількість_гравців]
-// Приклад: node test-mafia.js 7
 // ─────────────────────────────────────────────
 const { io } = require('socket.io-client');
 
-const N      = parseInt(process.argv[2]) || 5;
-const URL    = 'http://localhost:3000';
-const NAMES  = ['Олег','Ірина','Максим','Катя','Дмитро','Наталя','Борис','Оля','Тарас','Ліна'];
+const N     = parseInt(process.argv[2]) || 5;
+const URL   = 'http://localhost:3000';
+const NAMES = ['Олег','Ірина','Максим','Катя','Дмитро','Наталя','Борис',
+               'Оля','Тарас','Ліна','Влад','Соня','Денис','Аня','Роман'];
 
-const clients = [];
-let roomCode  = null;
+const roleMap    = {};   // botId → role (oracle рівень тесту)
+const actedRound = {};   // socketId → round (не дублюємо дії)
+let joinedCount  = 0;
+let gameStarted  = false;
 
 const log = (name, msg) => console.log(`[${name.padEnd(7)}] ${msg}`);
 
-function connect(name, isHost) {
+function makeBot(name, botIdx, isHost) {
     const s = io(URL);
 
     s.on('connect', () => {
-        log(name, `підключено`);
         if (isHost) {
-            // Хост створює кімнату Мафія
             s.emit('createRoom', { gameType: 'mafia', playerName: name }, (res) => {
                 if (res.error) { console.error('createRoom error:', res.error); return; }
-                roomCode = res.code;
-                log(name, `🏠 Кімната створена: ${roomCode}`);
-                // Дочекатись поки всі підключаться, потім старт
-                setTimeout(startGame, 2000);
+                global.roomCode = res.code;
+                log(name, `🏠 Кімната: ${global.roomCode}`);
             });
         } else {
-            // Чекаємо поки хост отримає код
             const tryJoin = () => {
-                if (!roomCode) { setTimeout(tryJoin, 300); return; }
-                s.emit('joinRoom', { code: roomCode, playerName: name }, (res) => {
-                    if (res.error) console.error(`${name} joinRoom:`, res.error);
-                    else log(name, `приєднався до ${roomCode}`);
+                if (!global.roomCode) { setTimeout(tryJoin, 150); return; }
+                s.emit('joinRoom', { code: global.roomCode, playerName: name }, (res) => {
+                    if (res.error) { console.error(`${name} joinRoom:`, res.error); return; }
+                    joinedCount++;
+                    log(name, `приєднався (${joinedCount}/${N-1})`);
+                    if (joinedCount === N - 1 && !gameStarted) {
+                        gameStarted = true;
+                        setTimeout(startGame, 500);
+                    }
                 });
             };
             tryJoin();
@@ -42,110 +44,130 @@ function connect(name, isHost) {
     });
 
     s.on('gameStarted', ({ state }) => {
-        const me = state.players[state.myId];
-        log(name, `🎮 гра почалась! Роль: ${me?.role || '?'}`);
-        // Одразу натискаємо "Готовий"
-        setTimeout(() => s.emit('action', { type: 'mafiaReady', data: {} }), 500 + Math.random() * 1000);
+        roleMap[state.myId] = state.myRole;
+        log(name, `🎮 Роль: ${state.myRole}`);
+        setTimeout(() => s.emit('action', { type: 'mafiaReady', data: {} }), 200 + Math.random() * 400);
     });
 
     s.on('stateUpdate', ({ state }) => {
         const me = state.players[state.myId];
         if (!me) return;
 
+        // role_reveal → натискаємо готовий
         if (state.phase === 'role_reveal') {
             s.emit('action', { type: 'mafiaReady', data: {} });
             return;
         }
 
+        // Ніч — діємо тільки ОДИН РАЗ за раунд
         if (state.phase === 'night' && me.isAlive) {
+            const key = `${s.id}_night_${state.round}`;
+            if (actedRound[key]) return;
+            actedRound[key] = true;
+
             const others = state.players.filter(p => p.isAlive && p.id !== state.myId);
             if (!others.length) return;
-            const target = others[Math.floor(Math.random() * others.length)];
 
-            // Надсилаємо відповідну нічну дію залежно від ролі
-            const delay = 3000 + Math.random() * 5000;
+            const delay = 500 + Math.random() * 1500;
             setTimeout(() => {
-                switch (me.role) {
-                    case 'mafia':
-                        s.emit('action', { type: 'mafiaVote', data: { targetId: target.id } });
-                        log(name, `🔫 голосує вбити ${target.name}`);
-                        break;
-                    case 'don':
-                        s.emit('action', { type: 'mafiaVote', data: { targetId: target.id } });
-                        log(name, `👑 дон голосує вбити ${target.name}`);
-                        break;
-                    case 'sheriff':
-                    case 'deputy':
-                        s.emit('action', { type: 'sheriffCheck', data: { targetId: target.id } });
-                        log(name, `🔍 перевіряє ${target.name}`);
-                        break;
-                    case 'doctor':
-                        s.emit('action', { type: 'doctorHeal', data: { targetId: target.id } });
-                        log(name, `💊 лікує ${target.name}`);
-                        break;
-                    case 'roleblocker':
-                        s.emit('action', { type: 'roleblockerBlock', data: { targetId: target.id } });
-                        log(name, `🚫 блокує ${target.name}`);
-                        break;
+                const role = me.role || roleMap[state.myId];
+
+                // Маньяк: б'є мафію першочергово (oracle)
+                if (role === 'maniac') {
+                    const mafiaTargets = others.filter(p => ['mafia','don'].includes(roleMap[p.id]));
+                    const pick = mafiaTargets.length
+                        ? mafiaTargets[Math.floor(Math.random() * mafiaTargets.length)]
+                        : others[Math.floor(Math.random() * others.length)];
+                    s.emit('action', { type: 'maniacKill', data: { targetId: pick.id } });
+                    log(name, `🔪 б'є ${pick.name}(${roleMap[pick.id]||'?'})`);
+                    return;
+                }
+
+                // Мафія/Дон: б'ють тільки мирних (не маньяка)
+                if (role === 'mafia' || role === 'don') {
+                    const townOnly = others.filter(p => !['mafia','don','maniac'].includes(roleMap[p.id]));
+                    const pick = townOnly.length
+                        ? townOnly[Math.floor(Math.random() * townOnly.length)]
+                        : others[Math.floor(Math.random() * others.length)];
+                    s.emit('action', { type: 'mafiaVote', data: { targetId: pick.id } });
+                    log(name, `🔫 б'є ${pick.name}`);
+                    if (role === 'don') {
+                        const other2 = others.find(p => p.id !== pick.id);
+                        if (other2) s.emit('action', { type: 'donCheck', data: { targetId: other2.id } });
+                    }
+                    return;
+                }
+
+                if (role === 'sheriff' || role === 'deputy') {
+                    const pick = others[Math.floor(Math.random() * others.length)];
+                    s.emit('action', { type: 'sheriffCheck', data: { targetId: pick.id } });
+                    return;
+                }
+
+                if (role === 'doctor') {
+                    const all = state.players.filter(p => p.isAlive);
+                    const pick = all[Math.floor(Math.random() * all.length)];
+                    s.emit('action', { type: 'doctorHeal', data: { targetId: pick.id } });
+                    return;
+                }
+
+                if (role === 'roleblocker') {
+                    // Блокуємо рандом СЕРЕД МИРНИХ (не маньяка, не мафію)
+                    const townOnly = others.filter(p => !['maniac'].includes(roleMap[p.id]));
+                    const pick = townOnly.length ? townOnly[Math.floor(Math.random() * townOnly.length)] : others[0];
+                    s.emit('action', { type: 'roleblockerBlock', data: { targetId: pick.id } });
+                    return;
                 }
             }, delay);
         }
 
-        if (state.phase === 'day_discussion' && me.isAlive && !me.isSilenced) {
-            // Надсилаємо повідомлення в чат
-            setTimeout(() => {
-                s.emit('dayChatMsg', { text: `${name}: Я підозрюю мафію!` });
-            }, 2000 + Math.random() * 3000);
-        }
-
+        // День — голосування: всі skip (маньяк повинен дожити)
         if (state.phase === 'day_voting' && me.isAlive && !me.isSilenced) {
-            const targets = state.players.filter(p => p.isAlive && p.id !== state.myId);
-            if (!targets.length) return;
-            const delay = 2000 + Math.random() * 8000;
+            const key = `${s.id}_vote_${state.round}`;
+            if (actedRound[key]) return;
+            actedRound[key] = true;
             setTimeout(() => {
-                if (Math.random() < 0.15) {
-                    s.emit('action', { type: 'dayVote', data: { targetId: 'skip' } });
-                    log(name, `⏭️ пропускає голосування`);
-                } else {
-                    const pick = targets[Math.floor(Math.random() * targets.length)];
-                    s.emit('action', { type: 'dayVote', data: { targetId: pick.id } });
-                    log(name, `🗳️ голосує проти ${pick.name}`);
-                }
-            }, delay);
+                s.emit('action', { type: 'dayVote', data: { targetId: 'skip' } });
+            }, 300 + Math.random() * 500);
         }
 
         if (state.phase === 'gameover') {
-            log(name, `🏁 Кінець гри! Переможець: ${state.winner}`);
+            log(name, `🏁 КІНЕЦЬ! переміг: ${state.winner}`);
         }
     });
 
     s.on('gameOver', ({ state }) => {
-        log(name, `🏁 GAMEOVER — перемогло: ${state?.winner}`);
-        setTimeout(() => { s.disconnect(); }, 1000);
+        const w = state?.winner;
+        log(name, `🏁 GAMEOVER → ${w}`);
+        if (w === 'maniac') console.log('\n🔪🔪🔪 МАНЬЯК ПЕРЕМІГ! 🔪🔪🔪\n');
+        else if (w === 'town')  console.log('\n🏙️ Місто перемогло\n');
+        else if (w === 'mafia') console.log('\n🔫 Мафія перемогла\n');
+        setTimeout(() => s.disconnect(), 300);
     });
 
-    s.on('error', (msg) => log(name, `⚠️ помилка: ${msg}`));
-
-    clients.push(s);
+    s.on('error', msg => log(name, `⚠️ ${msg}`));
+    return s;
 }
 
 function startGame() {
-    const host = clients[0];
-    log('HOST', `▶️ запускаємо гру (${N} гравців)...`);
-    host.emit('startGame', { settings: { nightDuration: 15, dayDuration: 20 } }, (res) => {
-        if (res?.error) console.error('startGame error:', res.error);
+    log('SYS', `▶️ Запускаємо гру (${N} гравців)`);
+    global.clients[0].emit('startGame', {
+        settings: { nightDuration: 12, dayDuration: 8, voteDuration: 6 }
     });
 }
 
-// Підключаємо гравців
-console.log(`\n🔫 Тест Мафії: ${N} гравців\n`);
+console.log(`\n🔪 Тест Мафії: ${N} гравців (маньяк повинен перемогти)\n`);
+global.roomCode = null;
+global.clients  = [];
+
 for (let i = 0; i < N; i++) {
-    setTimeout(() => connect(NAMES[i] || `Гравець${i+1}`, i === 0), i * 200);
+    setTimeout(() => {
+        global.clients.push(makeBot(NAMES[i] || `П${i+1}`, i, i === 0));
+    }, i * 200);
 }
 
-// Завершення через 5 хвилин (якщо гра не закінчилась)
 setTimeout(() => {
-    console.log('\n⏱️ Таймаут — зупиняємо тест');
-    clients.forEach(s => s.disconnect());
+    console.log('\n⏱️ Таймаут 10хв');
+    global.clients.forEach(s => s.disconnect());
     process.exit(0);
-}, 5 * 60 * 1000);
+}, 10 * 60 * 1000);

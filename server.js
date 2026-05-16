@@ -1286,29 +1286,30 @@ function emitTysyachaUpdate(room, sideEffect, toast) {
 // ════════════════════════════════════════════
 
 // ── Таблиця балансу ролей ────────────────────
-// citizen | sheriff | deputy | doctor | roleblocker | mafia | don
+// citizen | sheriff | deputy | doctor | roleblocker | mafia | don | maniac
 const MAFIA_BALANCE = {
-    5:  { citizen:2, sheriff:1, deputy:1, doctor:0, roleblocker:0, mafia:0, don:1 },
-    6:  { citizen:3, sheriff:1, deputy:1, doctor:0, roleblocker:0, mafia:0, don:1 },
-    7:  { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:0, mafia:1, don:1 },
-    8:  { citizen:3, sheriff:1, deputy:1, doctor:1, roleblocker:0, mafia:1, don:1 },
-    9:  { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1 },
-    10: { citizen:3, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1 },
-    11: { citizen:4, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1 },
-    12: { citizen:4, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:3, don:1 },
-    13: { citizen:4, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:3, don:1 },
-    14: { citizen:5, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:3, don:1 },
-    15: { citizen:5, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:4, don:1 },
+    5:  { citizen:2, sheriff:1, deputy:1, doctor:0, roleblocker:0, mafia:0, don:1, maniac:0 },
+    6:  { citizen:3, sheriff:1, deputy:1, doctor:0, roleblocker:0, mafia:0, don:1, maniac:0 },
+    7:  { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:0, mafia:1, don:1, maniac:0 },
+    8:  { citizen:3, sheriff:1, deputy:1, doctor:1, roleblocker:0, mafia:1, don:1, maniac:0 },
+    9:  { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1, maniac:0 },
+    10: { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1, maniac:1 },
+    11: { citizen:3, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1, maniac:1 },
+    12: { citizen:3, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:3, don:1, maniac:1 },
+    13: { citizen:4, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:3, don:1, maniac:1 },
+    14: { citizen:4, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:4, don:1, maniac:1 },
+    15: { citizen:5, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:4, don:1, maniac:1 },
 };
 
 const MAFIA_ROLE_LABELS = {
-    citizen:    { ua: 'Мирний житель', icon: '👤', faction: 'town' },
-    sheriff:    { ua: 'Комісар',       icon: '🔍', faction: 'town' },
-    deputy:     { ua: 'Помічник',      icon: '🛡️', faction: 'town' },
-    doctor:     { ua: 'Лікар',         icon: '💊', faction: 'town' },
-    roleblocker:{ ua: 'Повія',         icon: '🚫', faction: 'town' },
-    mafia:      { ua: 'Мафія',         icon: '🔫', faction: 'mafia' },
-    don:        { ua: 'Дон',           icon: '👑', faction: 'mafia' },
+    citizen:    { ua: 'Мирний житель', icon: '👤', faction: 'town'   },
+    sheriff:    { ua: 'Комісар',       icon: '🔍', faction: 'town'   },
+    deputy:     { ua: 'Помічник',      icon: '🛡️', faction: 'town'   },
+    doctor:     { ua: 'Лікар',         icon: '💊', faction: 'town'   },
+    roleblocker:{ ua: 'Повія',         icon: '🚫', faction: 'town'   },
+    mafia:      { ua: 'Мафія',         icon: '🔫', faction: 'mafia'  },
+    don:        { ua: 'Дон',           icon: '👑', faction: 'mafia'  },
+    maniac:     { ua: 'Маньяк',        icon: '🔪', faction: 'maniac' },
 };
 
 function createMafiaState(roomPlayers, settings = {}) {
@@ -1347,8 +1348,9 @@ function createMafiaState(roomPlayers, settings = {}) {
         winner:     null,
         log:        [],
         // Налаштування (передані хостом)
-        nightDuration:  settings.nightDuration || 90,
-        dayDuration:    settings.dayDuration   || 120,
+        nightDuration:  settings.nightDuration  || 90,
+        dayDuration:    settings.dayDuration    || 120,
+        voteDuration:   settings.voteDuration   || 60,
         revealDeadline: Date.now() + 25000,
     };
 }
@@ -1407,17 +1409,27 @@ function emitMafiaUpdate(room, sideEffect) {
 
 // ── Перевірка умов перемоги ──────────────────
 function checkMafiaWin(state) {
-    const alive       = state.players.filter(p => p.isAlive);
-    const aliveMafia  = alive.filter(p => MAFIA_ROLE_LABELS[p.role]?.faction === 'mafia').length;
-    const aliveTown   = alive.filter(p => MAFIA_ROLE_LABELS[p.role]?.faction === 'town').length;
+    const alive        = state.players.filter(p => p.isAlive);
+    const aliveMafia   = alive.filter(p => MAFIA_ROLE_LABELS[p.role]?.faction === 'mafia').length;
+    const aliveTown    = alive.filter(p => MAFIA_ROLE_LABELS[p.role]?.faction === 'town').length;
+    const aliveManiac  = alive.filter(p => p.role === 'maniac').length;
 
-    if (aliveMafia === 0) {
-        state.winner = 'town';
+    // Маньяк перемагає коли залишився єдиним
+    if (aliveManiac > 0 && aliveMafia === 0 && aliveTown === 0) {
+        state.winner = 'maniac';
         state.phase  = 'gameover';
-        state.log.unshift('🏆 Місто перемогло! Уся мафія знешкоджена.');
+        state.log.unshift('🔪 Маньяк переміг! Він єдиний хто вижив.');
         return true;
     }
-    if (aliveMafia >= aliveTown) {
+    // Місто перемагає коли знешкоджені і мафія і маньяк
+    if (aliveMafia === 0 && aliveManiac === 0) {
+        state.winner = 'town';
+        state.phase  = 'gameover';
+        state.log.unshift('🏆 Місто перемогло! Всіх злочинців знешкоджено.');
+        return true;
+    }
+    // Мафія перемагає коли маньяк мертвий і мафія >= мирних
+    if (aliveManiac === 0 && aliveMafia >= aliveTown) {
         state.winner = 'mafia';
         state.phase  = 'gameover';
         state.log.unshift('🔫 Мафія перемогла! Мирних залишилось менше.');
@@ -1436,6 +1448,7 @@ function startNightPhase(room) {
         sheriffCheck:     null, // { actorId, targetId }
         doctorHeal:       null, // { actorId, targetId }
         roleblockerBlock: null, // { actorId, targetId }
+        maniacKill:       null, // { actorId, targetId }
     };
     // Скидаємо isSilenced з попереднього раунду
     state.players.forEach(p => { p.isSilenced = false; });
@@ -1502,11 +1515,22 @@ function resolveNight(room) {
         if (maxV > 0) mafiaTarget = +Object.keys(voteCounts).find(k => voteCounts[k] === maxV);
     }
 
+    // 6. Maniac kill (незалежно від мафії)
+    let maniacTarget = null;
+    if (acts.maniacKill && !nightBlocked.has(acts.maniacKill.actorId)) {
+        maniacTarget = acts.maniacKill.targetId;
+    }
+
     // Застосовуємо вбивства
     state.lastDeaths = [];
     if (mafiaTarget !== null && mafiaTarget !== undefined && !protected_.has(mafiaTarget)) {
         ps[mafiaTarget].isAlive = false;
         state.lastDeaths.push(mafiaTarget);
+    }
+    if (maniacTarget !== null && maniacTarget !== undefined &&
+        !protected_.has(maniacTarget) && ps[maniacTarget].isAlive) {
+        ps[maniacTarget].isAlive = false;
+        state.lastDeaths.push(maniacTarget);
     }
 
     // Наступник Комісара
@@ -1576,7 +1600,7 @@ function startVotingPhase(room) {
     const state = room.state;
     state.phase = 'day_voting';
     state.votes  = {};
-    const VOTE_MS = 60000; // 60 секунд на голосування
+    const VOTE_MS = (state.voteDuration || 60) * 1000;
     state.voteDeadline = Date.now() + VOTE_MS;
     addLog(state, `🗳️ Час голосувати! Оберіть підозрюваного або пропустіть.`);
     emitMafiaUpdate(room, { event: 'votingStart', deadline: state.voteDeadline });
@@ -1687,6 +1711,15 @@ function processMafiaAction(state, type, data, pidx) {
             const { targetId: rbt } = data;
             if (!state.players[rbt]?.isAlive || rbt === pidx) break;
             state.nightActions.roleblockerBlock = { actorId: pidx, targetId: rbt };
+            break;
+        }
+
+        // Вбивство Маньяка
+        case 'maniacKill': {
+            if (state.phase !== 'night' || player.role !== 'maniac') break;
+            const { targetId: mkt } = data;
+            if (!state.players[mkt]?.isAlive || mkt === pidx) break;
+            state.nightActions.maniacKill = { actorId: pidx, targetId: mkt };
             break;
         }
 

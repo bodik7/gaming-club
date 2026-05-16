@@ -326,6 +326,10 @@
     background: linear-gradient(135deg, rgba(198,40,40,0.35) 0%, rgba(136,14,79,0.2) 100%);
     border: 1.5px solid rgba(198,40,40,0.5);
 }
+.m-gameover-banner.maniac {
+    background: linear-gradient(135deg, rgba(106,27,154,0.35) 0%, rgba(74,20,140,0.2) 100%);
+    border: 1.5px solid rgba(106,27,154,0.5);
+}
 .m-gameover-big-icon { font-size: 56px; line-height: 1; }
 .m-gameover-headline { font-size: 26px; font-weight: 900; color: white; letter-spacing: 0.5px; }
 .m-gameover-sub { font-size: 14px; color: var(--m-sub); }
