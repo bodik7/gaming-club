@@ -1,14 +1,16 @@
 // ============================================
 // МАФІЯ — клієнт (п.2: нічна фаза)
 // ============================================
-let mState  = null;
-let mMyIdx  = null;
-let mSideEffect = null; // персональний результат ночі
+let mState       = null;
+let mMyIdx       = null;
+let mSideEffect  = null;
+let mDeadChatLog = []; // зберігаємо між рендерами
 
 function initMafia(state, myIdx) {
-    mState  = state;
-    mMyIdx  = myIdx;
-    mSideEffect = null;
+    mState       = state;
+    mMyIdx       = myIdx;
+    mSideEffect  = null;
+    mDeadChatLog = [];
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('mafia-screen').classList.remove('hidden');
     document.getElementById('mafia-screen').classList.add('visible');
@@ -18,6 +20,8 @@ function initMafia(state, myIdx) {
 }
 
 function updateMafia(state, sideEffect) {
+    // Очищуємо sideEffect при переході до нової ночі (новий раунд)
+    if (state.phase === 'night' && mState?.phase !== 'night') mSideEffect = null;
     mState = state;
     if (sideEffect) mSideEffect = sideEffect;
     renderMafia();
@@ -441,12 +445,7 @@ function mReady() {
 }
 
 function mDayVote(targetId) {
-    if (targetId === null) {
-        // Скасувати голос — перемалюємо без відправки
-        if (mState) mState.myVote = null;
-        mRenderActions();
-        return;
-    }
+    // null = скасування → сервер видаляє голос, stateUpdate оновить UI
     socket.emit('action', { type: 'dayVote', data: { targetId } });
 }
 
@@ -472,12 +471,13 @@ function mSendMafiaChat() {
 
 // ── Чат мертвих ───────────────────────────────
 function mDeadUI() {
+    const msgs = mDeadChatLog.map(m =>
+        `<div class="m-dead-chat-msg"><span class="m-day-chat-name">👻 ${m.name}:</span> ${m.text}</div>`
+    ).join('') || `<div class="m-log-empty">Тут говорять привиди...</div>`;
     return `
         <div class="m-dead-chat-wrap">
             <div class="m-dead-chat-title">👻 Чат мертвих</div>
-            <div class="m-dead-chat-log" id="m-dead-chat-log">
-                <div class="m-log-empty">Тут говорять привиди...</div>
-            </div>
+            <div class="m-dead-chat-log" id="m-dead-chat-log">${msgs}</div>
             <div class="m-chat-input-row">
                 <input id="m-dead-chat-input" class="m-chat-input m-dead-input" maxlength="200"
                     placeholder="Тільки мертві чують..."
@@ -488,15 +488,18 @@ function mDeadUI() {
 }
 
 socket.on('deadChat', ({ name, text }) => {
+    mDeadChatLog.push({ name, text });
+    // Якщо вже є живий елемент — додаємо без перерендеру
     const log = document.getElementById('m-dead-chat-log');
-    if (!log) return;
-    const empty = log.querySelector('.m-log-empty');
-    if (empty) empty.remove();
-    const msg = document.createElement('div');
-    msg.className = 'm-dead-chat-msg';
-    msg.innerHTML = `<span class="m-day-chat-name">👻 ${name}:</span> ${text}`;
-    log.appendChild(msg);
-    log.scrollTop = log.scrollHeight;
+    if (log) {
+        const empty = log.querySelector('.m-log-empty');
+        if (empty) empty.remove();
+        const msg = document.createElement('div');
+        msg.className = 'm-dead-chat-msg';
+        msg.innerHTML = `<span class="m-day-chat-name">👻 ${name}:</span> ${text}`;
+        log.appendChild(msg);
+        log.scrollTop = log.scrollHeight;
+    }
 });
 
 function mSendDeadChat() {

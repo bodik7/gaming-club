@@ -1733,9 +1733,10 @@ function processMafiaAction(state, type, data, pidx) {
             if (state.phase !== 'day_voting') break;
             if (!player.isAlive || player.isSilenced) break;
             const { targetId: dvt } = data;
+            // null = скасування голосу
+            if (dvt === null) { delete state.votes[pidx]; break; }
             if (dvt !== 'skip' && (!state.players[dvt]?.isAlive || dvt === pidx)) break;
             state.votes[pidx] = dvt;
-            // Якщо всі живі (незаглушені) проголосували — вирішуємо одразу
             const eligible = state.players.filter(p => p.isAlive && !p.isSilenced);
             const voted    = eligible.filter(p => state.votes[p.id] !== undefined);
             if (voted.length >= eligible.length) state._resolveVoting = true;
