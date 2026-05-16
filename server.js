@@ -1384,6 +1384,8 @@ function sanitizeMafia(state, forIdx) {
         mafiaIds:    myFaction === 'mafia' ? state.mafiaIds : null,
         // Голосування — власний вибір видно, чужі — ні
         myVote:    state.votes?.[forIdx] ?? null,
+        // Всі голоси відкриті під час голосування (як у реальній грі)
+        allVotes:  state.phase === 'day_voting' ? { ...state.votes } : {},
         voteCount: state.phase === 'day_voting'
             ? state.players.filter(p => p.isAlive && !p.isSilenced && state.votes[p.id] !== undefined).length
             : 0,
@@ -1581,8 +1583,7 @@ function startMorningPhase(room, sheriffResult, donResult) {
         });
     });
 
-    // Через 6 секунд → денне обговорення (реалізується в п.3)
-    setTimeout(() => startDayPhase(room), 6000);
+    setTimeout(() => startDayPhase(room), 2000);
 }
 
 // ── Денна фаза ───────────────────────────────
@@ -1979,6 +1980,20 @@ io.on('connection', (socket) => {
             name: esc(player.name),
             text: esc(String(text || '').slice(0, 200)),
         });
+    });
+
+    // Чат мертвих (видно тільки мертвим)
+    socket.on('deadChat', ({ text }) => {
+        const room = rooms[socket.roomCode];
+        if (!room?.state || room.state.gameType !== 'mafia') return;
+        const player = room.state.players[socket.playerIndex];
+        if (!player || player.isAlive) return;
+        const esc = s => String(s).replace(/[&<>"']/g, c =>
+            ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+        const msg = { name: esc(player.name), text: esc(String(text || '').slice(0, 200)) };
+        room.players
+            .filter(rp => !room.state.players[rp.index]?.isAlive)
+            .forEach(rp => io.to(rp.socketId).emit('deadChat', msg));
     });
 
     // Приватний чат мафії

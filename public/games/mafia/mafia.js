@@ -114,7 +114,7 @@ function mRenderActions() {
 
     // ── Ніч
     if (s.phase === 'night') {
-        if (!me.isAlive) { el.innerHTML = `<div class="m-wait">Ви загинули. Спостерігайте.</div>`; return; }
+        if (!me.isAlive) { el.innerHTML = mDeadUI(); return; }
         el.innerHTML = mNightActions(s, me);
         return;
     }
@@ -144,7 +144,8 @@ function mRenderActions() {
                 👑 <b>${r.targetName}</b> — ${r.isSheriff ? '🔍 Комісар!' : '✅ Не Комісар'}
             </div>`;
         }
-        html += `<div class="m-wait" style="margin-top:12px">Переходимо до дня...</div></div>`;
+        if (!me.isAlive) html += mDeadUI();
+        html += `</div>`;
         el.innerHTML = html;
         return;
     }
@@ -193,27 +194,47 @@ function mRenderActions() {
         const canVote = me.isAlive && !me.isSilenced;
         const alreadyVoted = myVote !== null && myVote !== undefined;
 
+        // Рахуємо голоси по цілях
+        const voteTally = {};
+        const voterMap  = {};
+        Object.entries(s.allVotes || {}).forEach(([vid, tid]) => {
+            const voter = s.players[+vid];
+            if (!voter) return;
+            voterMap[+vid] = tid;
+            if (tid !== 'skip' && tid !== null) {
+                voteTally[tid] = (voteTally[tid] || []);
+                voteTally[tid].push(voter.name);
+            }
+        });
+
+        const voteLog = Object.entries(voterMap).map(([vid, tid]) => {
+            const voter  = s.players[+vid]?.name || '?';
+            const target = tid === 'skip' ? 'пропуск' : (s.players[tid]?.name || '?');
+            return `<span class="m-vote-log-item">${voter} → ${target}</span>`;
+        }).join('');
+
         el.innerHTML = `
             <div class="m-vote-ui">
                 <div class="m-day-title">🗳️ Голосування</div>
                 <div class="m-day-timer" id="m-vote-timer">${timer}</div>
                 <div class="m-vote-count">${s.voteCount} / ${s.eligibleVoters} проголосували</div>
+                ${voteLog ? `<div class="m-vote-log">${voteLog}</div>` : ''}
 
                 ${!canVote
-                    ? `<div class="m-wait">${me.isSilenced ? '🔇 Ви заглушені і не можете голосувати.' : '💀 Ви загинули.'}</div>`
+                    ? `${me.isAlive ? '' : mDeadUI()}`
                     : alreadyVoted
                     ? `<div class="m-voted-info">
                             ✅ Ви проголосували: <b>${myVote === 'skip' ? 'пропустити' : s.players[myVote]?.name || '?'}</b>
                             <button class="m-btn-small" onclick="mDayVote(null)">↩ Змінити</button>
                         </div>`
                     : `<div class="m-vote-targets">
-                            ${targets.map(p => `
-                                <button class="m-vote-target-btn" onclick="mDayVote(${p.id})">
-                                    ${p.name}
-                                </button>`).join('')}
-                            <button class="m-vote-skip-btn" onclick="mDayVote('skip')">
-                                ⏭️ Пропустити
-                            </button>
+                            ${targets.map(p => {
+                                const cnt = (voteTally[p.id] || []).length;
+                                return `<button class="m-vote-target-btn" onclick="mDayVote(${p.id})">
+                                    ${p.name}${cnt ? ` <span class="m-vote-badge">${cnt}</span>` : ''}
+                                </button>`;
+                            }).join('')}
+                            <button class="m-vote-skip-btn" onclick="mDayVote('skip')">⏭️ Пропустити</button>
                         </div>`}
             </div>`;
         mStartTimer('m-vote-timer', s.voteDeadline);
@@ -431,6 +452,44 @@ function mSendMafiaChat() {
     input.value = '';
 }
 
+// ── Чат мертвих ───────────────────────────────
+function mDeadUI() {
+    return `
+        <div class="m-dead-chat-wrap">
+            <div class="m-dead-chat-title">👻 Чат мертвих</div>
+            <div class="m-dead-chat-log" id="m-dead-chat-log">
+                <div class="m-log-empty">Тут говорять привиди...</div>
+            </div>
+            <div class="m-chat-input-row">
+                <input id="m-dead-chat-input" class="m-chat-input m-dead-input" maxlength="200"
+                    placeholder="Тільки мертві чують..."
+                    onkeydown="if(event.key==='Enter')mSendDeadChat()">
+                <button class="m-chat-send m-dead-send" onclick="mSendDeadChat()">➤</button>
+            </div>
+        </div>`;
+}
+
+socket.on('deadChat', ({ name, text }) => {
+    const log = document.getElementById('m-dead-chat-log');
+    if (!log) return;
+    const empty = log.querySelector('.m-log-empty');
+    if (empty) empty.remove();
+    const msg = document.createElement('div');
+    msg.className = 'm-dead-chat-msg';
+    msg.innerHTML = `<span class="m-day-chat-name">👻 ${name}:</span> ${text}`;
+    log.appendChild(msg);
+    log.scrollTop = log.scrollHeight;
+});
+
+function mSendDeadChat() {
+    const input = document.getElementById('m-dead-chat-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    socket.emit('deadChat', { text });
+    input.value = '';
+}
+
 // ── Денний чат ────────────────────────────────
 socket.on('dayChatMsg', ({ playerId, name, text }) => {
     const log = document.getElementById('m-day-chat-log');
@@ -521,7 +580,7 @@ function mRoleDesc(role) {
         roleblocker: 'Блокуйте нічні дії будь-якого гравця. Вдень заблокований мовчить.',
         mafia:       'Разом з командою вбивайте мирних щоночі. Виживіть до перемоги.',
         don:         'Лідер мафії. Ваш голос вирішальний. Перевіряйте чи є гравець Комісаром.',
-        maniac:      'Одинак. Кожної ночі вбивайте когось. Виграєте якщо залишитесь єдиним живим.',
+        maniac:      'Вбивайте всіх підряд — без різниці хто. Перемагаєте коли всі інші мертві.',
     };
     return descs[role] || '';
 }
