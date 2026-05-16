@@ -825,7 +825,7 @@ function quickJoin(code) {
 }
 
 // ── Налаштування гри ─────────────────────────
-const _gameSettings = { nightDuration: 90, dayDuration: 120 };
+const _gameSettings = { nightDuration: 90, dayDuration: 120, voteDuration: 60 };
 
 function setSetting(key, value) {
     _gameSettings[key] = value;

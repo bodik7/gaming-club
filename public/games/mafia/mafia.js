@@ -157,6 +157,8 @@ function mRenderActions() {
                 _mLastNightDL = s.nightDeadline;
                 mStartNightFlavor(s.nightDeadline);
             }
+        } else {
+            mStartTimer('m-night-act-timer', s.nightDeadline);
         }
         return;
     }
@@ -361,6 +363,10 @@ function mGameoverUI(s) {
 
 function mReturnToLobby() {
     clearSession();
+    // Прибираємо confetti перед поверненням
+    document.querySelectorAll('[style*="confetti-fall"]').forEach(el => el.remove());
+    _mFlavorTimeouts.forEach(clearTimeout);
+    _mFlavorTimeouts = [];
     document.getElementById('mafia-screen').classList.add('hidden');
     document.getElementById('mafia-screen').classList.remove('visible');
     document.getElementById('lobby-screen').classList.remove('hidden');
@@ -399,6 +405,11 @@ function mSpawnConfetti(winner) {
 // ── Нічні дії по ролі ─────────────────────────
 function mNightActions(s, me) {
     const alive = s.players.filter(p => p.isAlive && p.id !== mMyIdx);
+    // Таймер показується всім активним ролям (не тільки мирним)
+    const nightTimerHtml = `
+        <div class="m-night-timer-active">
+            🌙 Ранок через <b id="m-night-act-timer">${mDeadlineTimer(s.nightDeadline)}</b>
+        </div>`;
 
     const targetSelect = (actionType, label) => `
         <div class="m-night-action">
@@ -413,18 +424,19 @@ function mNightActions(s, me) {
 
     switch (me.role) {
         case 'mafia':
-            return targetSelect('mafiaVote', '🔫 Оберіть жертву') + mMafiaChat();
+            return nightTimerHtml + targetSelect('mafiaVote', '🔫 Оберіть жертву') + mMafiaChat();
 
         case 'don':
-            return targetSelect('mafiaVote', '🔫 Оберіть жертву') +
+            return nightTimerHtml +
+                   targetSelect('mafiaVote', '🔫 Оберіть жертву') +
                    targetSelect('donCheck', '👁️ Перевірити (Комісар?)') + mMafiaChat();
 
         case 'sheriff':
         case 'deputy':
-            return targetSelect('sheriffCheck', '🔍 Перевірити гравця');
+            return nightTimerHtml + targetSelect('sheriffCheck', '🔍 Перевірити гравця');
 
         case 'doctor':
-            return `<div class="m-night-action">
+            return nightTimerHtml + `<div class="m-night-action">
                 <div class="m-night-label">💊 Врятувати гравця</div>
                 <div class="m-target-list">
                     ${s.players.filter(p => p.isAlive).map(p => `
@@ -435,10 +447,10 @@ function mNightActions(s, me) {
             </div>`;
 
         case 'roleblocker':
-            return targetSelect('roleblockerBlock', '🚫 Заблокувати гравця');
+            return nightTimerHtml + targetSelect('roleblockerBlock', '🚫 Заблокувати гравця');
 
         case 'maniac':
-            return targetSelect('maniacKill', '🔪 Оберіть жертву');
+            return nightTimerHtml + targetSelect('maniacKill', '🔪 Оберіть жертву');
 
         default:
             return `

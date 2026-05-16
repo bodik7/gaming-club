@@ -96,6 +96,17 @@
     color: rgba(255,255,255,0.6);
     font-variant-numeric: tabular-nums;
 }
+.m-night-timer-active {
+    font-size: 12px;
+    color: var(--m-sub);
+    text-align: center;
+    padding: 4px 0 10px;
+    width: 100%;
+}
+.m-night-timer-active b {
+    color: rgba(255,255,255,0.55);
+    font-variant-numeric: tabular-nums;
+}
 .m-night-flavor {
     width: 100%;
     display: flex;
