@@ -1800,7 +1800,7 @@ io.on('connection', (socket) => {
             players: [{ socketId: socket.id, name: playerName, index: 0 }],
             started: false,
             state: null,
-            gameType: gameType === 'tysyacha' ? 'tysyacha' : 'monopoly',
+            gameType: gameType === 'tysyacha' ? 'tysyacha' : gameType === 'mafia' ? 'mafia' : 'monopoly',
             createdAt: Date.now(),
             lastActivityAt: Date.now(),
         };
