@@ -1462,6 +1462,8 @@ function startNightPhase(room) {
 function resolveNight(room) {
     clearTimeout(room.nightTimer);
     const state = room.state;
+    if (state.phase !== 'night') return;
+    state.phase = 'resolving'; // блокуємо повторний виклик одразу
     const acts  = state.nightActions;
     const ps    = state.players;
 
@@ -1611,6 +1613,8 @@ function startVotingPhase(room) {
 function resolveVoting(room) {
     clearTimeout(room.voteTimer);
     const state = room.state;
+    if (state.phase !== 'day_voting') return;
+    state.phase = 'resolving'; // блокуємо повторний виклик одразу
 
     // Підраховуємо голоси (заглушені не голосують)
     const voteCounts = {};
