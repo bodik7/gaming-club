@@ -2219,8 +2219,15 @@ io.on('connection', (socket) => {
         socket.playerIndex = playerIndex;
 
         if (room.started && room.state) {
+            // Для мафії — повертаємо в приватну sub-room якщо мафіозі
+            if (room.state.gameType === 'mafia') {
+                const mafiaIds = room.state.mafiaIds || [];
+                if (mafiaIds.includes(playerIndex)) socket.join(`${code}_mafia`);
+            }
             const st = room.state.gameType === 'tysyacha'
                 ? sanitizeTysyacha(room.state, playerIndex)
+                : room.state.gameType === 'mafia'
+                ? sanitizeMafia(room.state, playerIndex)
                 : sanitize(room.state);
             cb({ success: true, started: true, state: st, gameType: room.gameType });
         } else {

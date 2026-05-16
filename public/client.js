@@ -225,11 +225,14 @@ function tryRejoin() {
         }
         myPlayerIndex = playerIndex;
         if (started && state) {
-            // Гра вже йде — відновлюємо ігровий екран
             document.getElementById('lobby-screen').classList.add('hidden');
             setQuitBtn(true);
             if (state.gameType === 'tysyacha') {
                 initTysyacha(state, myPlayerIndex);
+                return;
+            }
+            if (state.gameType === 'mafia') {
+                initMafia(state, myPlayerIndex);
                 return;
             }
             showGameScreen();
@@ -835,16 +838,17 @@ function setSetting(key, value) {
 }
 
 function updateGameSettings(gameType) {
-    const panel = document.getElementById('game-settings');
+    const panel    = document.getElementById('game-settings');
     const nightRow = document.getElementById('settings-night-timer');
     const dayRow   = document.getElementById('settings-day-timer');
+    const voteRow  = document.getElementById('settings-vote-timer');
     const isHost   = myPlayerIndex === 0;
     if (!panel) return;
-    // Налаштування показуємо тільки хосту і тільки для Мафії
     const showPanel = isHost && gameType === 'mafia';
     panel.classList.toggle('hidden', !showPanel);
     if (nightRow) nightRow.classList.toggle('hidden', gameType !== 'mafia');
     if (dayRow)   dayRow.classList.toggle('hidden',   gameType !== 'mafia');
+    if (voteRow)  voteRow.classList.toggle('hidden',  gameType !== 'mafia');
 }
 
 function startGame() {

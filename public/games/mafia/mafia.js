@@ -40,6 +40,7 @@ function mRenderPhaseInfo() {
         role_reveal:     '📋 Перегляд ролі',
         night:           '🌙 Ніч',
         morning:         '🌅 Ранок',
+        resolving:       '⚖️ Підрахунок голосів',
         day_discussion:  '☀️ Обговорення',
         day_voting:      '🗳️ Голосування',
         gameover:        '🏁 Кінець гри',
@@ -112,6 +113,22 @@ function mRenderActions() {
         return;
     }
 
+    // ── Підрахунок голосів (пауза між голосуванням і наступною ніччю)
+    if (s.phase === 'resolving') {
+        const eliminated = (s.lastDeaths || []).map(id => s.players[id]).filter(Boolean);
+        const resultHtml = eliminated.length
+            ? eliminated.map(p => `<div class="m-morning-victim">🚪 ${p.name} покидає місто</div>`).join('')
+            : `<div class="m-morning-sub">Нічия — ніхто не вигнаний</div>`;
+        el.innerHTML = `
+            <div class="m-morning">
+                <div class="m-morning-title">⚖️ Результат голосування</div>
+                ${resultHtml}
+                <div class="m-wait" style="margin-top:12px">🌙 Ніч починається...</div>
+                ${!me.isAlive ? mDeadUI() : ''}
+            </div>`;
+        return;
+    }
+
     // ── Ніч
     if (s.phase === 'night') {
         if (!me.isAlive) { el.innerHTML = mDeadUI(); return; }
@@ -144,7 +161,8 @@ function mRenderActions() {
                 👑 <b>${r.targetName}</b> — ${r.isSheriff ? '🔍 Комісар!' : '✅ Не Комісар'}
             </div>`;
         }
-        if (!me.isAlive) html += mDeadUI();
+        if (me.isAlive) html += `<div class="m-wait" style="margin-top:10px">⏳ Переходимо до дня...</div>`;
+        else html += mDeadUI();
         html += `</div>`;
         el.innerHTML = html;
         return;
