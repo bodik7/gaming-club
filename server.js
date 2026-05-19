@@ -275,6 +275,14 @@ function addLog(state, text, type = '') {
 // Викликається після будь-якого вимушеного списання (податок, картка, в'язниця).
 // Якщо гравець у мінусі і немає активів — оголошує банкрутство банку.
 // Повертає true якщо настало банкрутство.
+function checkDebtCleared(state, player) {
+    if (state.pendingAction === 'coverDebt' && player.money >= 0) {
+        state.pendingAction = null;
+        state.pendingData   = null;
+        addLog(state, `✅ ${player.name} покрив(ла) борг — можна продовжувати`, 'success');
+    }
+}
+
 function checkForcedDebt(state, player) {
     if (player.money >= 0) return false;
     const netWorth = calcNetWorth(state, player);
@@ -761,6 +769,8 @@ function processAction(state, type, data, room) {
             player.properties = [];
             state.pendingAction = null;
             state.pendingData = null;
+            // Одразу передаємо хід — інакше currentPlayerIndex лишається на банкруті
+            sideEffect = nextPlayer(state);
             break;
         }
 
@@ -794,6 +804,7 @@ function processAction(state, type, data, room) {
             s.houses--;
             player.money += Math.floor(cell.housePrice * 0.9);
             addLog(state, `🔻 ${player.name} продав(ла) будинок на "${cell.name}"`, 'success');
+            checkDebtCleared(state, player);
             break;
         }
 
@@ -806,6 +817,7 @@ function processAction(state, type, data, room) {
             s.mortgaged = true;
             player.money += Math.floor(cell.price / 2);
             addLog(state, `🏷️ ${player.name} заставив(ла) "${cell.name}"`, 'warn');
+            checkDebtCleared(state, player);
             break;
         }
 
@@ -1779,7 +1791,7 @@ function startTradeTimer(room) {
 function startTurnTimer(room) {
     if (room.state?.pendingTrade) return; // не запускаємо під час очікування угоди
     const next = room.state?.players[room.state?.currentPlayerIndex];
-    if (next?.inJail) return; // гравець у в'язниці — чекаємо на його вибір (jailPay/jailCard/roll)
+    if (next?.bankrupt) return; // банкрутний гравець — хід вже передано
     clearTurnTimer(room);
     const TURN_MS = 90 * 1000;
     room.state.turnDeadline = Date.now() + TURN_MS;
