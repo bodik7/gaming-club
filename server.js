@@ -1344,6 +1344,7 @@ function sanitizeTysyacha(state, forIdx) {
         trick: state.trick,
         trump: state.trump, declaredBid: state.declaredBid,
         marriages: state.marriages,
+        givenCards: state.givenCards,
         log: state.log.slice(0, 30),
         winner: state.winner,
     };

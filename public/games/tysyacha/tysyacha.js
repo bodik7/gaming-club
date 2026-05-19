@@ -272,6 +272,7 @@ function renderTHand(s) {
     });
 
     // Визначаємо обмеження масті (тільки коли мій хід і взятка в процесі, не завершена)
+    const inTalon  = s.phase === 'talon' && s.auction?.winner === tMyIdx && !s.talonPiles;
     const myTurn   = s.phase === 'playing' && s.currentPlayer === tMyIdx && !tTrickShowing;
     const trickStarted = myTurn && (s.trick?.cards?.length ?? 0) > 0;
     const leadSuit = trickStarted ? s.trick.cards[0].card.slice(-1) : null;
@@ -290,8 +291,8 @@ function renderTHand(s) {
         // CSS класи
         const classes = [
             't-card',
-            sel             ? 'selected'   : '',
-            canPlayThisCard ? 'playable'   : '',
+            sel                    ? 'selected'   : '',
+            (canPlayThisCard || inTalon) ? 'playable'   : '',
             myTurn && isLeadSuit && mustFollowSuit ? 'lead-suit' : '',
             myTurn && mustFollowSuit && !isLeadSuit ? 'cant-play' : '',
             tDealing        ? 'dealing'    : '',
@@ -459,13 +460,20 @@ function renderTActions(s) {
 // ── Дії гравця ───────────────────────────────
 function tSelectCard(card) {
     const s = tState;
-    if (!s || s.phase !== 'playing' || s.currentPlayer !== tMyIdx) return;
-    if (tTrickShowing) return; // взятка завершена — чекаємо очищення
+    if (!s) return;
+    if (s.phase === 'talon' && s.auction?.winner === tMyIdx && !s.talonPiles) {
+        tSelectedCard = tSelectedCard === card ? null : card;
+        renderTHand(tState);
+        renderTActions(tState);
+        return;
+    }
+    if (s.phase !== 'playing' || s.currentPlayer !== tMyIdx) return;
+    if (tTrickShowing) return;
     if ((s.trick?.cards?.length ?? 0) > 0) {
         const leadSuit   = s.trick.cards[0].card.slice(-1);
         const me         = s.players[tMyIdx];
         const mustFollow = me?.hand?.some(c => c.slice(-1) === leadSuit);
-        if (mustFollow && card.slice(-1) !== leadSuit) return; // не можна обрати
+        if (mustFollow && card.slice(-1) !== leadSuit) return;
     }
     tSelectedCard = tSelectedCard === card ? null : card;
     renderTHand(tState);
