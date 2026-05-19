@@ -1318,16 +1318,31 @@ function animateDice() {
 // ── Адаптовані UI-функції для онлайну ─────────
 function offerPurchaseOnline(player, cell) {
     if (!cell) return;
+    const canBuy = player.money >= cell.price;
     showModal({
-        title: `Ділянка: ${cell.name}`,
-        body: `<p><b>${cell.name}</b></p>
-               <p>Ціна: <b>₴${cell.price}</b></p>
-               <p>У вас: ₴${player.money}</p>`,
+        title: '',
+        body: `
+            <div class="modal-hdr info">
+                <div class="modal-hdr-icon">🏠</div>
+                <div class="modal-hdr-title">${cell.name}</div>
+                ${cell.city ? `<div class="modal-hdr-sub">${cell.city}</div>` : ''}
+            </div>
+            <div class="modal-row neutral">
+                <span class="mlabel">Ціна ділянки</span>
+                <span class="mval gold">₴${cell.price}</span>
+            </div>
+            <div class="modal-row ${canBuy ? 'green' : 'red'}">
+                <span class="mlabel">Ваша готівка</span>
+                <span class="mval ${canBuy ? 'green' : 'red'}">₴${player.money}</span>
+            </div>
+            <p style="font-size:11px;color:#888;text-align:center;margin-top:8px">
+                Якщо відмовитесь — буде аукціон серед усіх гравців.
+            </p>`,
         buttons: [
-            { text: `Купити за ₴${cell.price}`, class: 'btn-success',
-              disabled: player.money < cell.price,
+            { text: `🏠 Купити за ₴${cell.price}`, class: 'btn-success',
+              disabled: !canBuy,
               action: () => { playSound('buy'); sendAction('buyProperty'); closeModal(); }},
-            { text: 'На аукціон', class: 'btn-secondary',
+            { text: '🔨 На аукціон', class: 'btn-secondary',
               action: () => { sendAction('startAuction'); closeModal(); }},
         ]
     });
@@ -1370,20 +1385,22 @@ function showAuctionUIOnline(state) {
     const isMyBid  = myPlayerIndex === bidderId;
 
     const body = `
-        <div style="background:#f4f7fc;border-radius:10px;padding:12px;margin-bottom:12px">
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                <span>Ділянка:</span><b>${a.cell.name}</b>
-            </div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                <span>Стартова ціна:</span><b>₴${Math.floor(a.cell.price / 2)}</b>
-            </div>
-            <div style="display:flex;justify-content:space-between">
-                <span>Поточна ставка:</span>
-                <b style="color:#cc1f1f">₴${a.currentBid}${lastBidder ? ` (${lastBidder.icon} ${lastBidder.name})` : ' — стартова'}</b>
-            </div>
+        <div class="modal-hdr gold">
+            <div class="modal-hdr-icon">🔨</div>
+            <div class="modal-hdr-title">${a.cell.name}</div>
+            ${a.cell.city ? `<div class="modal-hdr-sub">${a.cell.city}</div>` : ''}
         </div>
-        <div style="background:${bidder.color};color:white;padding:10px;border-radius:8px;text-align:center;margin-bottom:12px">
-            ${bidder.icon} <b>${bidder.name}</b> — ваш хід (готівка ₴${bidder.money})
+        <div class="modal-row neutral">
+            <span class="mlabel">Стартова ціна</span>
+            <span class="mval gold">₴${Math.floor(a.cell.price / 2)}</span>
+        </div>
+        <div class="modal-row red">
+            <span class="mlabel">Поточна ставка</span>
+            <span class="mval red">₴${a.currentBid}${lastBidder ? ` (${lastBidder.name})` : ' — стартова'}</span>
+        </div>
+        <div style="background:${bidder.color};color:white;padding:10px;border-radius:8px;
+                    text-align:center;margin-bottom:10px;font-weight:700">
+            ${bidder.icon} ${bidder.name} — хід (₴${bidder.money})
         </div>
         ${isMyBid ? `
         <div>

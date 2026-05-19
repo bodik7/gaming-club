@@ -133,7 +133,11 @@ body {
     height: 100vh;
     padding: 8px;
     overflow: hidden;
-    background: url('assets/ya-21688.jpg') center center / cover fixed;
+    background:
+        radial-gradient(ellipse at 15% 15%, rgba(0,87,183,0.28) 0%, transparent 50%),
+        radial-gradient(ellipse at 85% 85%, rgba(255,215,0,0.10) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 15%, rgba(0,56,168,0.15) 0%, transparent 45%),
+        #07101f;
 }
 
 .game-layout {
@@ -263,8 +267,13 @@ body {
 }
 
 .player-card.bankrupt {
-    opacity: 0.4;
-    filter: grayscale(0.7);
+    animation: playerBankrupt 2.2s ease forwards;
+}
+@keyframes playerBankrupt {
+    0%   { opacity: 1;   filter: none;          transform: scale(1)    rotate(0deg); }
+    15%  { opacity: 0.9; filter: grayscale(0.2); transform: scale(0.98) rotate(-1deg); }
+    30%  { opacity: 0.7; filter: grayscale(0.5); transform: scale(0.96) rotate(1deg); }
+    100% { opacity: 0.38; filter: grayscale(0.8); transform: scale(1)   rotate(0deg); }
 }
 
 .player-header {
@@ -692,6 +701,16 @@ body {
     animation: roll 0.6s ease-in-out;
 }
 
+/* Пульс кубика коли треба кидати */
+#roll-btn:not(:disabled) {
+    animation: rollPulse 2s ease-in-out infinite;
+}
+@keyframes rollPulse {
+    0%,100% { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    50%     { box-shadow: 0 4px 22px rgba(255,215,0,0.7), 0 0 36px rgba(255,215,0,0.2); }
+}
+#roll-btn:disabled { animation: none; }
+
 @keyframes roll {
     0% { transform: rotate(0deg) scale(1); }
     50% { transform: rotate(360deg) scale(1.2); }
@@ -760,21 +779,24 @@ body {
 }
 
 .action-buttons button {
-    background: white;
-    border: 2px solid #0057b7;
+    background: rgba(255,255,255,0.92);
+    border: 1.5px solid rgba(0,87,183,0.35);
     color: #004494;
     padding: 6px 10px;
-    border-radius: 7px;
+    border-radius: 8px;
     cursor: pointer;
     font-weight: 600;
-    transition: all 0.2s;
+    transition: all 0.18s;
     font-size: 12px;
     line-height: 1.2;
+    backdrop-filter: blur(4px);
 }
-
 .action-buttons button:hover {
     background: #0057b7;
     color: white;
+    border-color: #0057b7;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,87,183,0.35);
 }
 
 .log {
@@ -810,6 +832,49 @@ body {
 .log-entry.success { border-left-color: #2a9d3f; background: #e8f8ec; }
 .log-entry.warn { border-left-color: #ff851b; background: #fff4e0; }
 .log-entry.error { border-left-color: #e53935; background: #ffeae8; }
+
+/* ===== УТИЛІТИ ДЛЯ МОДАЛЬНИХ ВІКОН ===== */
+.modal-hdr {
+    margin: -30px -30px 18px;
+    padding: 18px 24px 14px;
+    border-radius: 18px 18px 0 0;
+    text-align: center;
+    color: white;
+}
+.modal-hdr.danger  { background: linear-gradient(135deg, #b71c1c, #7f0000); }
+.modal-hdr.success { background: linear-gradient(135deg, #1b5e20, #2e7d32); }
+.modal-hdr.warning { background: linear-gradient(135deg, #e65100, #bf360c); }
+.modal-hdr.info    { background: linear-gradient(135deg, #0d47a1, #1565c0); }
+.modal-hdr.gold    { background: linear-gradient(135deg, #f57f17, #ff8f00); }
+.modal-hdr-icon  { font-size: 44px; margin-bottom: 6px; }
+.modal-hdr-title { font-size: 19px; font-weight: 900; letter-spacing: .3px; }
+.modal-hdr-sub   { font-size: 12px; opacity: .8; margin-top: 2px; }
+
+.modal-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 13px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+.modal-row.neutral  { background: #f5f5f5; }
+.modal-row.red      { background: #ffeae8; }
+.modal-row.green    { background: #e8f8ec; }
+.modal-row.yellow   { background: #fff8e1; }
+.modal-row .mlabel  { color: #555; font-size: 13px; }
+.modal-row .mval    { font-weight: 700; font-size: 18px; }
+.modal-row .mval.red   { color: #b71c1c; }
+.modal-row .mval.green { color: #2a9d3f; }
+.modal-row .mval.gold  { color: #f57f17; }
+
+.modal-center { text-align: center; padding: 8px 0 4px; }
+.modal-big-num { font-size: 38px; font-weight: 900; }
+.modal-big-num.red   { color: #b71c1c; }
+.modal-big-num.green { color: #2a9d3f; }
+.modal-big-num.gold  { color: #f57f17; }
+.modal-sub { font-size: 13px; color: #666; margin-bottom: 4px; }
 
 /* ===== МОДАЛЬНЕ ВІКНО ===== */
 .modal {

@@ -1467,25 +1467,21 @@ function showLoanDeadlineModal(player) {
     showModal({
         title: '',
         body: `
-            <div style="margin:-30px -30px 20px;padding:20px 24px 16px;
-                        background:linear-gradient(135deg,#b71c1c,#7f0000);
-                        border-radius:18px 18px 0 0;text-align:center;color:white">
-                <div style="font-size:48px;margin-bottom:6px">🏦</div>
-                <div style="font-size:19px;font-weight:900">ЧАС ВИЙШОВ!</div>
+            <div class="modal-hdr danger">
+                <div class="modal-hdr-icon">🏦</div>
+                <div class="modal-hdr-title">ЧАС ВИЙШОВ!</div>
             </div>
             <div style="background:#ffeae8;border:2px solid #b71c1c;border-radius:12px;
                         padding:13px 16px;font-size:14px;line-height:1.6;text-align:center;margin-bottom:12px">
                 ${deadline}
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;
-                        padding:10px 14px;background:#ffeae8;border-radius:8px;margin-bottom:6px">
-                <span style="font-size:13px;color:#555">Борг до сплати:</span>
-                <span style="font-size:22px;font-weight:900;color:#b71c1c">₴${debt}</span>
+            <div class="modal-row red">
+                <span class="mlabel">Борг до сплати</span>
+                <span class="mval red">₴${debt}</span>
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;
-                        padding:10px 14px;background:${canPay?'#e8f8ec':'#ffeae8'};border-radius:8px">
-                <span style="font-size:13px;color:#555">Ваша готівка:</span>
-                <span style="font-size:18px;font-weight:700;color:${canPay?'#2a9d3f':'#cc1f1f'}">₴${player.money}</span>
+            <div class="modal-row ${canPay ? 'green' : 'red'}">
+                <span class="mlabel">Ваша готівка</span>
+                <span class="mval ${canPay ? 'green' : 'red'}">₴${player.money}</span>
             </div>`,
         buttons
     });
@@ -1574,28 +1570,26 @@ function showCoverDebtModal(shortfall) {
         title: '',
         dismissable: false,
         body: `
-        <div style="margin:-30px -30px 18px;padding:18px 24px 14px;
-                    background:linear-gradient(135deg,#b71c1c,#7f0000);
-                    border-radius:18px 18px 0 0;text-align:center;color:white">
-            <div style="font-size:44px;margin-bottom:6px">💸</div>
-            <div style="font-size:18px;font-weight:900">НЕ ВИСТАЧАЄ КОШТІВ</div>
+        <div class="modal-hdr danger">
+            <div class="modal-hdr-icon">💸</div>
+            <div class="modal-hdr-title">НЕ ВИСТАЧАЄ КОШТІВ</div>
         </div>
-        <div style="text-align:center;padding:10px 0 6px">
-            <div style="font-size:13px;color:#555;margin-bottom:4px">Ваш баланс від'ємний. Потрібно зібрати:</div>
-            <div style="font-size:36px;font-weight:900;color:#b71c1c">₴${shortfall}</div>
+        <div class="modal-center">
+            <div class="modal-sub">Ваш баланс від'ємний. Потрібно зібрати:</div>
+            <div class="modal-big-num red">₴${shortfall}</div>
         </div>
         <div style="display:flex;gap:6px;margin-bottom:4px">
-            <div style="flex:1;background:#ffeae8;border-radius:8px;padding:8px 10px;text-align:center">
-                <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.6px">Баланс</div>
-                <div style="font-size:16px;font-weight:700;color:#b71c1c">₴${player.money}</div>
+            <div class="modal-row red" style="flex:1;flex-direction:column;align-items:center;gap:2px;text-align:center">
+                <span style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.6px">Баланс</span>
+                <span class="mval red" style="font-size:15px">₴${player.money}</span>
             </div>
-            <div style="flex:1;background:${canCover?'#e8f8ec':'#ffeae8'};border-radius:8px;padding:8px 10px;text-align:center">
-                <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.6px">Якщо продасте все</div>
-                <div style="font-size:16px;font-weight:700;color:${canCover?'#2a9d3f':'#b71c1c'}">+₴${maxTotal}</div>
+            <div class="modal-row ${canCover?'green':'red'}" style="flex:1;flex-direction:column;align-items:center;gap:2px;text-align:center">
+                <span style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.6px">Якщо продасте все</span>
+                <span class="mval ${canCover?'green':'red'}" style="font-size:15px">+₴${maxTotal}</span>
             </div>
-            <div style="flex:1;background:${canCover?'#e8f8ec':'#ffeae8'};border-radius:8px;padding:8px 10px;text-align:center">
-                <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.6px">Залишок</div>
-                <div style="font-size:16px;font-weight:700;color:${canCover?'#2a9d3f':'#b71c1c'}">${canCover?'+':'-'}₴${Math.abs(maxTotal-shortfall)}</div>
+            <div class="modal-row ${canCover?'green':'red'}" style="flex:1;flex-direction:column;align-items:center;gap:2px;text-align:center">
+                <span style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.6px">Залишок</span>
+                <span class="mval ${canCover?'green':'red'}" style="font-size:15px">${canCover?'+':'-'}₴${Math.abs(maxTotal-shortfall)}</span>
             </div>
         </div>
         ${sellHTML}${mortgageHTML}
