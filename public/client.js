@@ -244,14 +244,19 @@ function tryRejoin() {
             setTimeout(() => {
                 const me = state.players[myPlayerIndex];
                 if (!me) return;
-                if (state.pendingAction === 'payRent' && myPlayerIndex === state.currentPlayerIndex) {
+                const isMyTurn = myPlayerIndex === state.currentPlayerIndex;
+                if (state.pendingAction === 'coverDebt' && isMyTurn) {
+                    showCoverDebtModal(state.pendingData?.shortfall || 0);
+                } else if (state.pendingAction === 'casino' && isMyTurn) {
+                    showCasinoModal(me.money);
+                } else if (state.pendingAction === 'payRent' && isMyTurn) {
                     const { rent, ownerId, pos } = state.pendingData || {};
                     showRentModalOnline(me, BOARD[pos], rent, state.players[ownerId]);
                 } else if (state.auctionState) {
                     showAuctionUIOnline(state);
-                } else if (me.inJail && myPlayerIndex === state.currentPlayerIndex) {
+                } else if (me.inJail && isMyTurn) {
                     offerJailOptions(me);
-                } else if (state.pendingAction === 'offerPurchase' && myPlayerIndex === state.currentPlayerIndex) {
+                } else if (state.pendingAction === 'offerPurchase' && isMyTurn) {
                     offerPurchaseOnline(me, BOARD[state.pendingData?.pos]);
                 }
             }, 500);
