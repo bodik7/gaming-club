@@ -550,15 +550,32 @@ function nextPlayer(state) {
     if (next.loan > 0) {
         if (next.loanTurnsLeft === 1) return { event: 'loanWarning', player: next };
         if (next.loanTurnsLeft <= 0) {
-            // Автоматично списуємо якщо є кошти, інакше — банкрутство
             const total = next.loan + next.loanInterest;
             if (next.money >= total) {
+                // Є готівка — списуємо автоматично
                 next.money -= total;
-                next.loan = 0;
-                next.loanInterest = 0;
-                next.loanTurnsLeft = 0;
+                next.loan = 0; next.loanInterest = 0; next.loanTurnsLeft = 0;
                 addLog(state, `🏦 Банк автоматично списав борг ₴${total} з ${next.name}`, 'warn');
             } else {
+                // Готівки немає — примусово списуємо (гравець іде в мінус)
+                next.money -= total;
+                next.loan = 0; next.loanInterest = 0; next.loanTurnsLeft = 0;
+                addLog(state, `🏦 Банк примусово списав кредит ₴${total} — ${next.name} у мінусі!`, 'error');
+                const netWorth = calcNetWorth(state, next);
+                if (netWorth <= 0) {
+                    // Навіть активів не вистачає → авто-банкрутство
+                    addLog(state, `💀 ${next.name} нічим покрити борг — банкрутство!`, 'error');
+                    next.properties.forEach(pos => {
+                        state.cellState[pos].owner = null;
+                        state.cellState[pos].houses = 0;
+                        state.cellState[pos].mortgaged = false;
+                    });
+                    next.money = 0; next.bankrupt = true; next.properties = [];
+                    return nextPlayer(state); // пропускаємо банкрута
+                }
+                // Є активи — вимагаємо продати
+                state.pendingAction = 'coverDebt';
+                state.pendingData   = { shortfall: -next.money };
                 return { event: 'loanDeadline', player: next };
             }
         }
@@ -1801,6 +1818,9 @@ function startTurnTimer(room) {
         try {
             if (state.auctionState) {
                 processAction(state, 'auctionPass', {}, room);
+            } else if (state.pendingAction === 'coverDebt') {
+                // Гравець не покрив борг за час ходу → авто-банкрутство
+                processAction(state, 'declareBankrupt', {}, room);
             } else if (!state.hasRolled) {
                 processAction(state, 'rollDice', {}, room);
                 if (state.pendingAction === 'payRent') {
@@ -1809,11 +1829,20 @@ function startTurnTimer(room) {
                 } else if (state.pendingAction === 'offerPurchase') {
                     processAction(state, 'startAuction', {}, room);
                 }
-                if (state.hasRolled && !state.auctionState)       processAction(state, 'endTurn', {}, room);
+                if (state.hasRolled && !state.auctionState) processAction(state, 'endTurn', {}, room);
             } else if (!state.auctionState) {
                 processAction(state, 'endTurn', {}, room);
             }
         } catch(e) { console.error('Auto-turn error:', e.message); }
+
+        // Перевірка переможця після авто-дій (включаючи авто-банкрутство)
+        const alive = state.players.filter(p => !p.bankrupt);
+        if (alive.length === 1) {
+            clearTurnTimer(room);
+            addLog(state, `🏆 ${alive[0].name} — переможець!`, 'success');
+            io.to(room.code).emit('gameOver', { winner: alive[0], state: sanitize(state) });
+            return;
+        }
 
         io.to(room.code).emit('stateUpdate', {
             state: sanitize(room.state),

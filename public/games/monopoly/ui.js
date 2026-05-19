@@ -1534,6 +1534,12 @@ function showCoverDebtModal(shortfall) {
     const sellable = player.properties.filter(pos => (cellState[pos]?.houses || 0) > 0);
     const mortgage = player.properties.filter(pos => !cellState[pos]?.mortgaged && (cellState[pos]?.houses || 0) === 0);
 
+    // Скільки можна зібрати якщо продати все
+    const maxFromSell = sellable.reduce((s, pos) => s + Math.floor(BOARD[pos].housePrice * 0.9) * cellState[pos].houses, 0);
+    const maxFromMort = mortgage.reduce((s, pos) => s + Math.floor(BOARD[pos].price / 2), 0);
+    const maxTotal    = maxFromSell + maxFromMort;
+    const canCover    = maxTotal >= shortfall;
+
     let sellHTML = '';
     if (sellable.length) {
         sellHTML = `<div style="margin-top:12px">
@@ -1577,6 +1583,20 @@ function showCoverDebtModal(shortfall) {
         <div style="text-align:center;padding:10px 0 6px">
             <div style="font-size:13px;color:#555;margin-bottom:4px">Ваш баланс від'ємний. Потрібно зібрати:</div>
             <div style="font-size:36px;font-weight:900;color:#b71c1c">₴${shortfall}</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:4px">
+            <div style="flex:1;background:#ffeae8;border-radius:8px;padding:8px 10px;text-align:center">
+                <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.6px">Баланс</div>
+                <div style="font-size:16px;font-weight:700;color:#b71c1c">₴${player.money}</div>
+            </div>
+            <div style="flex:1;background:${canCover?'#e8f8ec':'#ffeae8'};border-radius:8px;padding:8px 10px;text-align:center">
+                <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.6px">Якщо продасте все</div>
+                <div style="font-size:16px;font-weight:700;color:${canCover?'#2a9d3f':'#b71c1c'}">+₴${maxTotal}</div>
+            </div>
+            <div style="flex:1;background:${canCover?'#e8f8ec':'#ffeae8'};border-radius:8px;padding:8px 10px;text-align:center">
+                <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.6px">Залишок</div>
+                <div style="font-size:16px;font-weight:700;color:${canCover?'#2a9d3f':'#b71c1c'}">${canCover?'+':'-'}₴${Math.abs(maxTotal-shortfall)}</div>
+            </div>
         </div>
         ${sellHTML}${mortgageHTML}
         ${!sellable.length && !mortgage.length
