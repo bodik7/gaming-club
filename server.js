@@ -1234,20 +1234,29 @@ function tFinishRound(state) {
         suits.forEach(s => { state.players[+pid].trickPts += T_MARRIAGE[s]; });
     });
     const bid = state.declaredBid || state.auction.current;
+    const roundResults = [];
     state.players.forEach((p, i) => {
-        const rnd = Math.floor(p.trickPts / 10) * 10; // завжди вниз за правилами Тисячі
+        const rnd = Math.floor(p.trickPts / 10) * 10;
+        let delta;
         if (i === bidder) {
             if (p.trickPts >= bid) {
-                p.score += bid;
+                delta = bid;
                 state.log.unshift(`✅ ${p.name}: набрав ${p.trickPts} ≥ ${bid}, +${bid}`);
             } else {
-                p.score -= bid;
+                delta = -bid;
                 state.log.unshift(`❌ ${p.name}: набрав ${p.trickPts} < ${bid}, −${bid}`);
             }
         } else {
-            p.score += rnd;
+            delta = rnd;
             state.log.unshift(`${p.name}: +${rnd}`);
         }
+        p.score += delta;
+        roundResults.push({
+            id: p.id, name: p.name, trickPts: p.trickPts,
+            delta, score: p.score,
+            isBidder: i === bidder, bid: i === bidder ? bid : null,
+            success: i === bidder ? p.trickPts >= bid : null,
+        });
     });
     const winner = state.players.find(p => p.score >= 1000);
     if (winner) {
@@ -1273,7 +1282,7 @@ function tFinishRound(state) {
     state.trump = null; state.declaredBid = null;
     state.marriages = {}; state.givenCards = [];
     state.talonPiles = null; state.leftoverPile = null; state.lastTrickWinner = null;
-    return null;
+    return { event: 'roundResult', results: roundResults };
 }
 
 function sanitizeTysyacha(state, forIdx) {

@@ -1,9 +1,11 @@
 // ============================================
 // ТИСЯЧА — клієнт
 // ============================================
-let tState = null;
-let tMyIdx = null;
+let tState       = null;
+let tMyIdx       = null;
 let tSelectedCard = null;
+let tLastTrump   = null;  // відстежуємо зміну козиря для банеру шлюбу
+let tDealing     = false; // флаг роздачі карт
 
 const T_MARRIAGE    = { '♠': 40, '♣': 60, '♦': 80, '♥': 100 };
 const T_SUIT_COLORS = { '♠': '#0d47a1', '♣': '#1b5e20', '♦': '#e65100', '♥': '#b71c1c' };
@@ -12,14 +14,17 @@ function tSuitColor(card) { return T_SUIT_COLORS[card.slice(-1)] || '#1a1a1a'; }
 
 // ── Ініціалізація ─────────────────────────────
 function initTysyacha(state, myIdx) {
-    tState  = state;
-    tMyIdx  = myIdx;
+    tState     = state;
+    tMyIdx     = myIdx;
+    tLastTrump = state.trump;
+    tDealing   = true;
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('tysyacha-screen').classList.remove('hidden');
     setQuitBtn(true);
     if (typeof switchViewport === 'function') switchViewport('tysyacha');
     tCheckOrientation();
     renderTysyacha();
+    setTimeout(() => { tDealing = false; }, 800);
 }
 
 function tCheckOrientation() {
@@ -37,19 +42,36 @@ window.addEventListener('resize', tCheckOrientation);
 
 function updateTysyacha(state, sideEffect) {
     if (sideEffect?.event === 'trickComplete') {
-        // Показуємо завершену взятку 1.3 с, потім переходимо до чистого стану
         tState = { ...state, trick: { cards: sideEffect.cards, winnerId: sideEffect.winnerId } };
         tSelectedCard = null;
         renderTysyacha();
+        // Анімація взятки: позначаємо картки переможця, потім очищаємо
         setTimeout(() => {
-            tState = state;
-            renderTysyacha();
-        }, 1300);
+            document.querySelectorAll('.t-card-table').forEach(el => el.classList.add('trick-taken'));
+        }, 900);
+        setTimeout(() => { tState = state; renderTysyacha(); }, 1300);
         return;
     }
+    if (sideEffect?.event === 'roundResult') {
+        tState = state;
+        tDealing = true;
+        tShowRoundResult(sideEffect.results, () => {
+            renderTysyacha();
+            setTimeout(() => { tDealing = false; }, 800);
+        });
+        return;
+    }
+
+    const prevTrump = tLastTrump;
+    tLastTrump = state.trump;
     tState = state;
     tSelectedCard = null;
     renderTysyacha();
+
+    // Шлюб: козир щойно з'явився під час гри
+    if (state.phase === 'playing' && state.trump && state.trump !== prevTrump) {
+        tShowMarriageBanner(state.trump);
+    }
 }
 
 // ── Головний рендер ───────────────────────────
@@ -70,11 +92,12 @@ function renderTScores(s) {
     const el = document.getElementById('t-scores');
     if (!el) return;
     el.innerHTML = s.players.map(p => {
-        const isActive = p.id === s.currentPlayer;
-        const isMe     = p.id === tMyIdx;
-        const isBidder = p.id === s.auction?.winner && s.phase !== 'auction';
+        const isActive   = p.id === s.currentPlayer;
+        const isMe       = p.id === tMyIdx;
+        const isBidder   = p.id === s.auction?.winner && s.phase !== 'auction';
+        const scoreCls   = p.score >= 900 ? 'critical' : p.score >= 700 ? 'danger' : '';
         return `
-        <div class="t-score-pill ${isActive ? 'active' : ''} ${isMe ? 'me' : ''}">
+        <div class="t-score-pill ${isActive ? 'active' : ''} ${isMe ? 'me' : ''} ${scoreCls}">
             ${isBidder ? '👑 ' : ''}
             <span class="t-score-name">${isMe ? '👤 ' : ''}${p.name}</span>
             <span class="t-score-val">${p.score}</span>
@@ -264,14 +287,17 @@ function renderTHand(s) {
             canPlayThisCard ? 'playable'   : '',
             myTurn && isLeadSuit && mustFollowSuit ? 'lead-suit' : '',
             myTurn && mustFollowSuit && !isLeadSuit ? 'cant-play' : '',
+            tDealing        ? 'dealing'    : '',
         ].filter(Boolean).join(' ');
 
         // Значок шлюбу — лише коли веду (немає карт у взятці)
         const canMarry = myTurn && !trickStarted && tHasMarriagePartner(card, me.hand);
 
+        const cardIdx = sorted.indexOf(card);
+        const dealDelay = tDealing ? `animation-delay:${cardIdx * 60}ms` : '';
         return `
         <div class="${classes}"
-             style="border-top-color:${color}"
+             style="border-top-color:${color};${dealDelay}"
              onclick="tSelectCard('${card}')"
              title="${tCardTitle(card)}">
             <div class="t-card-corner-tl" style="color:${color}">
@@ -506,3 +532,61 @@ function tHasMarriagePartner(card, hand) {
 
 function tSuitOrder(card) { return ['♠', '♣', '♦', '♥'].indexOf(card.slice(-1)); }
 function tRankOrder(card) { return ['9', 'J', 'Q', 'K', '10', 'A'].indexOf(card.slice(0, -1)); }
+
+// ── Банер шлюбу ───────────────────────────────
+function tShowMarriageBanner(suit) {
+    const pts   = T_MARRIAGE[suit] || 0;
+    const color = { '♠':'#e8d5ff','♣':'#d5f5e3','♦':'#ffe5d5','♥':'#ffd5d5' }[suit] || 'white';
+    const el    = document.createElement('div');
+    el.className = 't-marriage-banner';
+    el.innerHTML = `
+        <div class="t-marriage-banner-suit" style="color:${color}">${suit}</div>
+        <div class="t-marriage-banner-text">ШЛЮБ!</div>
+        <div class="t-marriage-banner-pts">+${pts} очок</div>`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2500);
+}
+
+// ── Між-раундовий результат ───────────────────
+function tShowRoundResult(results, onClose) {
+    const overlay = document.createElement('div');
+    overlay.className = 't-round-result-overlay';
+
+    const rows = results.map(r => {
+        const deltaSign = r.delta > 0 ? '+' : '';
+        const deltaClass = r.delta >= 0 ? 'pos' : 'neg';
+        const bidderNote = r.isBidder
+            ? `<span style="font-size:10px;color:${r.success ? '#a5d6a7' : '#ef9a9a'}">
+                 (ставка ${r.bid}${r.success ? ' ✓' : ' ✗'})
+               </span>`
+            : '';
+        return `
+        <div class="t-round-result-row">
+            <div>
+                <div class="t-rr-name">${r.name} ${bidderNote}</div>
+                <div class="t-rr-pts">${r.trickPts} очок у взятках</div>
+            </div>
+            <div style="text-align:right">
+                <div class="t-rr-delta ${deltaClass}">${deltaSign}${r.delta}</div>
+                <div class="t-rr-total">${r.score}</div>
+            </div>
+        </div>`;
+    }).join('');
+
+    overlay.innerHTML = `
+        <div class="t-round-result-card">
+            <div class="t-round-result-title">⚔️ Результат раунду</div>
+            ${rows}
+            <div class="t-round-result-next">Наступний раунд через 4 секунди...</div>
+        </div>`;
+
+    document.body.appendChild(overlay);
+    setTimeout(() => {
+        overlay.style.opacity = '0';
+        overlay.style.transition = 'opacity 0.4s';
+        setTimeout(() => {
+            overlay.remove();
+            if (onClose) onClose();
+        }, 400);
+    }, 4000);
+}

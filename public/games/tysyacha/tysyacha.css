@@ -78,10 +78,27 @@
     font-size: 12px;
     transition: all 0.3s;
 }
-.t-score-pill.active { border-color: var(--folk-gold); background: rgba(201,162,39,0.18); }
+.t-score-pill.active {
+    border-color: var(--folk-gold);
+    background: rgba(201,162,39,0.22);
+    animation: activePillPulse 1.6s ease-in-out infinite;
+}
+@keyframes activePillPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(201,162,39,0); }
+    50%     { box-shadow: 0 0 0 5px rgba(201,162,39,0.25); }
+}
 .t-score-pill.me     { border-color: var(--folk-red); }
+/* Напруга наближення до 1000 */
+.t-score-pill.danger   { border-color: #ff9800; }
+.t-score-pill.danger .t-score-val   { color: #ff9800; }
+.t-score-pill.critical { border-color: #e53935; animation: criticalPulse 1s ease-in-out infinite; }
+.t-score-pill.critical .t-score-val { color: #ef5350; }
+@keyframes criticalPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(229,57,53,0); }
+    50%     { box-shadow: 0 0 0 6px rgba(229,57,53,0.35); }
+}
 .t-score-name { font-size: 11px; opacity: 0.8; }
-.t-score-val  { font-weight: 900; color: var(--folk-gold-l); font-size: 16px; }
+.t-score-val  { font-weight: 900; color: var(--folk-gold-l); font-size: 16px; transition: color 0.5s; }
 
 /* ─ Ігрова область ─ */
 .t-game-area {
@@ -385,7 +402,7 @@
     background: #fff;
     border-radius: 8px;
     border: none;
-    border-top: 4px solid #aaa; /* перекривається inline style */
+    border-top: 4px solid #aaa;
     width: 62px;
     height: 88px;
     display: flex;
@@ -395,9 +412,128 @@
     font-weight: 900;
     box-shadow: 0 4px 14px rgba(0,0,0,0.65);
     font-family: 'Georgia', serif;
+    animation: cardFly 0.28s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes cardFly {
+    from { transform: translateY(-50px) scale(1.15); opacity: 0; }
+    to   { transform: translateY(0)     scale(1);    opacity: 1; }
+}
+/* Анімація коли взятка забирається переможцем */
+.t-card-table.trick-taken {
+    animation: trickTaken 0.4s ease-in forwards;
+}
+@keyframes trickTaken {
+    0%   { transform: scale(1);    opacity: 1; }
+    100% { transform: scale(0.6);  opacity: 0; }
 }
 .t-card-table .t-rank { font-size: 18px; line-height: 1; }
 .t-card-table .t-suit { font-size: 32px; line-height: 1.1; }
+
+/* ─ Анімація роздачі карт ─ */
+@keyframes dealCard {
+    from { transform: translateX(-80px) rotate(-8deg); opacity: 0; }
+    to   { transform: translateX(0)     rotate(0deg);  opacity: 1; }
+}
+.t-card.dealing {
+    animation: dealCard 0.3s ease-out both;
+}
+
+/* ─ Банер шлюбу ─ */
+.t-marriage-banner {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.6);
+    z-index: 200;
+    text-align: center;
+    pointer-events: none;
+    animation: marriagePop 2.4s ease forwards;
+}
+@keyframes marriagePop {
+    0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.5); }
+    15%  { opacity: 1; transform: translate(-50%,-50%) scale(1.1); }
+    25%  { transform: translate(-50%,-50%) scale(1); }
+    70%  { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%,-50%) scale(0.9); }
+}
+.t-marriage-banner-suit {
+    font-size: 72px;
+    line-height: 1;
+    filter: drop-shadow(0 4px 16px rgba(0,0,0,0.8));
+}
+.t-marriage-banner-text {
+    font-size: 28px;
+    font-weight: 900;
+    color: white;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.9);
+    letter-spacing: 2px;
+    margin-top: 4px;
+}
+.t-marriage-banner-pts {
+    font-size: 18px;
+    color: var(--folk-gold-l);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+}
+
+/* ─ Між-раундовий екран ─ */
+.t-round-result-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,4,0,0.88);
+    backdrop-filter: blur(8px);
+    z-index: 150;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: overlayIn 0.35s ease-out;
+}
+@keyframes overlayIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.t-round-result-card {
+    background: rgba(40,15,0,0.95);
+    border: 2px solid var(--folk-gold);
+    border-radius: 16px;
+    padding: 28px 36px;
+    min-width: 280px;
+    text-align: center;
+    animation: resultCardPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes resultCardPop {
+    from { transform: scale(0.75); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+}
+.t-round-result-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--folk-gold);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    font-family: sans-serif;
+}
+.t-round-result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(201,162,39,0.15);
+    gap: 16px;
+}
+.t-round-result-row:last-child { border-bottom: none; }
+.t-rr-name { font-size: 14px; color: var(--folk-cream); }
+.t-rr-pts  { font-size: 12px; color: rgba(245,230,200,0.5); }
+.t-rr-delta { font-size: 18px; font-weight: 900; }
+.t-rr-delta.pos { color: #a5d6a7; }
+.t-rr-delta.neg { color: #ef9a9a; }
+.t-rr-total { font-size: 20px; font-weight: 900; color: var(--folk-gold-l); }
+.t-round-result-next {
+    margin-top: 16px;
+    font-size: 12px;
+    color: rgba(245,230,200,0.35);
+    font-style: italic;
+    font-family: sans-serif;
+}
 
 /* ─ Кнопки ─ */
 .t-btn {
