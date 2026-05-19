@@ -1301,6 +1301,7 @@ function sanitizeTysyacha(state, forIdx) {
         talonPiles: state.talonPiles ? state.talonPiles.map(p => p.length) : null,
         leftoverPileCount: state.leftoverPile?.length || 0,
         talon: null,
+        myId: forIdx,
         dealer: state.dealer, round: state.round,
         phase: state.phase, currentPlayer: state.currentPlayer,
         auction: state.auction,
