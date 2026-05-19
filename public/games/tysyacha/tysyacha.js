@@ -101,9 +101,10 @@ function renderTScores(s) {
         const isActive   = p.id === s.currentPlayer;
         const isMe       = p.id === tMyIdx;
         const isBidder   = p.id === s.auction?.winner && s.phase !== 'auction';
-        const scoreCls   = p.score >= 900 ? 'critical' : p.score >= 700 ? 'danger' : '';
+        const scoreCls   = p.onBarrel ? 'barrel' : p.score >= 700 ? 'danger' : '';
         return `
         <div class="t-score-pill ${isActive ? 'active' : ''} ${isMe ? 'me' : ''} ${scoreCls}">
+            ${p.onBarrel ? `<span class="t-barrel-icon" title="Бочка: спроба ${p.barrelAttempts}/3">🛢️</span>` : ''}
             ${isBidder ? '👑 ' : ''}
             <span class="t-score-name">${isMe ? '👤 ' : ''}${p.name}</span>
             <span class="t-score-val">${p.score}</span>
@@ -337,8 +338,11 @@ function renderTActions(s) {
             return;
         }
         const cur = s.auction.current;
+        const meInAuction = s.players[tMyIdx];
+        const onBarrel = meInAuction?.onBarrel;
         el.innerHTML = `
             <div class="t-section-title">Ваша ставка</div>
+            ${onBarrel ? `<div class="t-barrel-notice">🛢️ Бочка — не можна пасувати<br><small>Спроба ${meInAuction.barrelAttempts}/3</small></div>` : ''}
             <div class="t-auction-cur">${cur}</div>
             <div class="t-bid-row">
                 ${[10, 20, 50].map(d =>
@@ -349,7 +353,7 @@ function renderTActions(s) {
                 <input type="number" id="t-bid-input" min="${cur + 10}" step="10" value="${cur + 10}">
                 <button class="t-btn primary" onclick="tBidCustom()">OK</button>
             </div>
-            <button class="t-btn danger" onclick="tPass()">✕ Пас</button>`;
+            ${!onBarrel ? `<button class="t-btn danger" onclick="tPass()">✕ Пас</button>` : ''}`;
         return;
     }
 

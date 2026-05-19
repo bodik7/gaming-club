@@ -1031,6 +1031,7 @@ function createTysyachaState(roomPlayers) {
         players: roomPlayers.map((rp, i) => ({
             id: i, name: rp.name,
             score: 0, hand: deck.slice(i*cpp, (i+1)*cpp), trickPts: 0,
+            onBarrel: false, barrelAttempts: 0,
         })),
         talon: deck.slice(cpp*n),
         dealer: 0, round: 1,
@@ -1068,6 +1069,7 @@ function processTysyachaAction(state, type, data, pidx) {
         case 'tBid': {
             if (state.phase !== 'auction' || pidx !== state.currentPlayer) break;
             if (data.pass) {
+                if (player.onBarrel) break; // на бочці — не можна пасувати
                 state.auction.passed[pidx] = true;
                 state.log.unshift(`${player.name}: пас`);
             } else {
@@ -1197,7 +1199,8 @@ function processTysyachaAction(state, type, data, pidx) {
             if (state.phase !== 'talon' || pidx !== state.auction.winner) break;
             if (state.talonPiles) break; // 2-player: спочатку треба вибрати стопку
             const amt = parseInt(data.amount) || 0;
-            if (amt < state.auction.current || amt % 10 !== 0) break;
+            const minBid = Math.max(state.auction.current, state.declaredBid || 0);
+            if (amt < minBid || amt % 10 !== 0) break;
             state.declaredBid = amt;
             state.log.unshift(`📢 ${player.name} підвищує до ${amt}`);
             break;
@@ -1231,9 +1234,14 @@ function tFinishRound(state) {
         }
     }
 
-    // Додаємо очки шлюбів
+    // Додаємо очки шлюбів (бочка: козир встановлюється, але очки не рахуються)
     Object.entries(state.marriages).forEach(([pid, suits]) => {
-        suits.forEach(s => { state.players[+pid].trickPts += T_MARRIAGE[s]; });
+        const p = state.players[+pid];
+        if (p.onBarrel) {
+            state.log.unshift(`🛢️ ${p.name} на бочці — шлюб не рахується`);
+        } else {
+            suits.forEach(s => { p.trickPts += T_MARRIAGE[s]; });
+        }
     });
     const bid = state.declaredBid || state.auction.current;
     const roundResults = [];
@@ -1260,6 +1268,32 @@ function tFinishRound(state) {
             success: i === bidder ? p.trickPts >= bid : null,
         });
     });
+    // ── Бочка: оновлюємо статус ──────────────────
+    state.players.forEach((p, i) => {
+        if (p.onBarrel) {
+            const succeeded = (p.score >= 1000); // перевірка ДО reset
+            if (!succeeded) {
+                p.barrelAttempts++;
+                if (p.barrelAttempts >= 3) {
+                    addLog(state, `💣 ${p.name}: 3 спроби на бочці — рахунок скидається до 800`, 'error');
+                    p.score = 800;
+                    p.onBarrel = false;
+                    p.barrelAttempts = 0;
+                } else {
+                    addLog(state, `🛢️ ${p.name}: спроба ${p.barrelAttempts}/3 не вдалась`, 'warn');
+                }
+            }
+        }
+    });
+    // Нові гравці, що досягли 900+
+    state.players.forEach(p => {
+        if (!p.onBarrel && p.score >= 900 && p.score < 1000) {
+            p.onBarrel = true;
+            p.barrelAttempts = 0;
+            addLog(state, `🛢️ ${p.name} на бочці! Потрібно набрати 100+ за 3 спроби`, 'warn');
+        }
+    });
+
     const winner = state.players.find(p => p.score >= 1000);
     if (winner) {
         state.phase = 'gameover';
@@ -1294,6 +1328,8 @@ function sanitizeTysyacha(state, forIdx) {
             id: p.id, name: p.name, score: p.score, trickPts: p.trickPts,
             handCount: p.hand.length,
             hand: i === forIdx ? p.hand : null,
+            onBarrel: p.onBarrel || false,
+            barrelAttempts: p.barrelAttempts || 0,
         })),
         talonCount: state.talonPiles
             ? state.talonPiles.reduce((s, p) => s + p.length, 0)
@@ -1311,6 +1347,54 @@ function sanitizeTysyacha(state, forIdx) {
         log: state.log.slice(0, 30),
         winner: state.winner,
     };
+}
+
+function clearTysyachaTimer(room) {
+    if (room.tysyachaTimer) { clearTimeout(room.tysyachaTimer); room.tysyachaTimer = null; }
+}
+
+function startTysyachaTimer(room) {
+    clearTysyachaTimer(room);
+    const state = room.state;
+    if (!room.started || !state || state.phase === 'gameover') return;
+    room.tysyachaTimer = setTimeout(() => {
+        if (!room.started || !room.state) return;
+        const st = room.state;
+        if (st.phase === 'gameover') return;
+        const pidx = st.currentPlayer;
+        const player = st.players[pidx];
+        if (!player) return;
+
+        let result = null;
+        if (st.phase === 'auction') {
+            if (player.onBarrel) result = processTysyachaAction(st, 'tBid', { amount: st.auction.current }, pidx);
+            else                 result = processTysyachaAction(st, 'tBid', { pass: true }, pidx);
+        } else if (st.phase === 'talon') {
+            if (st.talonPiles) {
+                result = processTysyachaAction(st, 'tChoosePile', { pileIdx: 0 }, pidx);
+            } else {
+                const ungiven = st.players.map((_,i)=>i).filter(i=>i!==pidx && st.givenCards.filter(g=>g===i).length===0)[0];
+                if (ungiven !== undefined && player.hand.length)
+                    result = processTysyachaAction(st, 'tGiveCard', { card: player.hand[0], toPlayer: ungiven }, pidx);
+                else if (!st.declaredBid)
+                    result = processTysyachaAction(st, 'tSetBid', { amount: st.auction.current }, pidx);
+            }
+        } else if (st.phase === 'playing') {
+            const leadSuit = st.trick?.cards?.length ? st.trick.cards[0].card.slice(-1) : null;
+            const card = leadSuit ? (player.hand.find(c=>c.endsWith(leadSuit)) || player.hand[0]) : player.hand[0];
+            if (card) result = processTysyachaAction(st, 'tPlayCard', { card, marriage: false }, pidx);
+        }
+
+        if (result?.event === 'tGameOver') {
+            clearTysyachaTimer(room);
+            room.players.forEach(rp => io.to(rp.socketId).emit('gameOver', {
+                winner: st.players[st.winner], state: sanitizeTysyacha(st, rp.index), gameType: 'tysyacha',
+            }));
+            return;
+        }
+        emitTysyachaUpdate(room, result, { text: '⏱️ Авто-хід', color: '#e65100' });
+        startTysyachaTimer(room);
+    }, 60 * 1000);
 }
 
 function emitTysyachaUpdate(room, sideEffect, toast) {
@@ -2152,6 +2236,7 @@ io.on('connection', (socket) => {
                     gameType: 'tysyacha',
                 });
             });
+            startTysyachaTimer(room);
         } else {
             if (room.players.length < 2) return io.to(socket.id).emit('error', 'Потрібно мінімум 2 гравці');
             room.started = true;
@@ -2198,17 +2283,19 @@ io.on('connection', (socket) => {
         // ── Тисяча ──
         if (state.gameType === 'tysyacha') {
             room.lastActivityAt = Date.now();
+            clearTysyachaTimer(room);
             const result = processTysyachaAction(state, type, data || {}, socket.playerIndex);
             if (result?.event === 'tGameOver') {
-                clearTurnTimer(room);
                 room.players.forEach(rp => {
                     io.to(rp.socketId).emit('gameOver', {
                         winner: state.players[state.winner],
                         state: sanitizeTysyacha(state, rp.index),
+                        gameType: 'tysyacha',
                     });
                 });
             } else {
                 emitTysyachaUpdate(room, result, null);
+                startTysyachaTimer(room);
             }
             return;
         }
