@@ -1,11 +1,12 @@
 // ============================================
 // ТИСЯЧА — клієнт
 // ============================================
-let tState       = null;
-let tMyIdx       = null;
+let tState        = null;
+let tMyIdx        = null;
 let tSelectedCard = null;
-let tLastTrump   = null;  // відстежуємо зміну козиря для банеру шлюбу
-let tDealing     = false; // флаг роздачі карт
+let tLastTrump    = null;
+let tDealing      = false;
+let tTrickShowing = false; // true поки завершена взятка видна на столі (1.3с)
 
 const T_MARRIAGE    = { '♠': 40, '♣': 60, '♦': 80, '♥': 100 };
 const T_SUIT_COLORS = { '♠': '#0d47a1', '♣': '#1b5e20', '♦': '#e65100', '♥': '#b71c1c' };
@@ -42,14 +43,18 @@ window.addEventListener('resize', tCheckOrientation);
 
 function updateTysyacha(state, sideEffect) {
     if (sideEffect?.event === 'trickComplete') {
+        tTrickShowing = true;
         tState = { ...state, trick: { cards: sideEffect.cards, winnerId: sideEffect.winnerId } };
         tSelectedCard = null;
         renderTysyacha();
-        // Анімація взятки: позначаємо картки переможця, потім очищаємо
         setTimeout(() => {
             document.querySelectorAll('.t-card-table').forEach(el => el.classList.add('trick-taken'));
         }, 900);
-        setTimeout(() => { tState = state; renderTysyacha(); }, 1300);
+        setTimeout(() => {
+            tTrickShowing = false;
+            tState = state;
+            renderTysyacha();
+        }, 1300);
         return;
     }
     if (sideEffect?.event === 'roundResult') {
@@ -266,8 +271,7 @@ function renderTHand(s) {
     });
 
     // Визначаємо обмеження масті (тільки коли мій хід і взятка в процесі, не завершена)
-    const trickDone = s.trick?.winnerId !== undefined; // завершена взятка показується 1.3с
-    const myTurn   = s.phase === 'playing' && s.currentPlayer === tMyIdx && !trickDone;
+    const myTurn   = s.phase === 'playing' && s.currentPlayer === tMyIdx && !tTrickShowing;
     const trickStarted = myTurn && (s.trick?.cards?.length ?? 0) > 0;
     const leadSuit = trickStarted ? s.trick.cards[0].card.slice(-1) : null;
     const mustFollowSuit = leadSuit != null && me.hand.some(c => c.slice(-1) === leadSuit);
@@ -410,7 +414,7 @@ function renderTActions(s) {
 
     // ── ГРА ──
     if (s.phase === 'playing') {
-        if (!isMe || s.trick?.winnerId !== undefined) { // не мій хід АБО показ завершеної взятки
+        if (!isMe || tTrickShowing) { // не мій хід АБО показ завершеної взятки
             el.innerHTML = `
                 <div class="t-section-title">Хід</div>
                 <div class="t-wait">Ходить:<br><b style="color:#e8c547">${s.players[s.currentPlayer]?.name}</b></div>`;
@@ -452,7 +456,7 @@ function renderTActions(s) {
 function tSelectCard(card) {
     const s = tState;
     if (!s || s.phase !== 'playing' || s.currentPlayer !== tMyIdx) return;
-    if (s.trick?.winnerId !== undefined) return; // взятка завершена — чекаємо очищення
+    if (tTrickShowing) return; // взятка завершена — чекаємо очищення
     if ((s.trick?.cards?.length ?? 0) > 0) {
         const leadSuit   = s.trick.cards[0].card.slice(-1);
         const me         = s.players[tMyIdx];
