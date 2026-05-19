@@ -265,8 +265,9 @@ function renderTHand(s) {
         return sd !== 0 ? sd : tRankOrder(a) - tRankOrder(b);
     });
 
-    // Визначаємо обмеження масті (тільки коли мій хід і взятка вже почата)
-    const myTurn   = s.phase === 'playing' && s.currentPlayer === tMyIdx;
+    // Визначаємо обмеження масті (тільки коли мій хід і взятка в процесі, не завершена)
+    const trickDone = s.trick?.winnerId !== undefined; // завершена взятка показується 1.3с
+    const myTurn   = s.phase === 'playing' && s.currentPlayer === tMyIdx && !trickDone;
     const trickStarted = myTurn && (s.trick?.cards?.length ?? 0) > 0;
     const leadSuit = trickStarted ? s.trick.cards[0].card.slice(-1) : null;
     const mustFollowSuit = leadSuit != null && me.hand.some(c => c.slice(-1) === leadSuit);
@@ -409,7 +410,7 @@ function renderTActions(s) {
 
     // ── ГРА ──
     if (s.phase === 'playing') {
-        if (!isMe) {
+        if (!isMe || s.trick?.winnerId !== undefined) { // не мій хід АБО показ завершеної взятки
             el.innerHTML = `
                 <div class="t-section-title">Хід</div>
                 <div class="t-wait">Ходить:<br><b style="color:#e8c547">${s.players[s.currentPlayer]?.name}</b></div>`;
@@ -450,7 +451,9 @@ function renderTActions(s) {
 // ── Дії гравця ───────────────────────────────
 function tSelectCard(card) {
     const s = tState;
-    if (s && s.phase === 'playing' && s.currentPlayer === tMyIdx && (s.trick?.cards?.length ?? 0) > 0) {
+    if (!s || s.phase !== 'playing' || s.currentPlayer !== tMyIdx) return;
+    if (s.trick?.winnerId !== undefined) return; // взятка завершена — чекаємо очищення
+    if ((s.trick?.cards?.length ?? 0) > 0) {
         const leadSuit   = s.trick.cards[0].card.slice(-1);
         const me         = s.players[tMyIdx];
         const mustFollow = me?.hand?.some(c => c.slice(-1) === leadSuit);
