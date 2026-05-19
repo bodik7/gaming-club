@@ -1113,6 +1113,8 @@ function processTysyachaAction(state, type, data, pidx) {
             if (state.talonPiles) break; // 2-player: спочатку треба вибрати стопку
             const { card, toPlayer } = data;
             if (toPlayer === pidx || toPlayer < 0 || toPlayer >= n) break;
+            // Не можна дати двічі одному гравцю
+            if (state.givenCards.filter(g => g === toPlayer).length >= 1) break;
             const idx = player.hand.indexOf(card);
             if (idx === -1) break;
             player.hand.splice(idx, 1);

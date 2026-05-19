@@ -53,6 +53,7 @@ function updateTysyacha(state, sideEffect) {
         return;
     }
     if (sideEffect?.event === 'roundResult') {
+        tLastTrump = null; // новий раунд — козиря ще нема
         tState = state;
         tDealing = true;
         tShowRoundResult(sideEffect.results, () => {
