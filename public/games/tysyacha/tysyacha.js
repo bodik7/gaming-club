@@ -7,21 +7,39 @@ let tSelectedCard = null;
 let tLastTrump    = null;
 let tDealing      = false;
 let tTrickShowing = false;
-let tPendingTrick = null; // { winnerId, nextState } — чекаємо кнопку «Забрати»
+let tPendingTrick = null;
+let tTurnTimer    = null;
+let tTurnStart    = 0;
+let tPrevCurrentPlayer = null;
 
 const T_MARRIAGE    = { '♠': 40, '♣': 60, '♦': 80, '♥': 100 };
 const T_SUIT_COLORS = { '♠': '#0d47a1', '♣': '#1b5e20', '♦': '#e65100', '♥': '#b71c1c' };
 
 function tSuitColor(card) { return T_SUIT_COLORS[card.slice(-1)] || '#1a1a1a'; }
+function tCardPts(card) {
+    return ({ '9':0, 'J':2, 'Q':3, 'K':4, '10':10, 'A':11 })[card.slice(0,-1)] ?? 0;
+}
+
+// ── Таймер ходу ───────────────────────────────
+function tStartTurnClock() {
+    clearInterval(tTurnTimer);
+    tTurnStart = Date.now();
+    tTurnTimer = setInterval(() => {
+        const el = document.getElementById('t-turn-elapsed');
+        if (el) el.textContent = Math.floor((Date.now() - tTurnStart) / 1000) + 'с';
+    }, 1000);
+}
 
 // ── Ініціалізація ─────────────────────────────
 function initTysyacha(state, myIdx) {
-    tState        = state;
-    tMyIdx        = myIdx;
-    tLastTrump    = state.trump;
-    tDealing      = true;
-    tTrickShowing = false;
-    tPendingTrick = null;
+    tState             = state;
+    tMyIdx             = myIdx;
+    tLastTrump         = state.trump;
+    tDealing           = true;
+    tTrickShowing      = false;
+    tPendingTrick      = null;
+    tPrevCurrentPlayer = state.currentPlayer;
+    tStartTurnClock();
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('tysyacha-screen').classList.remove('hidden');
     setQuitBtn(true);
@@ -82,6 +100,23 @@ function updateTysyacha(state, sideEffect) {
     tPendingTrick = null;
     const prevTrump = tLastTrump;
     tLastTrump = state.trump;
+
+    // Таймер — перезапускаємо при зміні ходу
+    if (state.currentPlayer !== tPrevCurrentPlayer) {
+        tPrevCurrentPlayer = state.currentPlayer;
+        tStartTurnClock();
+        // Спалах "Ваш хід"
+        if (state.currentPlayer === tMyIdx && state.phase === 'playing') {
+            const hand = document.getElementById('t-hand');
+            if (hand) {
+                hand.classList.remove('t-my-turn-flash');
+                void hand.offsetWidth; // reflow
+                hand.classList.add('t-my-turn-flash');
+                setTimeout(() => hand.classList.remove('t-my-turn-flash'), 900);
+            }
+        }
+    }
+
     tState = state;
     tSelectedCard = null;
     renderTysyacha();
@@ -123,6 +158,7 @@ function renderTScores(s) {
                 ${isBidder ? '👑&nbsp;' : ''}
                 <span class="t-score-name">${isMe ? '👤&nbsp;' : ''}${p.name}</span>
                 <span class="t-score-val">${p.score}${inGame ? `<span style="font-size:9px;color:#ff9800;margin-left:2px">+${p.trickPts}</span>` : ''}</span>
+                ${isActive ? `<span id="t-turn-elapsed" style="font-size:9px;color:rgba(245,230,200,0.35);font-family:sans-serif;margin-left:2px"></span>` : ''}
             </div>
             <div class="t-score-bar-track">
                 <div class="t-score-bar-fill" style="width:${pct}%"></div>
@@ -330,6 +366,7 @@ function renderTHand(s) {
 
         const cardIdx = sorted.indexOf(card);
         const dealDelay = tDealing ? `animation-delay:${cardIdx * 60}ms` : '';
+        const pts = tCardPts(card);
         return `
         <div class="${classes}"
              style="border-top-color:${color};${dealDelay}"
@@ -344,6 +381,7 @@ function renderTHand(s) {
                 <div class="t-card-rank">${rank}</div>
                 <div class="t-card-suit-sm">${suit}</div>
             </div>
+            ${pts > 0 ? `<div class="t-card-pts">${pts}</div>` : ''}
             ${canMarry ? '<div class="t-marriage-badge">💍</div>' : ''}
         </div>`;
     }).join('');
@@ -389,6 +427,7 @@ function renderTActions(s) {
             ${onBarrel ? `<div class="t-barrel-notice">🛢️ Бочка — не можна пасувати<br><small>Спроба ${meInAuction.barrelAttempts}/3</small></div>` : ''}
             <div class="t-auction-cur">${cur}</div>
             <div class="t-bid-row">
+                ${!onBarrel ? `<button class="t-btn danger" onclick="tPass()" title="Пас" style="flex:0 0 auto;padding:7px 10px">✕</button>` : ''}
                 ${[10, 20, 50].map(d =>
                     `<button class="t-btn primary" onclick="tBid(${cur + d})">+${d}<br><small>${cur + d}</small></button>`
                 ).join('')}
@@ -396,8 +435,7 @@ function renderTActions(s) {
             <div class="t-bid-custom">
                 <input type="number" id="t-bid-input" min="${cur + 10}" step="10" value="${cur + 10}">
                 <button class="t-btn primary" onclick="tBidCustom()">OK</button>
-            </div>
-            ${!onBarrel ? `<button class="t-btn danger" onclick="tPass()">✕ Пас</button>` : ''}`;
+            </div>`;
         return;
     }
 
@@ -463,6 +501,7 @@ function renderTActions(s) {
     // ── ГРА ──
     if (s.phase === 'playing') {
         if (!isMe) {
+            tSelectedCard = null; // скидаємо виділення якщо хід перейшов до іншого
             el.innerHTML = `
                 <div class="t-section-title">Хід</div>
                 <div class="t-wait">Ходить:<br><b style="color:#e8c547">${s.players[s.currentPlayer]?.name}</b></div>`;
@@ -517,7 +556,12 @@ function tSelectCard(card) {
         const mustFollow = me?.hand?.some(c => c.slice(-1) === leadSuit);
         if (mustFollow && card.slice(-1) !== leadSuit) return;
     }
-    tSelectedCard = tSelectedCard === card ? null : card;
+    // Подвійне натискання на вже вибрану карту → одразу грати
+    if (tSelectedCard === card) {
+        tPlayCard(false);
+        return;
+    }
+    tSelectedCard = card;
     renderTHand(tState);
     renderTActions(tState);
 }

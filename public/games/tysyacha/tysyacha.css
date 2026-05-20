@@ -343,6 +343,14 @@
     flex-shrink: 0;
 }
 
+/* ─ Flash «Ваш хід» ─ */
+@keyframes myTurnFlash {
+    0%   { box-shadow: none; }
+    40%  { box-shadow: 0 0 0 4px rgba(201,162,39,0.7), 0 0 24px rgba(201,162,39,0.35); }
+    100% { box-shadow: none; }
+}
+.t-my-turn-flash { animation: myTurnFlash 0.9s ease-out; }
+
 /* ─ Панель швидких дій (над рукою) ─ */
 #t-action-bar {
     display: flex;
@@ -472,6 +480,20 @@
 }
 
 .t-card:not(.playable) { cursor: default; }
+
+/* Очки карти — маленький бейдж у нижньому правому куті */
+.t-card-pts {
+    position: absolute;
+    bottom: 3px;
+    right: 4px;
+    font-size: 9px;
+    font-family: sans-serif;
+    font-weight: 700;
+    color: rgba(0,0,0,0.28);
+    line-height: 1;
+    pointer-events: none;
+}
+.t-card.selected .t-card-pts { color: rgba(201,162,39,0.6); }
 
 .t-marriage-badge {
     position: absolute;
