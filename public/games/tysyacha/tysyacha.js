@@ -163,6 +163,12 @@ function renderTScores(s) {
                 <span class="t-score-val">${p.score}${inGame ? `<span style="font-size:9px;color:#ff9800;margin-left:2px">+${p.trickPts}</span>` : ''}</span>
                 ${isActive ? `<span id="t-turn-elapsed" style="font-size:9px;color:rgba(245,230,200,0.35);font-family:sans-serif;margin-left:2px"></span>` : ''}
             </div>
+            ${(() => {
+                const m = s.marriages?.[p.id] || [];
+                return m.length ? `<div class="t-score-marriages">${m.map(suit =>
+                    `<span style="color:${tSuitColor('A'+suit)}">💍${suit}</span>`
+                ).join('')}</div>` : '';
+            })()}
             <div class="t-score-bar-track">
                 <div class="t-score-bar-fill" style="width:${pct}%"></div>
             </div>
@@ -364,8 +370,8 @@ function renderTHand(s) {
             tDealing        ? 'dealing'    : '',
         ].filter(Boolean).join(' ');
 
-        // Значок шлюбу — лише коли веду (немає карт у взятці)
-        const canMarry = myTurn && !trickStarted && tHasMarriagePartner(card, me.hand);
+        // Значок шлюбу — показуємо що шлюб оголоситься автоматично
+        const canMarry = (myTurn || inTalon) && !trickStarted && tHasMarriagePartner(card, me.hand);
 
         const cardIdx = sorted.indexOf(card);
         const dealDelay = tDealing ? `animation-delay:${cardIdx * 60}ms` : '';
@@ -520,7 +526,7 @@ function renderTActions(s) {
         if (ab) ab.innerHTML = tSelectedCard
             ? `<button class="t-btn success t-bar-btn" onclick="tPlayCard(false)">▶ Зіграти&nbsp;${tCardLabel(tSelectedCard)}</button>
                ${hasMarriage && s.trick.cards.length === 0
-                   ? `<button class="t-btn gold t-bar-btn" onclick="tPlayCard(true)">💍&nbsp;+${T_MARRIAGE[marriageSuit]}&nbsp;шлюб</button>`
+                   ? `<span class="t-bar-hint" style="color:#e8c547;font-size:12px">💍&nbsp;+${T_MARRIAGE[marriageSuit]}&nbsp;шлюб оголоситься авто</span>`
                    : ''}
                <button class="t-btn secondary t-bar-btn" style="padding:10px 14px!important" onclick="tSelectedCard=null;renderTHand(tState);renderTActions(tState)">✕</button>`
             : '';

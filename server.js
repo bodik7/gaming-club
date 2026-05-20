@@ -1160,14 +1160,13 @@ function processTysyachaAction(state, type, data, pidx) {
                 // Якщо масті немає — будь-яка карта дозволена (козир необов'язковий)
             }
 
-            // Шлюб (бракосочетання)
-            if (marriage && trick.cards.length === 0) {
+            // Шлюб — авто при грі Q або K першою картою взятки
+            if (trick.cards.length === 0) {
                 const rank = tRank(card);
                 const suit = tSuit(card);
                 if (rank === 'Q' || rank === 'K') {
                     const partner = rank === 'Q' ? `K${suit}` : `Q${suit}`;
                     const alreadyDeclared = state.marriages[pidx]?.includes(suit);
-                    // Шлюб іншої масті після встановлення козира — заборонений
                     const trumpBlocks = state.trump && state.trump !== suit;
                     if (player.hand.includes(partner) && !alreadyDeclared && !trumpBlocks) {
                         if (!state.marriages[pidx]) state.marriages[pidx] = [];

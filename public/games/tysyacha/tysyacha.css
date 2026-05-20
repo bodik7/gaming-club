@@ -142,6 +142,13 @@
 }
 .t-score-name { font-size: 11px; opacity: 0.8; }
 .t-score-val  { font-weight: 900; color: var(--folk-gold-l); font-size: 16px; transition: color 0.5s; }
+.t-score-marriages {
+    display: flex;
+    gap: 4px;
+    font-size: 11px;
+    line-height: 1;
+    margin-bottom: 1px;
+}
 
 /* ─ Ігрова область ─ */
 .t-game-area {
