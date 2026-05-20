@@ -2493,4 +2493,12 @@ function sanitize(state) {
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🇺🇦 Монополія України запущена: http://localhost:${PORT}`));
+server.listen(PORT, () => {
+    console.log(`🇺🇦 Монополія України запущена: http://localhost:${PORT}`);
+    // Self-ping щоб Render не засипав (тільки на продакшені)
+    if (process.env.RENDER_EXTERNAL_URL) {
+        setInterval(() => {
+            http.get(process.env.RENDER_EXTERNAL_URL).on('error', () => {});
+        }, 14 * 60 * 1000); // кожні 14 хвилин
+    }
+});
