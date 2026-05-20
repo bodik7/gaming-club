@@ -525,9 +525,6 @@ function renderTActions(s) {
         // Кнопки дій — у action bar над рукою
         if (ab) ab.innerHTML = tSelectedCard
             ? `<button class="t-btn success t-bar-btn" onclick="tPlayCard(false)">▶ Зіграти&nbsp;${tCardLabel(tSelectedCard)}</button>
-               ${hasMarriage && s.trick.cards.length === 0
-                   ? `<span class="t-bar-hint" style="color:#e8c547;font-size:12px">💍&nbsp;+${T_MARRIAGE[marriageSuit]}&nbsp;шлюб оголоситься авто</span>`
-                   : ''}
                <button class="t-btn secondary t-bar-btn" style="padding:10px 14px!important" onclick="tSelectedCard=null;renderTHand(tState);renderTActions(tState)">✕</button>`
             : '';
         return;
