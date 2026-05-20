@@ -64,6 +64,7 @@ window.addEventListener('resize', tCheckOrientation);
 
 function updateTysyacha(state, sideEffect) {
     if (sideEffect?.event === 'trickComplete') {
+        playSound('trickTaken');
         const isWinner = sideEffect.winnerId === tMyIdx;
         tTrickShowing = true;
         tPendingTrick = { winnerId: sideEffect.winnerId, nextState: state };
@@ -105,12 +106,13 @@ function updateTysyacha(state, sideEffect) {
     if (state.currentPlayer !== tPrevCurrentPlayer) {
         tPrevCurrentPlayer = state.currentPlayer;
         tStartTurnClock();
-        // Спалах "Ваш хід"
+        // Спалах "Ваш хід" + звук
         if (state.currentPlayer === tMyIdx && state.phase === 'playing') {
+            playSound('myTurn');
             const hand = document.getElementById('t-hand');
             if (hand) {
                 hand.classList.remove('t-my-turn-flash');
-                void hand.offsetWidth; // reflow
+                void hand.offsetWidth;
                 hand.classList.add('t-my-turn-flash');
                 setTimeout(() => hand.classList.remove('t-my-turn-flash'), 900);
             }
@@ -123,6 +125,7 @@ function updateTysyacha(state, sideEffect) {
 
     // Шлюб: козир щойно з'явився під час гри
     if (state.phase === 'playing' && state.trump && state.trump !== prevTrump) {
+        playSound('marriage');
         tShowMarriageBanner(state.trump);
     }
 }
@@ -527,16 +530,29 @@ function renderTActions(s) {
     // ── КІНЕЦЬ ──
     if (s.phase === 'gameover') {
         const w = s.winner !== undefined ? s.players[s.winner] : null;
+        const iWon = w?.id === tMyIdx;
+        // Звук і статистика (тільки один раз)
+        if (!el.dataset.gameoverProcessed) {
+            el.dataset.gameoverProcessed = '1';
+            playSound(iWon ? 'win' : 'lose');
+            updateStats('tysyacha', iWon);
+        }
+        const st = getStats('tysyacha');
+        const isHost = tMyIdx === 0;
         el.innerHTML = `
             <div class="t-gameover">
                 <div class="t-gameover-title">🏆 ${w?.name || '???'}<br>переможець!</div>
                 <div class="t-scores-final">
                     ${s.players.map(p => `${p.name}: <b>${p.score}</b>`).join('<br>')}
                 </div>
-                <button class="t-btn primary" onclick="location.reload()">Нова гра</button>
+                ${st.g > 0 ? `<div style="font-size:10px;color:rgba(245,230,200,0.35);font-family:sans-serif;margin:4px 0 8px">Ваша статистика: ${st.w}/${st.g} перемог</div>` : ''}
+                ${isHost ? `<button class="t-btn gold" onclick="tRequestRematch()" style="margin-bottom:6px">🔄 Реванш</button>` : '<div class="t-hint" style="margin-bottom:6px">Чекаємо реваншу від хоста...</div>'}
+                <button class="t-btn secondary" onclick="location.reload()">🏠 Нова гра</button>
             </div>`;
     }
 }
+
+function tRequestRematch() { socket.emit('restartGame'); }
 
 // ── Дії гравця ───────────────────────────────
 function tSelectCard(card) {
@@ -554,7 +570,16 @@ function tSelectCard(card) {
         const leadSuit   = s.trick.cards[0].card.slice(-1);
         const me         = s.players[tMyIdx];
         const mustFollow = me?.hand?.some(c => c.slice(-1) === leadSuit);
-        if (mustFollow && card.slice(-1) !== leadSuit) return;
+        if (mustFollow && card.slice(-1) !== leadSuit) {
+            // Підказка: потрібно йти в масть
+            const ab = document.getElementById('t-action-bar');
+            if (ab) {
+                const prev = ab.innerHTML;
+                ab.innerHTML = `<div class="t-bar-hint" style="color:#ffb74d">Потрібно йти в масть&nbsp;${s.trick.cards[0].card.slice(-1)}</div>`;
+                setTimeout(() => { if (ab.innerHTML.includes('Потрібно') ) ab.innerHTML = prev; }, 1500);
+            }
+            return;
+        }
     }
     // Подвійне натискання на вже вибрану карту → одразу грати
     if (tSelectedCard === card) {
@@ -562,6 +587,7 @@ function tSelectCard(card) {
         return;
     }
     tSelectedCard = card;
+    playSound('cardSelect');
     renderTHand(tState);
     renderTActions(tState);
 }
@@ -598,11 +624,13 @@ function tSetBidCustom() {
 }
 function tGiveCard(toPlayer) {
     if (!tSelectedCard) return;
+    playSound('cardPlay');
     socket.emit('action', { type: 'tGiveCard', data: { card: tSelectedCard, toPlayer } });
     tSelectedCard = null;
 }
 function tPlayCard(marriage) {
     if (!tSelectedCard) return;
+    playSound('cardPlay');
     socket.emit('action', { type: 'tPlayCard', data: { card: tSelectedCard, marriage } });
     tSelectedCard = null;
 }
@@ -665,16 +693,26 @@ function tShowMarriageBanner(suit) {
 
 // ── Між-раундовий результат ───────────────────
 function tShowRoundResult(results, onClose) {
+    playSound('roundEnd');
     const overlay = document.createElement('div');
     overlay.className = 't-round-result-overlay';
+    let countdown = 6;
+    let done = false;
+
+    const close = () => {
+        if (done) return;
+        done = true;
+        clearInterval(timer);
+        overlay.style.opacity = '0';
+        overlay.style.transition = 'opacity 0.35s';
+        setTimeout(() => { overlay.remove(); if (onClose) onClose(); }, 350);
+    };
 
     const rows = results.map(r => {
         const deltaSign = r.delta > 0 ? '+' : '';
         const deltaClass = r.delta >= 0 ? 'pos' : 'neg';
         const bidderNote = r.isBidder
-            ? `<span style="font-size:10px;color:${r.success ? '#a5d6a7' : '#ef9a9a'}">
-                 (ставка ${r.bid}${r.success ? ' ✓' : ' ✗'})
-               </span>`
+            ? `<span style="font-size:10px;color:${r.success ? '#a5d6a7' : '#ef9a9a'}">(ставка ${r.bid}${r.success ? ' ✓' : ' ✗'})</span>`
             : '';
         return `
         <div class="t-round-result-row">
@@ -693,16 +731,18 @@ function tShowRoundResult(results, onClose) {
         <div class="t-round-result-card">
             <div class="t-round-result-title">⚔️ Результат раунду</div>
             ${rows}
-            <div class="t-round-result-next">Наступний раунд через 4 секунди...</div>
+            <button class="t-btn primary" id="t-rr-next" onclick="this.closest('.t-round-result-overlay').__close()" style="margin-top:10px">
+                Далі&nbsp;→&nbsp;<span id="t-rr-cd" style="opacity:0.5;font-size:11px">(${countdown})</span>
+            </button>
         </div>`;
 
+    overlay.__close = close;
     document.body.appendChild(overlay);
-    setTimeout(() => {
-        overlay.style.opacity = '0';
-        overlay.style.transition = 'opacity 0.4s';
-        setTimeout(() => {
-            overlay.remove();
-            if (onClose) onClose();
-        }, 400);
-    }, 4000);
+
+    const timer = setInterval(() => {
+        countdown--;
+        const cd = document.getElementById('t-rr-cd');
+        if (cd) cd.textContent = `(${countdown})`;
+        if (countdown <= 0) close();
+    }, 1000);
 }

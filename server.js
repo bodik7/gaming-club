@@ -1664,18 +1664,20 @@ function resolveNight(room) {
     }
 
     // Наступник Комісара
+    let newSheriffIdx = null;
     if (state.lastDeaths.some(id => ps[id].role === 'sheriff')) {
         const dep = ps.find(p => p.role === 'deputy' && p.isAlive);
         if (dep) {
             dep.role = 'sheriff';
+            newSheriffIdx = dep.id;
             addLog(state, `👮 Помічник займає місце Комісара`);
         }
     }
 
-    startMorningPhase(room, sheriffResult, donResult);
+    startMorningPhase(room, sheriffResult, donResult, newSheriffIdx);
 }
 
-function startMorningPhase(room, sheriffResult, donResult) {
+function startMorningPhase(room, sheriffResult, donResult, newSheriffIdx = null) {
     const state = room.state;
     state.phase = 'morning';
 
@@ -1703,6 +1705,8 @@ function startMorningPhase(room, sheriffResult, donResult) {
             sideEffect = { event: 'sheriffResult', ...sheriffResult };
         if (donResult && p.role === 'don')
             sideEffect = { event: 'donResult', ...donResult };
+        if (newSheriffIdx !== null && rp.index === newSheriffIdx)
+            sideEffect = { ...(sideEffect || {}), event: sideEffect?.event || 'newSheriff', newSheriff: true };
         io.to(rp.socketId).emit('stateUpdate', {
             state: sanitizeMafia(state, rp.index),
             sideEffect,
@@ -2245,6 +2249,44 @@ io.on('connection', (socket) => {
             addLog(room.state, `🎮 Гра почалась! Перший хід: ${room.state.players[0].name}`, 'success');
             startTurnTimer(room);
             io.to(socket.roomCode).emit('gameStarted', { state: sanitize(room.state), gameType: 'monopoly' });
+        }
+    });
+
+    // Реванш — хост перезапускає гру з тими ж гравцями
+    socket.on('restartGame', () => {
+        const room = rooms[socket.roomCode];
+        if (!room || socket.playerIndex !== 0) return;
+        const gameType = room.state?.gameType || room.gameType;
+        if (gameType === 'tysyacha') {
+            clearTysyachaTimer(room);
+            room.state = createTysyachaState(room.players);
+            room.started = true;
+            room.players.forEach(rp => {
+                io.to(rp.socketId).emit('gameStarted', {
+                    state: sanitizeTysyacha(room.state, rp.index),
+                    myPlayerIndex: rp.index,
+                    gameType: 'tysyacha',
+                });
+            });
+            startTysyachaTimer(room);
+        } else if (gameType === 'mafia') {
+            clearTimeout(room.nightTimer); clearTimeout(room.dayTimer);
+            clearTimeout(room.voteTimer); clearTimeout(room.morningTimer);
+            room.state = createMafiaState(room.players, room.settings || {});
+            room.started = true;
+            const mafiaIds = room.state.mafiaIds;
+            room.players.forEach(rp => {
+                const s = io.sockets.sockets.get(rp.socketId);
+                if (s && mafiaIds.includes(rp.index)) s.join(`${room.code}_mafia`);
+                io.to(rp.socketId).emit('gameStarted', {
+                    state: sanitizeMafia(room.state, rp.index),
+                    myPlayerIndex: rp.index,
+                    gameType: 'mafia',
+                });
+            });
+            setTimeout(() => {
+                if (room.state?.phase === 'role_reveal') startNightPhase(room);
+            }, 25000);
         }
     });
 

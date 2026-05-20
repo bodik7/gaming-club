@@ -6,15 +6,17 @@ let mMyIdx            = null;
 let mSideEffect       = null;
 let mDeadChatLog      = [];
 let _mFlavorTimeouts  = [];
-let _mLastNightDL     = 0; // nightDeadline поточної ночі
+let _mLastNightDL     = 0;
+let mGameoverProcessed = false;
 
 function initMafia(state, myIdx) {
-    mState            = state;
-    mMyIdx            = myIdx;
-    mSideEffect       = null;
-    mDeadChatLog      = [];
-    _mFlavorTimeouts  = [];
-    _mLastNightDL     = 0;
+    mState             = state;
+    mMyIdx             = myIdx;
+    mSideEffect        = null;
+    mDeadChatLog       = [];
+    _mFlavorTimeouts   = [];
+    _mLastNightDL      = 0;
+    mGameoverProcessed = false;
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('mafia-screen').classList.remove('hidden');
     document.getElementById('mafia-screen').classList.add('visible');
@@ -24,10 +26,26 @@ function initMafia(state, myIdx) {
 }
 
 function updateMafia(state, sideEffect) {
-    // Очищуємо sideEffect при переході до нової ночі (новий раунд)
-    if (state.phase === 'night' && mState?.phase !== 'night') mSideEffect = null;
+    const prevPhase = mState?.phase;
+    if (state.phase === 'night' && prevPhase !== 'night') mSideEffect = null;
     mState = state;
     if (sideEffect) mSideEffect = sideEffect;
+
+    // Звуки при зміні фази
+    if (state.phase !== prevPhase) {
+        if (state.phase === 'night')           playSound('night');
+        else if (state.phase === 'day_discussion') playSound('day');
+        else if (state.phase === 'day_voting')  playSound('vote');
+        else if (state.phase === 'morning' && state.lastDeaths?.length > 0) playSound('death');
+    }
+    // Deputy став Sheriff
+    if (sideEffect?.newSheriff) {
+        setTimeout(() => {
+            if (typeof showToast === 'function')
+                showToast('👮 Комісар загинув — тепер ви Комісар!', { color: '#0277bd' });
+        }, 1200);
+    }
+
     renderMafia();
 }
 
@@ -354,9 +372,24 @@ function mGameoverUI(s) {
                 Вижило: <b>${s.players.filter(p => p.isAlive).length}</b> /
                 <b>${s.players.length}</b>
             </div>
-
+            ${(() => {
+                if (!mGameoverProcessed) {
+                    mGameoverProcessed = true;
+                    playSound(iWon ? 'win' : 'lose');
+                    updateStats('mafia', iWon);
+                }
+                const st = getStats('mafia');
+                const isHost = mMyIdx === 0;
+                const statsHtml = st.g > 0
+                    ? `<div style="font-size:11px;color:rgba(245,230,200,0.35);font-family:sans-serif;margin-bottom:8px">Статистика: ${st.w}/${st.g} перемог</div>`
+                    : '';
+                const rematch = isHost
+                    ? `<button class="m-btn primary m-btn-wide" onclick="socket.emit('restartGame')" style="background:linear-gradient(135deg,#c9a227,#9a7a10);color:#1a0800;margin-bottom:6px">🔄 Реванш</button>`
+                    : `<div class="m-wait" style="margin-bottom:8px">Очікуємо реваншу від хоста...</div>`;
+                return statsHtml + rematch;
+            })()}
             <button class="m-btn primary m-btn-wide" onclick="mReturnToLobby()">
-                🏠 Повернутись у лобі
+                🏠 Нова гра
             </button>
         </div>`;
 }

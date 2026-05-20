@@ -379,14 +379,23 @@
 /* ─ Моя рука ─ */
 #t-hand {
     display: flex;
-    gap: 6px;
+    gap: 5px;
     justify-content: center;
     align-items: flex-end;
-    padding: 8px 16px;
+    padding: 8px 12px;
     flex-shrink: 0;
     min-height: 118px;
     flex-wrap: nowrap;
     overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+}
+#t-hand::-webkit-scrollbar { display: none; }
+
+/* На маленьких екранах — скрол з виівненням по лівому краю */
+@media (max-width: 520px) {
+    #t-hand { justify-content: flex-start; }
+    .t-card  { width: 54px; height: 82px; }
+    .t-card-center { font-size: 28px; }
 }
 
 /* ─ Картки в руці ─ */

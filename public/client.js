@@ -8,6 +8,49 @@ const socket = io();
 // Мій індекс гравця у цій сесії
 let myPlayerIndex = null;
 
+// ── Звуковий движок (Web Audio API) ──────────
+const _sfx = { ctx: null, get() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); return this.ctx; } };
+function playSound(type) {
+    try {
+        const ctx = _sfx.get();
+        const t   = ctx.currentTime;
+        const note = (freq, wt='sine', vol=0.08, dur=0.15, delay=0, freqEnd=null) => {
+            const o = ctx.createOscillator(), g = ctx.createGain();
+            o.type = wt; o.connect(g); g.connect(ctx.destination);
+            o.frequency.setValueAtTime(freq, t + delay);
+            if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, t + delay + dur);
+            g.gain.setValueAtTime(vol, t + delay);
+            g.gain.exponentialRampToValueAtTime(0.001, t + delay + dur);
+            o.start(t + delay); o.stop(t + delay + dur);
+        };
+        switch (type) {
+            case 'cardSelect':  note(1100,'sine',0.04,0.06); break;
+            case 'cardPlay':    note(600,'triangle',0.1,0.16,0,280); break;
+            case 'trickTaken':  note(380,'sine',0.12,0.24,0,180); break;
+            case 'myTurn':      note(660,'sine',0.08,0.2); note(880,'sine',0.08,0.2,0.13); break;
+            case 'marriage':    [523,659,784].forEach((f,i)=>note(f,'sine',0.1,0.3,i*0.1)); break;
+            case 'roundEnd':    note(440,'sine',0.08,0.45,0,220); break;
+            case 'night':       note(140,'sine',0.14,1.3,0,80); note(110,'sine',0.09,1.6,0.25); break;
+            case 'day':         note(550,'sine',0.08,0.28,0,720); note(700,'sine',0.06,0.22,0.16); break;
+            case 'vote':        note(820,'sine',0.06,0.1); break;
+            case 'death':       note(220,'sawtooth',0.07,0.5,0,110); note(165,'sine',0.05,0.6,0.12); break;
+            case 'win':         [523,659,784,1047].forEach((f,i)=>note(f,'sine',0.11,0.35,i*0.13)); break;
+            case 'lose':        note(330,'sine',0.09,0.45,0,220); note(277,'sine',0.07,0.55,0.22); break;
+        }
+    } catch(e) {}
+}
+
+// ── Статистика (localStorage) ─────────────────
+function updateStats(game, won) {
+    const k = 'stats_' + game;
+    const s = JSON.parse(localStorage.getItem(k) || '{"g":0,"w":0}');
+    s.g++; if (won) s.w++;
+    localStorage.setItem(k, JSON.stringify(s));
+}
+function getStats(game) {
+    return JSON.parse(localStorage.getItem('stats_' + game) || '{"g":0,"w":0}');
+}
+
 // ── Збереження імені гравця (гість) ──────────
 const NAME_KEY = 'monopolia_name';
 function saveName(name) { localStorage.setItem(NAME_KEY, name); }
