@@ -110,17 +110,23 @@ function renderTScores(s) {
     const el = document.getElementById('t-scores');
     if (!el) return;
     el.innerHTML = s.players.map(p => {
-        const isActive   = p.id === s.currentPlayer;
-        const isMe       = p.id === tMyIdx;
-        const isBidder   = p.id === s.auction?.winner && s.phase !== 'auction';
-        const scoreCls   = p.onBarrel ? 'barrel' : p.score >= 700 ? 'danger' : '';
+        const isActive = p.id === s.currentPlayer;
+        const isMe     = p.id === tMyIdx;
+        const isBidder = p.id === s.auction?.winner && s.phase !== 'auction';
+        const scoreCls = p.onBarrel ? 'barrel' : p.score >= 900 ? 'critical' : p.score >= 700 ? 'danger' : '';
+        const pct      = Math.min(100, Math.max(0, Math.round(p.score / 10)));
+        const inGame   = s.phase === 'playing' && p.trickPts;
         return `
         <div class="t-score-pill ${isActive ? 'active' : ''} ${isMe ? 'me' : ''} ${scoreCls}">
-            ${p.onBarrel ? `<span class="t-barrel-icon" title="Бочка: спроба ${p.barrelAttempts}/3">🛢️</span>` : ''}
-            ${isBidder ? '👑 ' : ''}
-            <span class="t-score-name">${isMe ? '👤 ' : ''}${p.name}</span>
-            <span class="t-score-val">${p.score}</span>
-            ${s.phase === 'playing' && p.trickPts ? `<span style="font-size:10px;color:#ff9800">+${p.trickPts}</span>` : ''}
+            <div class="t-score-top">
+                ${p.onBarrel ? `<span class="t-barrel-icon" title="Бочка ${p.barrelAttempts}/3">🛢️</span>` : ''}
+                ${isBidder ? '👑&nbsp;' : ''}
+                <span class="t-score-name">${isMe ? '👤&nbsp;' : ''}${p.name}</span>
+                <span class="t-score-val">${p.score}${inGame ? `<span style="font-size:9px;color:#ff9800;margin-left:2px">+${p.trickPts}</span>` : ''}</span>
+            </div>
+            <div class="t-score-bar-track">
+                <div class="t-score-bar-fill" style="width:${pct}%"></div>
+            </div>
         </div>`;
     }).join('');
 }
@@ -173,7 +179,7 @@ function renderTOpponents(s) {
         const count = p.handCount || 0;
         // карти з ефектом фану (перекриваються)
         const cards = Array.from({ length: count }, (_, i) =>
-            `<div class="t-card-back" style="margin-left:${i > 0 ? '-20px' : '0'};z-index:${i}">🌻</div>`
+            `<div class="t-card-back" style="margin-left:${i > 0 ? '-20px' : '0'};z-index:${i}"></div>`
         ).join('');
         return `
         <div class="t-opponent ${isActive ? 'active' : ''}">
@@ -189,7 +195,7 @@ function renderTOpponents(s) {
 // ── Прикуп (стопка карт сорочкою) ────────────
 function talonPileHTML(count) {
     const cards = Array.from({ length: count }, (_, i) =>
-        `<div class="t-card-back" style="position:absolute;top:${i*8}px;left:${i*5}px;z-index:${i}">🌻</div>`
+        `<div class="t-card-back" style="position:absolute;top:${i*8}px;left:${i*5}px;z-index:${i}"></div>`
     ).join('');
     return `<div style="position:relative;width:${46+(count-1)*5}px;height:${66+(count-1)*8}px">${cards}</div>`;
 }
@@ -238,23 +244,29 @@ function renderTTrick(s) {
         return;
     }
 
-    // Нерозкрита стопка під час гри — показуємо як маленький бейдж (не там де ::after)
+    // Козир всередині столу
+    const trumpBadge = s.trump
+        ? `<div class="t-trump-badge">
+               <div class="t-trump-suit-big" style="color:${tSuitColor('A'+s.trump)}">${s.trump}</div>
+               <div class="t-trump-label">козир</div>
+           </div>`
+        : '';
+
+    // Нерозкрита стопка (2-гравці) — дискретний бейдж у верхньому куті
     const leftoverIndicator = s.leftoverPileCount > 0 && s.phase === 'playing'
-        ? `<div style="position:absolute;top:6px;right:10px;
-                       background:rgba(0,0,0,0.55);border:1px solid rgba(245,230,200,0.15);
-                       border-radius:6px;padding:3px 7px;pointer-events:none">
-               <span style="font-size:10px;color:rgba(245,230,200,0.4);font-family:sans-serif;letter-spacing:.5px">
-                   🂠 прикуп
-               </span>
+        ? `<div style="position:absolute;top:8px;right:14px;
+                       background:rgba(0,0,0,0.5);border:1px solid rgba(245,230,200,0.12);
+                       border-radius:6px;padding:3px 8px;pointer-events:none">
+               <span style="font-size:9px;color:rgba(245,230,200,0.35);font-family:sans-serif;letter-spacing:.5px">🂠 прикуп</span>
            </div>`
         : '';
 
     if (!s.trick || s.trick.cards.length === 0) {
-        el.innerHTML = `<div class="t-trick-empty">— стіл порожній —</div>${leftoverIndicator}`;
+        el.innerHTML = `${trumpBadge}<div class="t-table-watermark">♠♥♦♣</div>${leftoverIndicator}`;
         return;
     }
     const winnerId = s.trick.winnerId;
-    el.innerHTML = s.trick.cards.map(({ playerId, card }) => {
+    el.innerHTML = trumpBadge + leftoverIndicator + s.trick.cards.map(({ playerId, card }) => {
         const rank = card.slice(0, -1);
         const suit = card.slice(-1);
         const color = tSuitColor(card);
@@ -271,7 +283,7 @@ function renderTTrick(s) {
                 ${isWinner ? '🏆 ' : ''}${s.players[playerId]?.name || ''}
             </div>
         </div>`;
-    }).join('') + leftoverIndicator;
+    }).join('');
 }
 
 // ── Моя рука ─────────────────────────────────
@@ -342,18 +354,19 @@ function renderTActions(s) {
     const el = document.getElementById('t-actions');
     if (!el) return;
     el.innerHTML = '';
+    const ab = document.getElementById('t-action-bar');
+    if (ab) ab.innerHTML = '';
 
-    // ── ВЗЯТКА: показуємо кнопку «Забрати» або «Чекаємо» ──
+    // ── ВЗЯТКА: дії розподіляємо між правою панеллю і action bar ──
     if (tPendingTrick) {
         const isWinner = tPendingTrick.winnerId === tMyIdx;
         const winnerName = tState?.players[tPendingTrick.winnerId]?.name || '';
         el.innerHTML = isWinner
-            ? `<div class="t-section-title">Ваша взятка!</div>
-               <button class="t-btn gold" onclick="tTakeTrick()" style="font-size:17px;padding:14px 20px;margin-top:8px">
-                   🃏 Забрати
-               </button>`
+            ? `<div class="t-section-title">Ваша взятка!</div>`
             : `<div class="t-section-title">Взятка</div>
                <div class="t-wait">Бере:<br><b style="color:#e8c547">${winnerName}</b></div>`;
+        if (ab && isWinner) ab.innerHTML =
+            `<button class="t-btn gold t-bar-btn" onclick="tTakeTrick()">🃏 Забрати взятку</button>`;
         return;
     }
 
@@ -458,18 +471,17 @@ function renderTActions(s) {
         const me = s.players[tMyIdx];
         const hasMarriage = tSelectedCard && tHasMarriagePartner(tSelectedCard, me.hand);
         const marriageSuit = tSelectedCard ? tSelectedCard.slice(-1) : null;
-        el.innerHTML = `
-            <div class="t-section-title">Ваш хід</div>
-            <div class="t-play-ui" style="display:flex;flex-direction:column;gap:8px">
-                ${tSelectedCard
-                    ? `<div class="t-selected-info">Обрано:<br><b style="font-size:18px">${tCardLabel(tSelectedCard)}</b></div>
-                       <button class="t-btn success" onclick="tPlayCard(false)">▶ Зіграти</button>
-                       ${hasMarriage && s.trick.cards.length === 0
-                           ? `<button class="t-btn gold" onclick="tPlayCard(true)">💍 +${T_MARRIAGE[marriageSuit]} шлюб</button>`
-                           : ''}
-                       <button class="t-btn secondary" onclick="tSelectedCard=null;renderTHand(tState);renderTActions(tState)">✕ Скасувати</button>`
-                    : '<div class="t-hint">↓ оберіть картку в руці</div>'}
-            </div>`;
+        // Права панель: лише статус
+        el.innerHTML = `<div class="t-section-title">Ваш хід</div>
+            ${!tSelectedCard ? '<div class="t-hint" style="margin-top:8px">👆 оберіть картку</div>' : ''}`;
+        // Кнопки дій — у action bar над рукою
+        if (ab) ab.innerHTML = tSelectedCard
+            ? `<button class="t-btn success t-bar-btn" onclick="tPlayCard(false)">▶ Зіграти&nbsp;${tCardLabel(tSelectedCard)}</button>
+               ${hasMarriage && s.trick.cards.length === 0
+                   ? `<button class="t-btn gold t-bar-btn" onclick="tPlayCard(true)">💍&nbsp;+${T_MARRIAGE[marriageSuit]}&nbsp;шлюб</button>`
+                   : ''}
+               <button class="t-btn secondary t-bar-btn" style="padding:10px 14px!important" onclick="tSelectedCard=null;renderTHand(tState);renderTActions(tState)">✕</button>`
+            : '';
         return;
     }
 
