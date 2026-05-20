@@ -6,7 +6,8 @@ let tMyIdx        = null;
 let tSelectedCard = null;
 let tLastTrump    = null;
 let tDealing      = false;
-let tTrickShowing = false; // true поки завершена взятка видна на столі (1.3с)
+let tTrickShowing = false;
+let tPendingTrick = null; // { winnerId, nextState } — чекаємо кнопку «Забрати»
 
 const T_MARRIAGE    = { '♠': 40, '♣': 60, '♦': 80, '♥': 100 };
 const T_SUIT_COLORS = { '♠': '#0d47a1', '♣': '#1b5e20', '♦': '#e65100', '♥': '#b71c1c' };
@@ -15,10 +16,12 @@ function tSuitColor(card) { return T_SUIT_COLORS[card.slice(-1)] || '#1a1a1a'; }
 
 // ── Ініціалізація ─────────────────────────────
 function initTysyacha(state, myIdx) {
-    tState     = state;
-    tMyIdx     = myIdx;
-    tLastTrump = state.trump;
-    tDealing   = true;
+    tState        = state;
+    tMyIdx        = myIdx;
+    tLastTrump    = state.trump;
+    tDealing      = true;
+    tTrickShowing = false;
+    tPendingTrick = null;
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('tysyacha-screen').classList.remove('hidden');
     setQuitBtn(true);
@@ -43,22 +46,28 @@ window.addEventListener('resize', tCheckOrientation);
 
 function updateTysyacha(state, sideEffect) {
     if (sideEffect?.event === 'trickComplete') {
+        const isWinner = sideEffect.winnerId === tMyIdx;
         tTrickShowing = true;
+        tPendingTrick = { winnerId: sideEffect.winnerId, nextState: state };
         tState = { ...state, trick: { cards: sideEffect.cards, winnerId: sideEffect.winnerId } };
         tSelectedCard = null;
         renderTysyacha();
         setTimeout(() => {
             document.querySelectorAll('.t-card-table').forEach(el => el.classList.add('trick-taken'));
         }, 900);
-        setTimeout(() => {
-            tTrickShowing = false;
-            tState = state;
-            renderTysyacha();
-        }, 1300);
+        if (!isWinner) {
+            // Не переможець: авто-прибирання через 3с
+            setTimeout(() => { if (tTrickShowing) tTakeTrick(); }, 3000);
+        } else {
+            // Переможець: чекаємо кнопку, fallback 10с
+            setTimeout(() => { if (tTrickShowing) tTakeTrick(); }, 10000);
+        }
         return;
     }
     if (sideEffect?.event === 'roundResult') {
-        tLastTrump = null; // новий раунд — козиря ще нема
+        tTrickShowing = false;
+        tPendingTrick = null;
+        tLastTrump = null;
         tState = state;
         tDealing = true;
         tShowRoundResult(sideEffect.results, () => {
@@ -68,6 +77,9 @@ function updateTysyacha(state, sideEffect) {
         return;
     }
 
+    // Будь-який інший stateUpdate знімає блокування взятки
+    tTrickShowing = false;
+    tPendingTrick = null;
     const prevTrump = tLastTrump;
     tLastTrump = state.trump;
     tState = state;
@@ -226,11 +238,14 @@ function renderTTrick(s) {
         return;
     }
 
-    // Нерозкрита стопка під час гри — показуємо як маленький індикатор
+    // Нерозкрита стопка під час гри — показуємо як маленький бейдж (не там де ::after)
     const leftoverIndicator = s.leftoverPileCount > 0 && s.phase === 'playing'
-        ? `<div style="position:absolute;bottom:8px;right:10px;display:flex;flex-direction:column;align-items:center;gap:3px">
-               ${talonPileHTML(s.leftoverPileCount)}
-               <div style="font-size:9px;color:rgba(245,230,200,0.3);font-family:sans-serif">прикуп</div>
+        ? `<div style="position:absolute;top:6px;right:10px;
+                       background:rgba(0,0,0,0.55);border:1px solid rgba(245,230,200,0.15);
+                       border-radius:6px;padding:3px 7px;pointer-events:none">
+               <span style="font-size:10px;color:rgba(245,230,200,0.4);font-family:sans-serif;letter-spacing:.5px">
+                   🂠 прикуп
+               </span>
            </div>`
         : '';
 
@@ -327,6 +342,21 @@ function renderTActions(s) {
     const el = document.getElementById('t-actions');
     if (!el) return;
     el.innerHTML = '';
+
+    // ── ВЗЯТКА: показуємо кнопку «Забрати» або «Чекаємо» ──
+    if (tPendingTrick) {
+        const isWinner = tPendingTrick.winnerId === tMyIdx;
+        const winnerName = tState?.players[tPendingTrick.winnerId]?.name || '';
+        el.innerHTML = isWinner
+            ? `<div class="t-section-title">Ваша взятка!</div>
+               <button class="t-btn gold" onclick="tTakeTrick()" style="font-size:17px;padding:14px 20px;margin-top:8px">
+                   🃏 Забрати
+               </button>`
+            : `<div class="t-section-title">Взятка</div>
+               <div class="t-wait">Бере:<br><b style="color:#e8c547">${winnerName}</b></div>`;
+        return;
+    }
+
     const isMe = s.currentPlayer === tMyIdx;
 
     // ── АУКЦІОН ──
@@ -419,7 +449,7 @@ function renderTActions(s) {
 
     // ── ГРА ──
     if (s.phase === 'playing') {
-        if (!isMe || tTrickShowing) { // не мій хід АБО показ завершеної взятки
+        if (!isMe) {
             el.innerHTML = `
                 <div class="t-section-title">Хід</div>
                 <div class="t-wait">Ходить:<br><b style="color:#e8c547">${s.players[s.currentPlayer]?.name}</b></div>`;
@@ -478,6 +508,16 @@ function tSelectCard(card) {
     tSelectedCard = tSelectedCard === card ? null : card;
     renderTHand(tState);
     renderTActions(tState);
+}
+
+function tTakeTrick() {
+    if (!tPendingTrick) return;
+    const st = tPendingTrick.nextState;
+    tTrickShowing = false;
+    tPendingTrick = null;
+    tSelectedCard = null;
+    tState = st;
+    renderTysyacha();
 }
 
 function tBid(amount) {
