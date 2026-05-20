@@ -27,7 +27,15 @@ function saveUsers(users) {
 }
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+    etag: true,
+    lastModified: true,
+    setHeaders(res, filePath) {
+        if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
+            res.setHeader('Cache-Control', 'no-cache');
+        }
+    },
+}));
 
 // ── REST Auth API ─────────────────────────────
 app.post('/api/register', async (req, res) => {
