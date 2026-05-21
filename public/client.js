@@ -1134,13 +1134,21 @@ socket.on('lobbyUpdate', ({ players, gameType }) => {
     }).join('');
     const maxMap = { tysyacha: 3, mafia: 15, monopoly: 6, durak: 6, bunker: 15 };
     const minMap = { tysyacha: 2, mafia: 5, monopoly: 2, durak: 2, bunker: 4 };
+    const min = minMap[_selectedGame] || 2;
     const counter = document.getElementById('lobby-player-count');
     if (counter) counter.textContent = `${players.length}/${maxMap[_selectedGame] || 6}`;
     const hint = document.getElementById('waiting-hint');
-    if (hint) hint.textContent = `Хост бачить кнопку старту · Мінімум ${minMap[_selectedGame] || 2} гравці`;
+    if (hint) hint.textContent = players.length < min
+        ? `Потрібно ще ${min - players.length} гравців для старту`
+        : 'Хост бачить кнопку старту';
     // Хост може змінитись після kick — оновлюємо видимість кнопки старту
     const startBtn = document.getElementById('start-btn');
-    if (startBtn) startBtn.classList.toggle('hidden', myPlayerIndex !== 0);
+    const isHost = myPlayerIndex === 0;
+    if (startBtn) {
+        startBtn.classList.toggle('hidden', !isHost);
+        startBtn.disabled = players.length < min;
+        startBtn.style.opacity = players.length < min ? '0.4' : '1';
+    }
     // Показуємо панель налаштувань якщо хост і Мафія
     updateGameSettings(_selectedGame);
 });
@@ -1218,6 +1226,7 @@ socket.on('playerDisconnected', ({ playerIndex }) => {
 
 socket.on('error', (msg) => {
     log(`❌ ${msg}`, 'error');
+    showToast('⚠️ ' + msg, { color: '#b71c1c', duration: 4000 });
 });
 
 // Попередній стан кубиків, позицій і аукціону

@@ -24,7 +24,8 @@ interface GameStore {
   connectionStatus: 'connected' | 'disconnected' | 'reconnecting'
   gameState:        BunkerState | null
   chat:             ChatMessage[]
-  localMarkers:     LocalMarkers   // клієнтські мітки 🟢🔴 — тільки локально
+  localMarkers:     LocalMarkers
+  error:            string | null
 
   // Actions
   setScreen:            (s: Screen) => void
@@ -37,6 +38,7 @@ interface GameStore {
   handleGameOver:       (state: BunkerState) => void
   addChatMessage:       (msg: Omit<ChatMessage, 'ts'>) => void
   setLocalMarker:       (playerIdx: number, marker: '🟢' | '🔴' | null) => void
+  setError:             (msg: string | null) => void
   reset:                () => void
 }
 
@@ -51,6 +53,7 @@ export const useGameStore = create<GameStore>((set) => ({
   gameState:        null,
   chat:             [],
   localMarkers:     {},
+  error:            null,
 
   setScreen:  (screen) => set({ screen }),
   setMyName:  (myName) => {
@@ -92,6 +95,11 @@ export const useGameStore = create<GameStore>((set) => ({
     localMarkers: { ...s.localMarkers, [playerIdx]: marker },
   })),
 
+  setError: (error) => {
+    set({ error })
+    if (error) setTimeout(() => useGameStore.getState().setError(null), 4000)
+  },
+
   reset: () => set({
     screen:      'lobby',
     myIndex:     null,
@@ -101,5 +109,6 @@ export const useGameStore = create<GameStore>((set) => ({
     gameState:   null,
     chat:        [],
     localMarkers:{},
+    error:       null,
   }),
 }))

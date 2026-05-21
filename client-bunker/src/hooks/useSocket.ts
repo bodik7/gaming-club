@@ -84,6 +84,10 @@ export function useSocket() {
     s.on('roomClosed',  () => useGameStore.getState().reset())
     s.on('kicked',      () => useGameStore.getState().reset())
 
+    s.on('error', (msg: string) => {
+      useGameStore.getState().setError(typeof msg === 'string' ? msg : 'Помилка сервера')
+    })
+
     s.on('chatMessage', ({ name, text, color }: { name: string; text: string; color: string }) => {
       useGameStore.getState().addChatMessage({ name, text, color })
     })

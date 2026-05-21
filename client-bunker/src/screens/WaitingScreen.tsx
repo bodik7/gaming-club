@@ -45,7 +45,7 @@ const HOW_TO_PLAY = [
 ]
 
 export function WaitingScreen() {
-  const { roomCode, roomPlayers, isHost, myName, reset } = useGameStore()
+  const { roomCode, roomPlayers, isHost, myName, reset, error } = useGameStore()
   const [selectedScenario, setSelectedScenario] = useState<number>(0)
   const [showScenarios, setShowScenarios] = useState(false)
   const [showHowTo, setShowHowTo] = useState(false)
@@ -75,7 +75,7 @@ export function WaitingScreen() {
   }
 
   const startGame = () => {
-    getSocket().emit('startGame', { scenarioId: selectedScenario })
+    getSocket().emit('startGame', { settings: { scenarioId: selectedScenario } })
   }
 
   const leaveRoom = () => {
@@ -233,6 +233,13 @@ export function WaitingScreen() {
                 style={{ border: '1px solid rgba(204,34,0,0.3)', color: '#ff6666' }}>
           🚪 Вийти з кімнати
         </button>
+
+        {error && (
+          <div className="rounded-xl px-4 py-3 text-sm text-center"
+               style={{ background: 'rgba(204,34,0,0.18)', border: '1px solid rgba(204,34,0,0.4)', color: '#ff8080' }}>
+            ⚠️ {error}
+          </div>
+        )}
       </div>
     </div>
   )
