@@ -492,8 +492,11 @@ let _selectedGame = 'monopoly';
 
 function selectGame(type) {
     _selectedGame = type;
-    document.getElementById('game-btn-monopoly')?.classList.toggle('active', type === 'monopoly');
-    document.getElementById('game-btn-tysyacha')?.classList.toggle('active', type === 'tysyacha');
+    // Знімаємо active з усіх карток і ставимо на обрану
+    document.querySelectorAll('.game-card').forEach(btn => {
+        const game = btn.dataset.game || btn.id?.replace('game-btn-', '');
+        btn.classList.toggle('active', game === type);
+    });
 }
 
 function createRoom() {
