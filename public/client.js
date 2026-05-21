@@ -123,10 +123,7 @@ async function checkAuth() {
     // AUTH вимкнено — вмикається коли потрібно (замінити рядок нижче)
     // document.getElementById('auth-screen').classList.remove('hidden');
     playAsGuest();
-    if (joinCode) {
-        const codeInput = document.getElementById('lobby-code');
-        if (codeInput) codeInput.value = joinCode.toUpperCase();
-    }
+    if (joinCode) _pendingJoinCode = joinCode.toUpperCase();
 }
 
 function _enterLobby(username, joinCode) {
@@ -160,11 +157,8 @@ function _enterLobby(username, joinCode) {
     // Показуємо банер запрошення якщо є код у URL або sessionStorage
     const code = joinCode || sessionStorage.getItem('pendingJoin') || '';
     const banner  = document.getElementById('join-invite-banner');
-    const codeEl  = document.getElementById('join-invite-code');
-    const codeInp = document.getElementById('lobby-code');
     if (code) {
-        if (codeInp) codeInp.value = code.toUpperCase();
-        if (codeEl)  codeEl.textContent = code.toUpperCase();
+        _pendingJoinCode = code.toUpperCase();
         if (banner)  banner.classList.remove('hidden');
         sessionStorage.removeItem('pendingJoin');
         // Peek: показуємо скільки гравців вже в кімнаті
@@ -543,6 +537,7 @@ function declareBankrupt() {
 // ── Лобі ─────────────────────────────────────
 let _inviteCode = '';
 let _selectedGame = 'monopoly';
+let _pendingJoinCode = '';
 
 function selectGame(type) {
     _selectedGame = type;
@@ -572,12 +567,12 @@ function createRoom() {
 
 function joinRoom() {
     const name = document.getElementById('lobby-name').value.trim();
-    const code = document.getElementById('lobby-code').value.trim().toUpperCase();
+    const code = _pendingJoinCode;
     if (!name) return _lobbyError('Введіть своє ім\'я', 'lobby-name');
-    if (!code) return _lobbyError('Введіть код кімнати', 'lobby-code');
+    if (!code) return _lobbyError('Немає коду кімнати — скористайтесь посиланням-запрошенням', 'lobby-name');
     saveName(name);
     socket.emit('joinRoom', { code, playerName: name }, ({ code: c, playerIndex, error }) => {
-        if (error) return _lobbyError(error, 'lobby-code');
+        if (error) return _lobbyError(error);
         myPlayerIndex = playerIndex;
         saveSession(c, playerIndex, name);
         showLobbyWaiting(c);
@@ -642,8 +637,8 @@ function showLobbyWaiting(code) {
     _inviteCode = code;
     document.getElementById('lobby-screen').classList.add('hidden');
     document.getElementById('waiting-screen').classList.remove('hidden');
-    const codeEl = document.getElementById('room-code-display');
-    if (codeEl) { codeEl.innerText = code; codeEl.title = 'Клікніть щоб скопіювати'; codeEl.style.cursor = 'pointer'; }
+    const linkEl = document.getElementById('room-link-display');
+    if (linkEl) linkEl.textContent = `${location.origin}${location.pathname}?join=${code}`;
     document.getElementById('start-btn').classList.toggle('hidden', myPlayerIndex !== 0);
     fetchRoomCounts();
     const shareBtn = document.getElementById('copy-link-btn');
@@ -651,10 +646,7 @@ function showLobbyWaiting(code) {
 }
 
 function copyRoomCode() {
-    if (!_inviteCode) return;
-    navigator.clipboard.writeText(_inviteCode).then(() => {
-        showToast('✅ Код скопійовано: ' + _inviteCode, { color: '#1b5e20', duration: 2000 });
-    }).catch(() => {});
+    copyInviteLink();
 }
 
 function leaveRoom() {
@@ -765,14 +757,15 @@ socket.on('surrendered', () => {
 function copyInviteLink() {
     const url = `${location.origin}${location.pathname}?join=${_inviteCode}`;
     if (navigator.share) {
-        navigator.share({ title: 'Ігровий Клуб — запрошення', text: `Приєднуйся до гри! Код: ${_inviteCode}`, url }).catch(() => {});
+        navigator.share({ title: 'Ігровий Клуб — запрошення', text: 'Приєднуйся до гри!', url }).catch(() => {});
         return;
     }
     navigator.clipboard.writeText(url).then(() => {
+        showToast('✅ Посилання скопійовано!', { color: '#1b5e20', duration: 2000 });
         const btn = document.getElementById('copy-link-btn');
         if (!btn) return;
         const orig = btn.textContent;
-        btn.textContent = '✅ Посилання скопійовано!';
+        btn.textContent = '✅ Скопійовано!';
         setTimeout(() => { btn.textContent = orig; }, 2500);
     }).catch(() => prompt('Скопіюйте посилання:', url));
 }

@@ -259,13 +259,15 @@
         padding: 18px;
         text-align: center;
     }
-    .wait-code-label { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
-    .wait-code-value {
-        font-size: 32px;
-        font-weight: 900;
-        color: #ffd700;
-        letter-spacing: 4px;
-        text-shadow: 0 2px 12px rgba(255,215,0,0.35);
+    .wait-code-label { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 8px; }
+    .wait-link-value {
+        font-size: 13px;
+        font-weight: 600;
+        color: rgba(255,255,255,0.7);
+        word-break: break-all;
+        margin-bottom: 12px;
+        font-family: monospace;
+        letter-spacing: 0.3px;
     }
     .wait-code-hint  { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 6px; }
 
@@ -697,18 +699,6 @@
 
                     <div class="lobby-divider">або приєднатись до існуючої</div>
 
-                    <div>
-                        <label class="lobby-label" for="lobby-code">Або введіть код кімнати</label>
-                        <div class="lobby-row">
-                            <input id="lobby-code" class="lobby-input" type="text"
-                                   placeholder="Код (напр. ABCD)" maxlength="6"
-                                   style="text-transform:uppercase;letter-spacing:3px;font-weight:700"
-                                   oninput="this.value=this.value.toUpperCase()"
-                                   onkeydown="if(event.key==='Enter')joinRoom()">
-                            <button class="lobby-btn lobby-btn-blue" onclick="joinRoom()" style="padding:13px 18px">🔗</button>
-                        </div>
-                    </div>
-
                     <button class="lobby-btn lobby-btn-outline" onclick="findRoom()">
                         🔍 Знайти вільну кімнату
                     </button>
@@ -716,9 +706,7 @@
                     <div id="join-invite-banner" class="hidden"
                          style="background:rgba(0,87,183,0.15);border:1px solid rgba(0,87,183,0.4);
                                 border-radius:12px;padding:14px 18px;text-align:center">
-                        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:6px">Вас запрошено</div>
-                        <div style="font-size:20px;font-weight:900;color:#ffd700;letter-spacing:3px;margin-bottom:6px"
-                             id="join-invite-code"></div>
+                        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:6px">Вас запрошено до кімнати</div>
                         <div id="join-room-peek" style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:10px"></div>
                         <button class="lobby-btn lobby-btn-blue" onclick="joinRoom()"
                                 style="padding:10px">🔗 Приєднатись</button>
@@ -772,22 +760,20 @@
             <div class="lobby-header">
                 <div class="lobby-header-logo">⏳</div>
                 <h1 class="lobby-header-title">Зала очікування</h1>
-                <p class="lobby-header-sub">Поділіться кодом — чекаємо гравців</p>
+                <p class="lobby-header-sub">Поділіться посиланням — чекаємо гравців</p>
             </div>
 
             <div class="lobby-glass" style="display:flex;flex-direction:column;gap:16px">
 
-                <!-- Код кімнати -->
+                <!-- Посилання-запрошення -->
                 <div class="wait-code-box">
-                    <div class="wait-code-label">Код кімнати</div>
-                    <div class="wait-code-value" id="room-code-display" onclick="copyRoomCode()" style="cursor:pointer" title="Клікніть щоб скопіювати">——</div>
-                    <div class="wait-code-hint">Інші гравці вводять цей код</div>
+                    <div class="wait-code-label">📎 Посилання-запрошення</div>
+                    <div class="wait-link-value" id="room-link-display">——</div>
+                    <button id="copy-link-btn" class="lobby-btn lobby-btn-blue"
+                            onclick="copyInviteLink()" style="font-size:13px;padding:10px;width:100%">
+                        📋 Скопіювати посилання
+                    </button>
                 </div>
-
-                <button id="copy-link-btn" class="lobby-btn lobby-btn-outline"
-                        onclick="copyInviteLink()" style="font-size:14px;padding:11px">
-                    📋 Копіювати посилання-запрошення
-                </button>
 
                 <!-- Список гравців -->
                 <div>

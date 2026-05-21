@@ -31,10 +31,18 @@ export function WaitingScreen() {
     return () => { s.off('lobbyUpdate'); s.off('roomClosed'); s.off('kicked') }
   }, [])
 
+  const [copied, setCopied] = useState(false)
+
   const copyCode = () => {
     const url = `${location.origin}?join=${roomCode}`
-    if (navigator.share) navigator.share({ title: 'Бункер — запрошення', url }).catch(() => {})
-    else navigator.clipboard.writeText(url).catch(() => {})
+    if (navigator.share) {
+      navigator.share({ title: 'Бункер — запрошення', url }).catch(() => {})
+      return
+    }
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    }).catch(() => {})
   }
 
   const startGame = () => {
@@ -54,16 +62,21 @@ export function WaitingScreen() {
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#111212' }}>
       <div className="w-full max-w-sm flex flex-col gap-3">
 
-        {/* Код */}
-        <div className="rounded-2xl p-4 text-center"
+        {/* Посилання-запрошення */}
+        <div className="rounded-2xl p-4"
              style={{ background: 'var(--bunker-surface)', border: '1px solid var(--bunker-border)' }}>
-          <p className="text-xs uppercase tracking-widest mb-1" style={{ color: 'var(--bunker-muted)' }}>Код кімнати</p>
+          <p className="text-xs uppercase tracking-widest mb-2 text-center" style={{ color: 'var(--bunker-muted)' }}>
+            📎 Посилання-запрошення
+          </p>
+          <p className="text-xs text-center mb-3 break-all font-mono"
+             style={{ color: 'rgba(255,255,255,0.6)' }}>
+            {location.origin}?join={roomCode}
+          </p>
           <button onClick={copyCode}
-                  className="text-4xl font-black tracking-widest transition-opacity hover:opacity-70"
-                  style={{ color: 'var(--bunker-yellow)' }}>
-            {roomCode}
+                  className="w-full py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95"
+                  style={{ background: 'var(--bunker-blue, #0057b7)', color: 'white' }}>
+            {copied ? '✅ Скопійовано!' : '📋 Скопіювати посилання'}
           </button>
-          <p className="text-xs mt-1" style={{ color: 'var(--bunker-muted)' }}>Натисніть щоб поділитись</p>
         </div>
 
         {/* Гравці */}
