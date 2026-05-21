@@ -20,6 +20,7 @@ interface GameStore {
   myIndex:          number | null
   roomCode:         string
   roomPlayers:      string[]
+  roomBots:         boolean[]
   isHost:           boolean
   connectionStatus: 'connected' | 'disconnected' | 'reconnecting'
   gameState:        BunkerState | null
@@ -31,7 +32,7 @@ interface GameStore {
   setScreen:            (s: Screen) => void
   setMyName:            (n: string) => void
   setRoom:              (code: string, myIndex: number, players: string[]) => void
-  setRoomPlayers:       (players: string[], gameType?: string) => void
+  setRoomPlayers:       (players: string[], bots?: boolean[]) => void
   setConnectionStatus:  (s: 'connected' | 'disconnected' | 'reconnecting') => void
   handleStateUpdate:    (state: BunkerState) => void
   handleGameStarted:    (state: BunkerState) => void
@@ -48,6 +49,7 @@ export const useGameStore = create<GameStore>((set) => ({
   myIndex:          null,
   roomCode:         '',
   roomPlayers:      [],
+  roomBots:         [],
   isHost:           false,
   connectionStatus: 'disconnected',
   gameState:        null,
@@ -69,7 +71,7 @@ export const useGameStore = create<GameStore>((set) => ({
     screen: 'waiting',
   }),
 
-  setRoomPlayers: (roomPlayers) => set({ roomPlayers }),
+  setRoomPlayers: (roomPlayers, bots) => set({ roomPlayers, roomBots: bots || [] }),
 
   setConnectionStatus: (connectionStatus) => set({ connectionStatus }),
 
@@ -105,6 +107,7 @@ export const useGameStore = create<GameStore>((set) => ({
     myIndex:     null,
     roomCode:    '',
     roomPlayers: [],
+    roomBots:    [],
     isHost:      false,
     gameState:   null,
     chat:        [],

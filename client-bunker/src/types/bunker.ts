@@ -32,6 +32,7 @@ export interface ActionCard {
 export interface BunkerPlayer {
   id:             number
   name:           string
+  isBot?:         boolean
   isAlive:        boolean
   isSilenced:     boolean
   immunityRounds: number

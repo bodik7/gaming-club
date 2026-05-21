@@ -63,8 +63,8 @@ export function useSocket() {
 
     s.on('disconnect', () => setConnectionStatus('disconnected'))
 
-    s.on('lobbyUpdate', ({ players }: { players: string[] }) => {
-      useGameStore.getState().setRoomPlayers(players)
+    s.on('lobbyUpdate', ({ players, bots }: { players: string[]; bots?: boolean[] }) => {
+      useGameStore.getState().setRoomPlayers(players, bots)
     })
 
     s.on('stateUpdate', ({ state }) => handleStateUpdate(state))

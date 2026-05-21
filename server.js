@@ -1687,6 +1687,7 @@ function createBunkerState(roomPlayers, settings = {}) {
         return {
             id:       i,
             name:     rp.name,
+            isBot:    rp.isBot || false,
             isAlive:  true,
             isSilenced:     false,
             immunityRounds: 0,
@@ -1737,6 +1738,7 @@ function sanitizeBunker(state, forIdx) {
         players: state.players.map((p, i) => ({
             id:         p.id,
             name:       p.name,
+            isBot:      p.isBot || false,
             isAlive:    p.isAlive,
             isSilenced: p.isSilenced,
             immunityRounds: p.immunityRounds,
@@ -1769,6 +1771,7 @@ function sanitizeBunker(state, forIdx) {
 
 function emitBunkerUpdate(room) {
     room.players.forEach(rp => {
+        if (!rp.socketId || rp.isBot) return;
         io.to(rp.socketId).emit('stateUpdate', {
             state: sanitizeBunker(room.state, rp.index),
         });
@@ -1840,6 +1843,201 @@ function clearBunkerTimer(room) {
 }
 
 // ── Старт фази з таймером ─────────────────────
+// ── AI-боти для Бункера ───────────────────────
+const BOT_NAMES = ['Мирослав-АІ', 'Оксана-АІ', 'Тарас-АІ', 'Ганна-АІ', 'Богдан-АІ', 'Лариса-АІ'];
+
+async function getBotDecisions(room, phase) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key || key === 'YOUR_KEY_HERE') return null;
+    const s = room.state;
+    const bots = s.players.filter(p => p.isBot && p.isAlive);
+    if (!bots.length) return null;
+
+    const playersDesc = s.players
+        .filter(p => p.isAlive)
+        .map(p => {
+            const attrs = Object.entries(p.attributes)
+                .map(([k, v]) => `${BUNKER_ATTR_LABELS[k]||k}: ${v.isRevealed ? v.value : '?'}`)
+                .join(', ');
+            return `${p.name}${p.isBot?' 🤖':''} (id=${p.id}): ${attrs}`;
+        }).join('\n');
+
+    let prompt = '';
+
+    if (phase === 'round_reveal') {
+        const forced = BUNKER_FORCED_ATTR[s.round];
+        const botsNeedingReveal = bots.filter(p => !p.hasRevealed);
+        if (!botsNeedingReveal.length) return null;
+        const botsDesc = botsNeedingReveal.map(p => {
+            const unrevealed = Object.keys(p.attributes).filter(k => !p.attributes[k].isRevealed);
+            return `id=${p.id}, name="${p.name}", нерозкриті: [${unrevealed.join(', ')}]`;
+        }).join('\n');
+
+        prompt = `Ти керуєш ботами у грі "Бункер" (українська). Відповідай тільки українською.
+
+Сценарій: "${s.scenario.title}" — ${s.scenario.disaster}
+Бункер: ${s.scenario.bunker}. Мета: ${s.scenario.goal}
+Місць у бункері: ${s.bunkerCapacity} з ${s.players.filter(p=>p.isAlive).length}. Раунд ${s.round}.
+
+Атрибути гравців (? = приховано):
+${playersDesc}
+
+Боти що ходять зараз:
+${botsDesc}
+${forced ? `\nОБОВ'ЯЗКОВО: у раунді ${s.round} всі розкривають "${forced}". Використай саме цей атрибут.` : ''}
+
+Для кожного бота вкажи:
+- attr: що розкрити (${forced ? `обов'язково "${forced}"` : 'один з нерозкритих'})
+- message: 1-2 речення від першої особи — чому ти потрібен у бункері
+
+Відповідь ТІЛЬКИ JSON (без markdown, без пояснень):
+{"decisions":[{"index":ID,"attr":"ATTR","message":"TEXT"}]}`;
+
+    } else if (phase === 'voting') {
+        const botsToVote = bots.filter(p => s.votes[p.id] === undefined);
+        if (!botsToVote.length) return null;
+        const aliveList = s.players.filter(p => p.isAlive)
+            .map(p => `id=${p.id} "${p.name}"${p.isBot?' (бот)':''}`).join(', ');
+
+        prompt = `Ти керуєш ботами у грі "Бункер" (українська).
+
+Сценарій: "${s.scenario.title}" — ${s.scenario.disaster}
+Місць у бункері: ${s.bunkerCapacity} з ${s.players.filter(p=>p.isAlive).length}
+
+Атрибути гравців:
+${playersDesc}
+
+Живі гравці: ${aliveList}
+Боти що голосують: ${botsToVote.map(p=>`id=${p.id} "${p.name}"`).join(', ')}
+
+Кожен бот голосує ПРОТИ одного гравця (найменш корисний для виживання в цьому сценарії). Не голосуй проти себе. Використовуй числовий id.
+
+Відповідь ТІЛЬКИ JSON:
+{"votes":[{"index":BOT_ID,"target":TARGET_ID}]}`;
+    }
+
+    if (!prompt) return null;
+    try {
+        const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${key}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0.85, maxOutputTokens: 600 },
+                }),
+            }
+        );
+        const json = await res.json();
+        const text = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const match = text.match(/\{[\s\S]*\}/);
+        if (!match) return null;
+        return JSON.parse(match[0]);
+    } catch (e) {
+        console.error('[Bot] getBotDecisions error:', e.message);
+        return null;
+    }
+}
+
+function scheduleBotActions(room, phase) {
+    const bots = room.players.filter(p => p.isBot);
+    if (!bots.length) return;
+
+    if (phase === 'game_start') {
+        setTimeout(() => {
+            if (room.state?.phase !== 'game_start') return;
+            bots.forEach(bp => {
+                const p = room.state.players[bp.index];
+                if (p && !p.hasRevealed) processBunkerAction(room, 'b_ready', {}, bp.index);
+            });
+        }, 1500);
+        return;
+    }
+
+    if (phase === 'round_reveal') {
+        setTimeout(async () => {
+            if (room.state?.phase !== 'round_reveal') return;
+            const data = await getBotDecisions(room, 'round_reveal');
+            const botsToAct = bots.filter(bp => {
+                const p = room.state?.players[bp.index];
+                return p?.isAlive && !p.hasRevealed;
+            });
+
+            if (!data?.decisions?.length) {
+                // Fallback — розкрити перший нерозкритий
+                botsToAct.forEach((bp, i) => {
+                    setTimeout(() => {
+                        if (room.state?.phase !== 'round_reveal') return;
+                        const p = room.state.players[bp.index];
+                        if (!p?.isAlive || p.hasRevealed) return;
+                        const forced = BUNKER_FORCED_ATTR[room.state.round];
+                        const attr = forced || Object.keys(p.attributes).find(k => !p.attributes[k].isRevealed);
+                        if (attr) processBunkerAction(room, 'b_revealAttr', { attr }, bp.index);
+                    }, (i + 1) * 2500);
+                });
+                return;
+            }
+
+            data.decisions.forEach((d, i) => {
+                setTimeout(() => {
+                    if (room.state?.phase !== 'round_reveal') return;
+                    const p = room.state.players[d.index];
+                    if (!p?.isAlive || p.hasRevealed) return;
+                    const forced = BUNKER_FORCED_ATTR[room.state.round];
+                    const attr = forced || (p.attributes[d.attr] && !p.attributes[d.attr].isRevealed ? d.attr
+                        : Object.keys(p.attributes).find(k => !p.attributes[k].isRevealed));
+                    if (!attr) return;
+                    processBunkerAction(room, 'b_revealAttr', { attr }, d.index);
+                    if (d.message) {
+                        io.to(room.code).emit('chatMessage', {
+                            playerIndex: d.index,
+                            name: p.name,
+                            color: '#88aaff',
+                            icon: '🤖',
+                            text: d.message,
+                        });
+                    }
+                }, (i + 1) * 3000);
+            });
+        }, 5000); // Боти ходять після 5с — спочатку хід людей
+        return;
+    }
+
+    if (phase === 'voting') {
+        setTimeout(async () => {
+            if (room.state?.phase !== 'voting') return;
+            const data = await getBotDecisions(room, 'voting');
+            const botsToVote = bots.filter(bp => {
+                const p = room.state?.players[bp.index];
+                return p?.isAlive && room.state?.votes[bp.index] === undefined;
+            });
+
+            if (!data?.votes?.length) {
+                botsToVote.forEach((bp, i) => {
+                    setTimeout(() => {
+                        if (room.state?.phase !== 'voting') return;
+                        const alive = room.state.players.filter(p => p.isAlive && p.id !== bp.index);
+                        const target = alive[Math.floor(Math.random() * alive.length)]?.id;
+                        if (target !== undefined) processBunkerAction(room, 'b_vote', { target }, bp.index);
+                    }, (i + 1) * 2000);
+                });
+                return;
+            }
+
+            data.votes.forEach((v, i) => {
+                setTimeout(() => {
+                    if (room.state?.phase !== 'voting') return;
+                    const p = room.state.players[v.index];
+                    if (!p?.isAlive || room.state.votes[v.index] !== undefined) return;
+                    processBunkerAction(room, 'b_vote', { target: v.target }, v.index);
+                }, (i + 1) * 2500);
+            });
+        }, 4000);
+        return;
+    }
+}
+
 function startBunkerPhase(room, phase) {
     clearBunkerTimer(room);
     const s = room.state;
@@ -1847,6 +2045,7 @@ function startBunkerPhase(room, phase) {
     s.timeDeadline = Date.now() + (BUNKER_PHASE_MS[phase] || 30_000);
     emitBunkerUpdate(room);
     room.bunkerTimer = setTimeout(() => onBunkerTimeout(room, phase), BUNKER_PHASE_MS[phase] || 30_000);
+    scheduleBotActions(room, phase);
 }
 
 function onBunkerTimeout(room, phase) {
@@ -3030,6 +3229,35 @@ io.on('connection', (socket) => {
         });
 
         io.to(socket.roomCode).emit('lobbyUpdate', { players: room.players.map(p => p.name), gameType: room.gameType });
+    });
+
+    // Додати / прибрати бота (тільки хост, тільки в залі очікування)
+    socket.on('addBot', () => {
+        const room = rooms[socket.roomCode];
+        if (!room || socket.playerIndex !== 0 || room.started || room.gameType !== 'bunker') return;
+        if (room.players.length >= 15) return;
+        const usedNames = new Set(room.players.map(p => p.name));
+        const botName = BOT_NAMES.find(n => !usedNames.has(n)) || `Бот-АІ-${room.players.length}`;
+        const idx = room.players.length;
+        room.players.push({ name: botName, index: idx, socketId: null, isBot: true });
+        io.to(socket.roomCode).emit('lobbyUpdate', {
+            players: room.players.map(p => p.name),
+            bots:    room.players.map(p => !!p.isBot),
+            gameType: room.gameType,
+        });
+    });
+
+    socket.on('removeBot', () => {
+        const room = rooms[socket.roomCode];
+        if (!room || socket.playerIndex !== 0 || room.started) return;
+        const last = room.players[room.players.length - 1];
+        if (!last?.isBot) return;
+        room.players.pop();
+        io.to(socket.roomCode).emit('lobbyUpdate', {
+            players: room.players.map(p => p.name),
+            bots:    room.players.map(p => !!p.isBot),
+            gameType: room.gameType,
+        });
     });
 
     // Почати гру (тільки хост — index 0)

@@ -45,15 +45,15 @@ const HOW_TO_PLAY = [
 ]
 
 export function WaitingScreen() {
-  const { roomCode, roomPlayers, isHost, myName, reset, error } = useGameStore()
+  const { roomCode, roomPlayers, roomBots, isHost, myName, reset, error } = useGameStore()
   const [selectedScenario, setSelectedScenario] = useState<number>(0)
   const [showScenarios, setShowScenarios] = useState(false)
   const [showHowTo, setShowHowTo] = useState(false)
 
   useEffect(() => {
     const s = getSocket()
-    s.on('lobbyUpdate', ({ players }: { players: string[] }) => {
-      useGameStore.getState().setRoomPlayers(players)
+    s.on('lobbyUpdate', ({ players, bots }: { players: string[]; bots?: boolean[] }) => {
+      useGameStore.getState().setRoomPlayers(players, bots)
     })
     s.on('roomClosed', reset)
     s.on('kicked',     reset)
@@ -121,19 +121,39 @@ export function WaitingScreen() {
             </span>
           </div>
           <div className="flex flex-col gap-1">
-            {roomPlayers.map((p, i) => (
-              <div key={i} className="flex items-center gap-2 py-1.5 px-2 rounded-lg text-sm"
-                   style={{
-                     background: p === myName ? 'rgba(245,196,0,0.06)' : 'transparent',
-                     color: p === myName ? 'var(--bunker-yellow)' : 'var(--bunker-text)',
-                   }}>
-                {i === 0 ? '👑' : '👤'} {p}{p === myName ? ' (ви)' : ''}
-              </div>
-            ))}
+            {roomPlayers.map((p, i) => {
+              const isBot = roomBots[i]
+              return (
+                <div key={i} className="flex items-center gap-2 py-1.5 px-2 rounded-lg text-sm"
+                     style={{
+                       background: p === myName ? 'rgba(245,196,0,0.06)' : isBot ? 'rgba(136,170,255,0.05)' : 'transparent',
+                       color: p === myName ? 'var(--bunker-yellow)' : isBot ? '#88aaff' : 'var(--bunker-text)',
+                     }}>
+                  {i === 0 ? '👑' : isBot ? '🤖' : '👤'} {p}{p === myName ? ' (ви)' : ''}
+                </div>
+              )
+            })}
           </div>
-          {roomPlayers.length < minPlayers && (
+          {isHost && (
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => getSocket().emit('addBot')}
+                      disabled={roomPlayers.length >= 15}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 disabled:opacity-30"
+                      style={{ background: 'rgba(136,170,255,0.12)', border: '1px solid rgba(136,170,255,0.3)', color: '#88aaff' }}>
+                + Додати бота 🤖
+              </button>
+              {roomBots.some(Boolean) && (
+                <button onClick={() => getSocket().emit('removeBot')}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95"
+                        style={{ background: 'rgba(204,34,0,0.1)', border: '1px solid rgba(204,34,0,0.3)', color: '#ff8080' }}>
+                  −
+                </button>
+              )}
+            </div>
+          )}
+          {roomPlayers.filter((_, i) => !roomBots[i]).length < minPlayers && (
             <p className="text-xs mt-2 text-center" style={{ color: 'var(--bunker-muted)' }}>
-              Потрібно ще {minPlayers - roomPlayers.length} гравців
+              Потрібно ще {minPlayers - roomPlayers.filter((_, i) => !roomBots[i]).length} живих гравців
             </p>
           )}
         </div>
