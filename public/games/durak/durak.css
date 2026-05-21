@@ -339,6 +339,73 @@
 .d-card.cant         { opacity: 0.28; filter: grayscale(0.6); cursor: not-allowed; }
 .d-card.cant:hover   { transform: none !important; box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important; }
 
+/* ─ Колода на столі ─ */
+.d-deck-wrap {
+    position: absolute;
+    bottom: 12px;
+    left: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.d-deck-stack {
+    position: relative;
+    width: 44px;
+    height: 62px;
+    margin-bottom: -44px; /* козир виглядає з-під колоди */
+}
+
+.d-deck-card {
+    position: absolute;
+    width: 44px;
+    height: 62px;
+    background: linear-gradient(145deg, #1a237e 0%, #283593 100%);
+    border-radius: 6px;
+    border: 1.5px solid rgba(201,162,39,0.5);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+}
+.d-deck-card::after {
+    content: '◆';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    font-size: 12px;
+    color: rgba(201,162,39,0.5);
+}
+
+.d-deck-cnt {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    font-size: 13px;
+    font-weight: 900;
+    color: rgba(201,162,39,0.9);
+    font-family: sans-serif;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+    z-index: 10;
+}
+
+/* Козир — горизонтально під колодою */
+.d-deck-trump {
+    width: 62px;
+    height: 44px;
+    background: #fff;
+    border-radius: 6px;
+    border-left: 4px solid #aaa; /* колір масті через inline */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-weight: 900;
+    font-family: 'Georgia', serif;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.65);
+}
+.d-dt-rank { font-size: 14px; line-height: 1; }
+.d-dt-suit { font-size: 20px; line-height: 1; }
+
 /* ─ Кінець гри ─ */
 .d-gameover { text-align: center; display: flex; flex-direction: column; gap: 8px; }
 .d-gameover-title { font-size: 17px; font-weight: 900; color: #c9a227; text-shadow: 0 2px 8px rgba(201,162,39,0.4); }

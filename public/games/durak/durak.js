@@ -69,12 +69,34 @@ function renderDInfo(s){
     `<div class="d-pill trump-pill" style="color:${dSuitColor(s.trumpCard)}">${s.trump} козир <span style="opacity:.5;font-size:10px">(${s.deckCount}🂠)</span></div>`;
 }
 
+// ── Колода на столі ─────────────────────────
+function dDeckIndicator(s){
+    const tc = s.trumpCard;
+    if(!tc) return '';
+    const tColor = dSuitColor(tc);
+    const layers = s.deckCount > 0 ? Math.min(5, Math.max(1, Math.ceil(s.deckCount / 5))) : 0;
+    const stack = layers > 0
+        ? Array.from({length: layers}, (_, i) =>
+            `<div class="d-deck-card" style="top:${-i*3}px;right:${i*2}px"></div>`
+          ).join('') + `<div class="d-deck-cnt">${s.deckCount}</div>`
+        : '';
+    return `
+    <div class="d-deck-wrap">
+        <div class="d-deck-stack">${stack}</div>
+        <div class="d-deck-trump" style="border-left-color:${tColor};color:${tColor}">
+            <div class="d-dt-rank">${dRank(tc)}</div>
+            <div class="d-dt-suit">${dSuit(tc)}</div>
+        </div>
+    </div>`;
+}
+
 // ── Стіл ─────────────────────────────────────
 function renderDTable(s){
     const el = document.getElementById('d-table');
     if(!el) return;
+    const deck = dDeckIndicator(s);
     if(!s.table.length){
-        el.innerHTML = `<div class="d-table-empty">— стіл порожній —</div>`;
+        el.innerHTML = `<div class="d-table-empty">— стіл порожній —</div>${deck}`;
         return;
     }
     el.innerHTML = s.table.map((slot, i) => {
@@ -98,7 +120,7 @@ function renderDTable(s){
                    </div>`
                 : `<div class="d-slot-empty"></div>`}
         </div>`;
-    }).join('');
+    }).join('') + deck;
 }
 
 // ── Рука ─────────────────────────────────────
