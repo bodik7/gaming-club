@@ -277,7 +277,7 @@ function clearSession() {
 }
 
 function setQuitBtn(visible) {
-    ['quit-btn-monopoly', 'quit-btn-tysyacha', 'quit-btn-mafia'].forEach(id => {
+    ['quit-btn-monopoly', 'quit-btn-tysyacha', 'quit-btn-mafia', 'quit-btn-durak'].forEach(id => {
         document.getElementById(id)?.classList.toggle('hidden', !visible);
     });
 }
@@ -299,6 +299,10 @@ function tryRejoin() {
         if (started && state) {
             document.getElementById('lobby-screen').classList.add('hidden');
             setQuitBtn(true);
+            if (state.gameType === 'durak') {
+                initDurak(state, myPlayerIndex);
+                return;
+            }
             if (state.gameType === 'tysyacha') {
                 initTysyacha(state, myPlayerIndex);
                 return;

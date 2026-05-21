@@ -5,7 +5,8 @@ let dState        = null;
 let dMyIdx        = null;
 let dSelCard      = null;
 let dSelAtk       = null;
-let dDragCard     = null; // карта що перетягується
+let dDragCard          = null;
+let dGameoverProcessed = false;
 
 const D_SUIT_COLORS = { '♠':'#1565c0', '♣':'#2e7d32', '♦':'#e53935', '♥':'#c62828' };
 const D_RANK_IDX    = {'6':0,'7':1,'8':2,'9':3,'10':4,'J':5,'Q':6,'K':7,'A':8};
@@ -23,7 +24,7 @@ function dCanBeat(atk, def, trump){
 // ── Ініціалізація ─────────────────────────────
 function initDurak(state, myIdx){
     dState = state; dMyIdx = myIdx;
-    dSelCard = null; dSelAtk = null;
+    dSelCard = null; dSelAtk = null; dGameoverProcessed = false;
     document.getElementById('game-screen').classList.add('hidden');
     const scr = document.getElementById('durak-screen');
     scr.classList.remove('hidden');
@@ -202,7 +203,7 @@ function renderDActions(s){
         const loser = s.loser!==null ? s.players[s.loser]?.name : null;
         const iWon = s.loser !== dMyIdx;
         const isHost = dMyIdx===0;
-        if(!el.dataset.gameoverDone){ el.dataset.gameoverDone='1'; updateStats('durak', iWon); playSound(iWon?'win':'lose'); }
+        if(!dGameoverProcessed){ dGameoverProcessed=true; updateStats('durak', iWon); playSound(iWon?'win':'lose'); }
         const st = getStats('durak');
         el.innerHTML = `
             <div class="d-gameover">

@@ -697,9 +697,9 @@ function tDblClickCard(card) {
 function tActWithCard(card) {
     const s = tState;
     if (!s) return;
-    // Талон: роздача карти — вибираємо, але без автоматичної роздачі (потрібно вибрати кому)
+    // Талон: drag/dblclick вибирає карту (кому роздати — потрібно натиснути кнопку або перетягти на ім'я гравця)
     if (s.phase === 'talon' && s.auction?.winner === tMyIdx && !s.talonPiles) {
-        tSelectedCard = card;
+        tSelectedCard = tSelectedCard === card ? null : card;
         renderTHand(s); renderTActions(s);
         return;
     }
