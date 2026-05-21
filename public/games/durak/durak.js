@@ -3,8 +3,9 @@
 // ============================================
 let dState        = null;
 let dMyIdx        = null;
-let dSelCard      = null; // картка з руки (вибрана)
-let dSelAtk       = null; // картка атаки на столі (для відбиття)
+let dSelCard      = null;
+let dSelAtk       = null;
+let dDragCard     = null; // карта що перетягується
 
 const D_SUIT_COLORS = { '♠':'#1565c0', '♣':'#2e7d32', '♦':'#e53935', '♥':'#c62828' };
 const D_RANK_IDX    = {'6':0,'7':1,'8':2,'9':3,'10':4,'J':5,'Q':6,'K':7,'A':8};
@@ -176,6 +177,9 @@ function renderDHand(s){
         const cantCls = canAct && !playable && !sel ? ' cant':'';
         return `
         <div class="d-card${sel}${cantCls}" style="border-top-color:${color}"
+             draggable="${canAct && playable ? 'true' : 'false'}"
+             ondragstart="dDragStart('${card}',event)"
+             ondblclick="dDblClick('${card}')"
              onclick="dClickHandCard('${card}')">
             <div class="d-cr" style="color:${color}"><div class="d-crn">${dRank(card)}</div><div class="d-crs">${dSuit(card)}</div></div>
             <div class="d-cc" style="color:${color}">${dSuit(card)}</div>
@@ -341,4 +345,64 @@ function dRequestRematch(){ socket.emit('restartGame'); }
 function dGoLobby(){
     if(typeof clearSession==='function') clearSession();
     location.href='/';
+}
+
+// ── Drag & Drop ───────────────────────────────
+function dDragStart(card, event){
+    dDragCard = card;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', card);
+}
+
+function dDragOver(event){
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    document.getElementById('d-table')?.classList.add('drag-over');
+}
+
+function dDragLeave(event){
+    // Ігноруємо якщо мишка перейшла на дочірній елемент
+    if(event.relatedTarget && document.getElementById('d-table')?.contains(event.relatedTarget)) return;
+    document.getElementById('d-table')?.classList.remove('drag-over');
+}
+
+function dDropOnTable(event){
+    event.preventDefault();
+    document.getElementById('d-table')?.classList.remove('drag-over');
+    const card = dDragCard || event.dataTransfer.getData('text/plain');
+    dDragCard = null;
+    if(card) dActWithCard(card);
+}
+
+// ── Подвійний клік ────────────────────────────
+function dDblClick(card){
+    dActWithCard(card);
+}
+
+// Спільна логіка для drag-drop і dblclick
+function dActWithCard(card){
+    const s = dState;
+    if(!s) return;
+    const ph = s.phase, myIdx = dMyIdx;
+    const isAtk   = ph==='attack' && s.attacker===myIdx;
+    const isDef   = ph==='defend' && s.defender===myIdx;
+    const isThrow = ph==='throw'  && s.defender!==myIdx && !s.passedThrow.includes(myIdx);
+
+    if(isAtk || isThrow){
+        dSelCard = card;
+        dPlayCards();
+    } else if(isDef){
+        // Автоматично відбиваємо найближчу невідбиту карту атаки
+        const unbeaten = s.table.filter(t=>!t.defense);
+        const target = unbeaten.find(t=>dCanBeat(t.attack, card, s.trump));
+        if(target){
+            dSelAtk = target.attack;
+            dSelCard = card;
+            dBeat();
+        } else {
+            // Карта не може відбити жодної — просто виділяємо
+            dSelCard = card;
+            renderDHand(s); renderDActions(s);
+        }
+    }
 }

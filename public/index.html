@@ -700,7 +700,10 @@
         </div>
         <div class="d-game-area">
             <div class="d-table-zone">
-                <div id="d-table"></div>
+                <div id="d-table"
+                     ondragover="dDragOver(event)"
+                     ondragleave="dDragLeave(event)"
+                     ondrop="dDropOnTable(event)"></div>
                 <div class="d-right-panel">
                     <div id="d-actions"></div>
                     <div id="d-log"></div>
@@ -928,7 +931,10 @@
         <div class="t-game-area">
             <div id="t-opponents"></div>
             <div class="t-table-zone">
-                <div id="t-trick"></div>
+                <div id="t-trick"
+                     ondragover="tDragOver(event)"
+                     ondragleave="tDragLeave(event)"
+                     ondrop="tDropOnTrick(event)"></div>
                 <div class="t-right-panel">
                     <div id="t-actions"></div>
                     <div id="t-log"></div>

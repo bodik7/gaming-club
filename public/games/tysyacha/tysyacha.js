@@ -386,9 +386,13 @@ function renderTHand(s) {
         const cardIdx = sorted.indexOf(card);
         const dealDelay = tDealing ? `animation-delay:${cardIdx * 60}ms` : '';
         const pts = tCardPts(card);
+        const draggable = (canPlayThisCard || inTalon) ? 'true' : 'false';
         return `
         <div class="${classes}"
              style="border-top-color:${color};${dealDelay}"
+             draggable="${draggable}"
+             ondragstart="tDragStart('${card}',event)"
+             ondblclick="tDblClickCard('${card}')"
              onclick="tSelectCard('${card}')"
              title="${tCardTitle(card)}">
             <div class="t-card-corner-tl" style="color:${color}">
@@ -656,6 +660,61 @@ function tPlayCard(marriage) {
     playSound('cardPlay');
     socket.emit('action', { type: 'tPlayCard', data: { card: tSelectedCard, marriage } });
     tSelectedCard = null;
+}
+
+// ── Drag & Drop і Double-click ───────────────
+let tDragCard = null;
+
+function tDragStart(card, event) {
+    tDragCard = card;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', card);
+}
+
+function tDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    document.getElementById('t-trick')?.classList.add('t-drag-over');
+}
+
+function tDragLeave(event) {
+    if (event.relatedTarget && document.getElementById('t-trick')?.contains(event.relatedTarget)) return;
+    document.getElementById('t-trick')?.classList.remove('t-drag-over');
+}
+
+function tDropOnTrick(event) {
+    event.preventDefault();
+    document.getElementById('t-trick')?.classList.remove('t-drag-over');
+    const card = tDragCard || event.dataTransfer.getData('text/plain');
+    tDragCard = null;
+    if (card) tActWithCard(card);
+}
+
+function tDblClickCard(card) {
+    tActWithCard(card);
+}
+
+function tActWithCard(card) {
+    const s = tState;
+    if (!s) return;
+    // Талон: роздача карти — вибираємо, але без автоматичної роздачі (потрібно вибрати кому)
+    if (s.phase === 'talon' && s.auction?.winner === tMyIdx && !s.talonPiles) {
+        tSelectedCard = card;
+        renderTHand(s); renderTActions(s);
+        return;
+    }
+    // Гра: одразу граємо картою
+    if (s.phase === 'playing' && s.currentPlayer === tMyIdx && !tTrickShowing) {
+        // Перевіряємо чи можна зіграти
+        if (s.trick?.cards?.length > 0) {
+            const leadSuit = s.trick.cards[0].card.slice(-1);
+            const me = s.players[tMyIdx];
+            const mustFollow = me?.hand?.some(c => c.slice(-1) === leadSuit);
+            if (mustFollow && card.slice(-1) !== leadSuit) return; // не та масть
+        }
+        tSelectedCard = card;
+        tPlayCard(false); // грати без шлюбу (шлюб авто-оголошується сервером)
+    }
 }
 
 // ── Чат ──────────────────────────────────────
