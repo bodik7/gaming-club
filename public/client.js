@@ -621,13 +621,22 @@ const HOW_TO_PLAY = {
 <b>Будинки:</b> маючи всі міста одного кольору — будуй будинки та готелі. Рента зростає.<br><br>
 <b>Тюрма:</b> потрапляєш якщо перейшов клітинку тюрми або випав дубль тричі. Виходиш сплативши 50 або дублем.<br><br>
 <b>Банкрутство:</b> якщо не можеш сплатити — продаєш майно. Якщо нічого немає — вибуваєш.<br><br>
-<b>Перемога:</b> останній гравець що не збанкрутував.`
+<b>Перемога:</b> останній гравець що не збанкрутував.`,
+
+    bunker: `<b>🏚️ Бункер</b> — дискусійна гра на виживання.<br><br>
+<b>Мета:</b> переконати інших що ти корисний і потрапити до бункера. Місць менше ніж гравців.<br><br>
+<b>Персонаж:</b> кожен отримує 5 прихованих атрибутів — Професія, Здоров'я, Хобі, Риса характеру, Багаж.<br><br>
+<b>Розкриття:</b> кожен раунд гравці по черзі відкривають один свій атрибут на вибір. Стратегічно обирай що показати.<br><br>
+<b>Дискусія:</b> після розкриття — вільне обговорення. Переконуй, аргументуй, блефуй.<br><br>
+<b>Голосування:</b> всі голосують за одного гравця якого виключити. Хто набрав найбільше — вибуває. При нічиї — повторне голосування між лідерами.<br><br>
+<b>Карти дій:</b> у кожного є спеціальні карти. Їх можна зіграти у відповідну фазу: підглянути чужий атрибут, обмінятись, заблокувати голос тощо.<br><br>
+<b>Перемога:</b> коли кількість гравців = місткості бункера — залишені входять до бункера і виграють.`
 };
 
 function showHowToPlay() {
     const gameType = typeof _selectedGame !== 'undefined' ? _selectedGame : 'monopoly';
     const modal = document.getElementById('howtoplay-modal');
-    const titles = { tysyacha: '📖 Як грати — Тисяча', mafia: '📖 Як грати — Мафія', monopoly: '📖 Як грати — Монополія', durak: '📖 Як грати — Дурак' };
+    const titles = { tysyacha: '📖 Як грати — Тисяча', mafia: '📖 Як грати — Мафія', monopoly: '📖 Як грати — Монополія', durak: '📖 Як грати — Дурак', bunker: '📖 Як грати — Бункер' };
     document.getElementById('htp-title').textContent = titles[gameType] || '📖 Як грати';
     document.getElementById('htp-content').innerHTML = HOW_TO_PLAY[gameType] || 'Правила для цієї гри ще не додані.';
     modal.style.display = 'flex';
@@ -1123,9 +1132,12 @@ socket.on('lobbyUpdate', ({ players, gameType }) => {
             </button>` : ''}
         </div>`;
     }).join('');
-    const maxMap = { tysyacha: 3, mafia: 15, monopoly: 6, durak: 6 };
+    const maxMap = { tysyacha: 3, mafia: 15, monopoly: 6, durak: 6, bunker: 15 };
+    const minMap = { tysyacha: 2, mafia: 5, monopoly: 2, durak: 2, bunker: 4 };
     const counter = document.getElementById('lobby-player-count');
     if (counter) counter.textContent = `${players.length}/${maxMap[_selectedGame] || 6}`;
+    const hint = document.getElementById('waiting-hint');
+    if (hint) hint.textContent = `Хост бачить кнопку старту · Мінімум ${minMap[_selectedGame] || 2} гравці`;
     // Хост може змінитись після kick — оновлюємо видимість кнопки старту
     const startBtn = document.getElementById('start-btn');
     if (startBtn) startBtn.classList.toggle('hidden', myPlayerIndex !== 0);
