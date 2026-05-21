@@ -231,25 +231,31 @@ function renderDHand(s){
         const sel = isSel ? ' selected' : '';
 
         let playable = false;
+        let defBeatable = false; // зелений glow під час захисту
         if(isAtk){
             if(s.table.length === 0){
-                // на порожньому столі — тільки одного рангу
                 playable = !firstSelRank || dRank(card) === firstSelRank;
             } else {
                 playable = tableRanks.has(dRank(card));
             }
-        } else if(isDef && dSelAtk){
-            playable = dCanBeat(dSelAtk, card, s.trump);
         } else if(isDef){
-            // підсвітити карти якими взагалі можна щось відбити
-            playable = s.table.some(t => !t.defense && dCanBeat(t.attack, card, s.trump));
+            if(dSelAtk){
+                // вибрана конкретна атакуюча — підсвічуємо тільки ті що б'ють її
+                defBeatable = dCanBeat(dSelAtk, card, s.trump);
+            } else {
+                // без вибору — підсвічуємо всі що можуть відбити хоч щось
+                defBeatable = s.table.some(t => !t.defense && dCanBeat(t.attack, card, s.trump));
+            }
+            playable = defBeatable; // для draggable/dblclick
         } else if(isThrow){
             playable = tableRanks.has(dRank(card));
         }
 
-        const cantCls = canAct && !playable && !isSel ? ' cant' : '';
+        // Під час захисту НЕ затемнюємо — бо "Забрати" теж законна дія
+        const cantCls = (canAct && !isDef && !playable && !isSel) ? ' cant' : '';
+        const beatCls = defBeatable && !isSel ? ' def-beat' : '';
         return `
-        <div class="d-card${sel}${cantCls}" style="border-top-color:${color}"
+        <div class="d-card${sel}${cantCls}${beatCls}" style="border-top-color:${color}"
              draggable="${canAct && playable ? 'true' : 'false'}"
              ondragstart="dDragStart('${card}',event)"
              ondblclick="dDblClick('${card}')"
