@@ -1154,6 +1154,11 @@ socket.on('kicked', ({ reason }) => {
 
 socket.on('gameStarted', ({ state, gameType, myPlayerIndex: mpi }) => {
     if (mpi !== undefined) myPlayerIndex = mpi;
+    // Бункер — React SPA на /bunker; редіректимо туди зі збереженою сесією
+    if (gameType === 'bunker' || state?.gameType === 'bunker') {
+        location.href = '/bunker';
+        return;
+    }
     document.getElementById('waiting-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.add('hidden');
     setQuitBtn(true);
