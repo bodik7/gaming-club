@@ -973,7 +973,7 @@ function setSetting(key, value) {
     _gameSettings[key] = value;
     // Підсвічуємо активну кнопку
     document.querySelectorAll(`[data-setting="${key}"]`).forEach(btn => {
-        btn.classList.toggle('active', +btn.dataset.value === value);
+        btn.classList.toggle('active', String(btn.dataset.value) === String(value));
     });
     // Надсилаємо хосту на сервер одразу
     socket.emit('updateSettings', { [key]: value });
