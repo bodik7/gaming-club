@@ -43,10 +43,36 @@ function updateDurak(state, sideEffect){
 function renderDurak(){
     if(!dState) return;
     renderDInfo(dState);
+    renderDOpponents(dState);
     renderDTable(dState);
     renderDHand(dState);
     renderDActions(dState);
     renderDLog(dState);
+}
+
+// ── Суперники над столом ─────────────────────
+function renderDOpponents(s){
+    const el = document.getElementById('d-opponents');
+    if(!el) return;
+    const opponents = s.players.filter((p, i) => i !== dMyIdx);
+    if(!opponents.length){ el.innerHTML=''; return; }
+    el.innerHTML = opponents.map(p => {
+        const isAtk = p.id === s.attacker && s.phase !== 'gameover';
+        const isDef = p.id === s.defender && s.phase !== 'gameover';
+        const role  = isAtk ? '<span class="d-opp-role atk">⚔</span>' : isDef ? '<span class="d-opp-role def">🛡</span>' : '';
+        const done  = p.finished;
+        const cnt   = done ? 0 : (p.handCount || 0);
+        const cards = done
+            ? '<span class="d-opp-done">✓ вийшов</span>'
+            : Array.from({length: Math.min(cnt, 12)}, (_, i) =>
+                `<div class="d-opp-card" style="margin-left:${i===0?0:-18}px;z-index:${i}"></div>`
+              ).join('') + (cnt > 12 ? `<span class="d-opp-more">+${cnt-12}</span>` : '');
+        const cls = ['d-opp-player', isAtk?'atk':isDef?'def':'', done?'done':''].filter(Boolean).join(' ');
+        return `<div class="${cls}">
+            <div class="d-opp-name">${role}${p.name}</div>
+            <div class="d-opp-hand">${cards}</div>
+        </div>`;
+    }).join('');
 }
 
 // ── Топбар: гравці + козир ───────────────────
@@ -277,6 +303,7 @@ function renderDLog(s){
     if(!el) return;
     if(!s.log?.length){ el.innerHTML='<div class="d-log-empty">Лог порожній</div>'; return; }
     el.innerHTML = s.log.map(e=>`<div class="d-log-entry">${e?.text ?? e}</div>`).join('');
+    el.scrollTop = el.scrollHeight;
 }
 
 // ── Обробники кліків ─────────────────────────

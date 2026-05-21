@@ -2349,8 +2349,9 @@ io.on('connection', (socket) => {
 
     // Отримати список вільних кімнат
     socket.on('getRooms', (cb) => {
+        const _maxP = { tysyacha: 3, mafia: 15, durak: 6, monopoly: 6 };
         const available = Object.values(rooms)
-            .filter(r => !r.started && r.players.length > 0 && r.players.length < 6)
+            .filter(r => !r.started && r.players.length > 0 && r.players.length < (_maxP[r.gameType] || 6))
             .map(r => ({
                 code: r.code,
                 playerCount: r.players.length,

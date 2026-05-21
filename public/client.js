@@ -10,7 +10,19 @@ let myPlayerIndex = null;
 
 // ── Звуковий движок (Web Audio API) ──────────
 const _sfx = { ctx: null, get() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); return this.ctx; } };
+let _soundMuted = localStorage.getItem('igclub_muted') === '1';
+function toggleMute() {
+    _soundMuted = !_soundMuted;
+    localStorage.setItem('igclub_muted', _soundMuted ? '1' : '0');
+    const btn = document.getElementById('mute-btn');
+    if (btn) btn.textContent = _soundMuted ? '🔇' : '🔊';
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('mute-btn');
+    if (btn && _soundMuted) btn.textContent = '🔇';
+});
 function playSound(type) {
+    if (_soundMuted) return;
     try {
         const ctx = _sfx.get();
         const t   = ctx.currentTime;
@@ -162,6 +174,18 @@ function _enterLobby(username, joinCode) {
     } else {
         if (banner) banner.classList.add('hidden');
     }
+
+    // Показуємо статистику на картках ігор
+    ['monopoly', 'tysyacha', 'durak', 'mafia'].forEach(game => {
+        const st = getStats(game);
+        const el = document.getElementById('stat-' + game);
+        if (!el) return;
+        if (st.g > 0) {
+            el.textContent = `🏆 ${st.w}/${st.g}`;
+            el.classList.remove('hidden');
+            el.classList.add('has-stats');
+        }
+    });
 }
 
 // ── Кнопки авторизації ────────────────────────
@@ -503,12 +527,17 @@ function selectGame(type) {
     });
 }
 
+function _lobbyError(msg, focusId) {
+    showToast('⚠️ ' + msg, { color: '#b71c1c', duration: 3000 });
+    if (focusId) document.getElementById(focusId)?.focus();
+}
+
 function createRoom() {
     const name = document.getElementById('lobby-name').value.trim();
-    if (!name) return alert('Введіть своє ім\'я');
+    if (!name) return _lobbyError('Введіть своє ім\'я', 'lobby-name');
     saveName(name);
     socket.emit('createRoom', { playerName: name, gameType: _selectedGame }, ({ code, playerIndex, error }) => {
-        if (error) return alert(error);
+        if (error) return _lobbyError(error);
         myPlayerIndex = playerIndex;
         saveSession(code, playerIndex, name);
         showLobbyWaiting(code);
@@ -518,11 +547,11 @@ function createRoom() {
 function joinRoom() {
     const name = document.getElementById('lobby-name').value.trim();
     const code = document.getElementById('lobby-code').value.trim().toUpperCase();
-    if (!name) return alert('Введіть своє ім\'я');
-    if (!code) return alert('Введіть код кімнати');
+    if (!name) return _lobbyError('Введіть своє ім\'я', 'lobby-name');
+    if (!code) return _lobbyError('Введіть код кімнати', 'lobby-code');
     saveName(name);
     socket.emit('joinRoom', { code, playerName: name }, ({ code: c, playerIndex, error }) => {
-        if (error) return alert(error);
+        if (error) return _lobbyError(error, 'lobby-code');
         myPlayerIndex = playerIndex;
         saveSession(c, playerIndex, name);
         showLobbyWaiting(c);
@@ -675,6 +704,10 @@ socket.on('surrendered', () => {
 
 function copyInviteLink() {
     const url = `${location.origin}${location.pathname}?join=${_inviteCode}`;
+    if (navigator.share) {
+        navigator.share({ title: 'Ігровий Клуб — запрошення', text: `Приєднуйся до гри! Код: ${_inviteCode}`, url }).catch(() => {});
+        return;
+    }
     navigator.clipboard.writeText(url).then(() => {
         const btn = document.getElementById('copy-link-btn');
         if (!btn) return;
@@ -961,13 +994,12 @@ function quickJoin(code) {
     const name = document.getElementById('lobby-name').value.trim();
     if (!name) {
         closeModal();
-        alert('Спочатку введіть своє ім\'я');
-        document.getElementById('lobby-name')?.focus();
+        _lobbyError('Спочатку введіть своє ім\'я', 'lobby-name');
         return;
     }
     saveName(name);
     socket.emit('joinRoom', { code, playerName: name }, ({ code: c, playerIndex, error }) => {
-        if (error) { alert(error); return; }
+        if (error) { _lobbyError(error); return; }
         closeModal();
         myPlayerIndex = playerIndex;
         saveSession(c, playerIndex, name);

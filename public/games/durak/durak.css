@@ -454,6 +454,84 @@
 .d-gameover { text-align: center; display: flex; flex-direction: column; gap: 8px; }
 .d-gameover-title { font-size: 17px; font-weight: 900; color: #c9a227; text-shadow: 0 2px 8px rgba(201,162,39,0.4); }
 
+/* ─ Суперники ─ */
+#d-opponents {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 4px 12px 0;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+.d-opp-player {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    background: rgba(0,0,0,0.3);
+    border: 1.5px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    min-width: 80px;
+    transition: border-color 0.25s;
+}
+.d-opp-player.atk { border-color: rgba(239,83,80,0.5); background: rgba(239,83,80,0.08); }
+.d-opp-player.def { border-color: rgba(66,165,245,0.5); background: rgba(66,165,245,0.08); }
+.d-opp-player.done { opacity: 0.4; }
+.d-opp-name {
+    font-size: 10px;
+    color: rgba(245,230,200,0.6);
+    font-family: sans-serif;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+.d-opp-role { font-size: 10px; }
+.d-opp-role.atk { color: #ef5350; }
+.d-opp-role.def { color: #42a5f5; }
+.d-opp-hand {
+    display: flex;
+    align-items: flex-end;
+    position: relative;
+    height: 38px;
+}
+.d-opp-card {
+    width: 24px;
+    height: 34px;
+    background:
+        repeating-linear-gradient(-55deg, transparent, transparent 3px,
+            rgba(255,255,255,0.04) 3px, rgba(255,255,255,0.04) 6px),
+        linear-gradient(145deg, #1a237e 0%, #283593 100%);
+    border-radius: 4px;
+    border: 1.5px solid rgba(201,162,39,0.45);
+    position: relative;
+    flex-shrink: 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.6);
+}
+.d-opp-card::after {
+    content: '◆';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    font-size: 8px;
+    color: rgba(201,162,39,0.5);
+}
+.d-opp-more {
+    font-size: 10px;
+    color: rgba(245,230,200,0.45);
+    font-family: sans-serif;
+    margin-left: 4px;
+    align-self: center;
+}
+.d-opp-done {
+    font-size: 10px;
+    color: #66bb6a;
+    font-family: sans-serif;
+    font-style: italic;
+}
+
 /* ─ Мобайл ─ */
 @media (max-width: 520px) {
     .d-card { width: 48px; height: 72px; }
