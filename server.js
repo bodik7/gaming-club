@@ -1393,16 +1393,38 @@ function dNextActive(state, from){
     return from;
 }
 
+function dFindFirstAttacker(players, trump){
+    // Найнижчий козир → першим ходить власник
+    let best = -1, bestRank = 999, hasTrump = false;
+    players.forEach((p, i) => {
+        const trumps = p.hand.filter(c => dSuit(c) === trump);
+        if(trumps.length){
+            const min = Math.min(...trumps.map(c => D_RANK_IDX[dRank(c)]));
+            if(!hasTrump || min < bestRank){ hasTrump = true; bestRank = min; best = i; }
+        }
+    });
+    if(hasTrump) return best;
+    // Козирів немає → найнижча карта серед усіх
+    bestRank = 999;
+    players.forEach((p, i) => {
+        const min = Math.min(...p.hand.map(c => D_RANK_IDX[dRank(c)]));
+        if(min < bestRank){ bestRank = min; best = i; }
+    });
+    return best >= 0 ? best : 0;
+}
+
 function createDurakState(roomPlayers, settings={}){
     const deck = shuffle(D_SUITS.flatMap(s=>D_RANKS.map(r=>r+s)));
     const players = roomPlayers.map((rp,i)=>({ id:i, name:rp.name, hand:deck.splice(0,6) }));
     const trumpCard = deck[deck.length-1];
+    const trump = dSuit(trumpCard);
+    const attacker = dFindFirstAttacker(players, trump);
     return {
         gameType:'durak', mode: settings.mode||'podkidnoy',
         players, deck,
-        trump: dSuit(trumpCard), trumpCard,
-        attacker:0, defender:1%roomPlayers.length,
-        phase:'attack', // 'attack'|'defend'|'throw'|'gameover'
+        trump, trumpCard,
+        attacker, defender:(attacker+1)%roomPlayers.length,
+        phase:'attack',
         table:[], passedThrow:[], finished:[],
         log:[], loser:null,
     };
