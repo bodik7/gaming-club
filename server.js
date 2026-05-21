@@ -1449,7 +1449,12 @@ function dStartTurnTimer(room) {
 function createDurakState(roomPlayers, settings={}){
     const deck = shuffle(D_SUITS.flatMap(s=>D_RANKS.map(r=>r+s)));
     const players = roomPlayers.map((rp,i)=>({ id:i, name:rp.name, hand:deck.splice(0,6) }));
+    // Козир — остання карта в колоді (видима, забирається останньою).
+    // Переміщуємо на початок масиву: deck.pop() бере з кінця,
+    // тому козир на позиції [0] буде взятий останнім.
     const trumpCard = deck[deck.length-1];
+    deck.splice(deck.length-1, 1);
+    deck.unshift(trumpCard);
     const trump = dSuit(trumpCard);
     const attacker = dFindFirstAttacker(players, trump);
     return {
@@ -1566,6 +1571,8 @@ function dAdvance(state, defenderTook){
     for(const idx of order){
         const p=state.players[idx];
         while(p.hand.length<6 && state.deck.length>0) p.hand.push(state.deck.pop());
+        // Коли колода вичерпана — козирна карта більше не показується біля колоди
+        if(state.deck.length===0) state.trumpCard = null;
         if(p.hand.length===0 && !state.finished.includes(idx)){
             state.finished.push(idx);
             addLog(state,`🏅 ${p.name} вийшов(ла) з гри`);

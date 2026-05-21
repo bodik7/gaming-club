@@ -126,7 +126,15 @@ function renderDInfo(s){
 // ── Колода на столі ─────────────────────────
 function dDeckIndicator(s){
     const tc = s.trumpCard;
-    if(!tc) return '';
+    // Колода порожня — показуємо тільки масть козиря без картки
+    if(!tc){
+        if(!s.trump) return '';
+        const tColor = D_SUIT_COLORS[s.trump]||'#333';
+        return `<div class="d-deck-wrap">
+            <div style="font-size:28px;color:${tColor};filter:drop-shadow(0 2px 6px rgba(0,0,0,0.7))"
+                 title="Козир">${s.trump}</div>
+        </div>`;
+    }
     const tColor = dSuitColor(tc);
     const cnt = s.deckCount;
     const layers = cnt > 0 ? Math.min(6, Math.max(1, Math.ceil(cnt / 4))) : 0;
