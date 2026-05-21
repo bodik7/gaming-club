@@ -2503,6 +2503,13 @@ io.on('connection', (socket) => {
             setTimeout(() => {
                 if (room.state?.phase === 'role_reveal') startNightPhase(room);
             }, 25000);
+        } else {
+            // Монополія
+            room.state = createGameState(room.players);
+            addLog(room.state, `🎮 Реванш! Перший хід: ${room.state.players[0].name}`, 'success');
+            room.started = true;
+            startTurnTimer(room);
+            io.to(socket.roomCode).emit('gameStarted', { state: sanitize(room.state), gameType: 'monopoly' });
         }
     });
 

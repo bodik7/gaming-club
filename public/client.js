@@ -463,6 +463,7 @@ socket.on('chatMessage', ({ playerIndex, icon, name, color, text }) => {
     const targets = [
         { id: 'chat-messages',   msgClass: 'chat-message',  authorClass: 'chat-author' },
         { id: 't-chat-messages', msgClass: 't-chat-msg',    authorClass: 't-chat-author' },
+        { id: 'd-chat-messages', msgClass: 'd-chat-msg',    authorClass: 'd-chat-author' },
     ];
     targets.forEach(({ id, msgClass, authorClass }) => {
         const container = document.getElementById(id);
@@ -476,6 +477,25 @@ socket.on('chatMessage', ({ playerIndex, icon, name, color, text }) => {
         while (container.children.length > 60) container.removeChild(container.firstChild);
     });
 });
+
+function sendDurakChat() {
+    const input = document.getElementById('d-chat-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    const me = dState?.players[dMyIdx];
+    const colors = ['#e53935','#1565c0','#2e7d32','#e65100','#6a1b9a','#00838f'];
+    socket.emit('chatMessage', { text, icon: '🂡', name: me?.name || 'Гравець', color: colors[dMyIdx % colors.length] });
+    input.value = '';
+    input.focus();
+}
+
+function _showDndHint(game) {
+    const key = 'igclub_dnd_' + game;
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+    setTimeout(() => showToast('💡 Перетягніть карту або двічі клікніть щоб зіграти', { color: '#1565c0', duration: 5000 }), 1200);
+}
 
 // ── Заглушки функцій engine.js (сервер все обробляє) ─
 function saveGame()        {}
@@ -618,7 +638,9 @@ function showLobbyWaiting(code) {
     document.getElementById('waiting-screen').classList.remove('hidden');
     document.getElementById('room-code-display').innerText = code;
     document.getElementById('start-btn').classList.toggle('hidden', myPlayerIndex !== 0);
-    fetchRoomCounts(); // оновлюємо після створення кімнати
+    fetchRoomCounts();
+    const shareBtn = document.getElementById('copy-link-btn');
+    if (shareBtn && navigator.share) shareBtn.textContent = '📤 Поділитись запрошенням';
 }
 
 function leaveRoom() {
@@ -956,9 +978,15 @@ function findRoom() {
     socket.emit('getRooms', ({ rooms: list }) => {
         let body;
         if (list.length === 0) {
-            body = `<p style="text-align:center;color:#888;padding:24px 0;font-size:15px">
-                        😔 Зараз немає вільних кімнат.<br><br>Створіть свою і чекайте друзів!
-                    </p>`;
+            body = `<p style="text-align:center;color:#888;padding:16px 0 8px;font-size:15px">
+                        😔 Зараз немає вільних кімнат.
+                    </p>
+                    <button onclick="closeModal();createRoom()" style="
+                        display:block;width:100%;padding:12px;margin:8px 0 4px;
+                        background:linear-gradient(135deg,#ffd700,#ffaa00);color:#002a70;
+                        border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">
+                        🏠 Створити свою кімнату
+                    </button>`;
         } else {
             body = list.map(r => `
                 <div onclick="quickJoin('${r.code}')" style="
@@ -1061,7 +1089,7 @@ socket.on('lobbyUpdate', ({ players, gameType }) => {
             </button>` : ''}
         </div>`;
     }).join('');
-    const maxMap = { tysyacha: 3, mafia: 15, monopoly: 6 };
+    const maxMap = { tysyacha: 3, mafia: 15, monopoly: 6, durak: 6 };
     const counter = document.getElementById('lobby-player-count');
     if (counter) counter.textContent = `${players.length}/${maxMap[_selectedGame] || 6}`;
     // Хост може змінитись після kick — оновлюємо видимість кнопки старту
@@ -1090,6 +1118,7 @@ socket.on('gameStarted', ({ state, gameType, myPlayerIndex: mpi }) => {
     setQuitBtn(true);
     if (gameType === 'durak' || state?.gameType === 'durak') {
         initDurak(state, myPlayerIndex);
+        _showDndHint('durak');
         return;
     }
     if (gameType === 'mafia' || state?.gameType === 'mafia') {
@@ -1098,6 +1127,7 @@ socket.on('gameStarted', ({ state, gameType, myPlayerIndex: mpi }) => {
     }
     if (gameType === 'tysyacha' || state?.gameType === 'tysyacha') {
         initTysyacha(state, myPlayerIndex);
+        _showDndHint('tysyacha');
         return;
     }
     showGameScreen();

@@ -1299,6 +1299,9 @@ function announceWinner(player, allPlayers) {
     clearSavedGame();
     spawnConfetti();
     setTimeout(spawnConfetti, 1800);
+    const myPlayer = (allPlayers || players)[typeof myPlayerIndex !== 'undefined' ? myPlayerIndex : -1];
+    const iWon = myPlayer && player.name === myPlayer.name;
+    if (typeof updateStats === 'function') updateStats('monopoly', iWon);
 
     const ranked = [...(allPlayers || players)].sort((a,b) => calcNetWorth(b) - calcNetWorth(a));
     const medals = ['🥇','🥈','🥉'];
@@ -1339,7 +1342,11 @@ function announceWinner(player, allPlayers) {
                 <tbody>${statsRows}</tbody>
             </table>`,
         buttons: [
-            { text: '🎮 Нова гра', class: 'btn-primary', action: () => { if(typeof clearSession==='function') clearSession(); location.href='/'; } }
+            ...(typeof myPlayerIndex !== 'undefined' && myPlayerIndex === 0
+                ? [{ text: '🔄 Реванш', class: 'btn-primary', action: () => { closeModal(); socket.emit('restartGame'); } }]
+                : [{ text: '⏳ Чекаємо реваншу...', class: 'btn-secondary', action: () => {} }]
+            ),
+            { text: '🏠 Нова гра', class: 'btn-secondary', action: () => { if(typeof clearSession==='function') clearSession(); location.href='/'; } }
         ]
     });
 }

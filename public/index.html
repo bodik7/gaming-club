@@ -742,6 +742,15 @@
                 <div class="d-right-panel">
                     <div id="d-actions"></div>
                     <div id="d-log"></div>
+                    <div class="d-chat">
+                        <div class="d-chat-title">💬 Чат</div>
+                        <div id="d-chat-messages"></div>
+                        <div class="d-chat-input-row">
+                            <input id="d-chat-input" type="text" placeholder="Написати…" maxlength="120"
+                                   onkeydown="if(event.key==='Enter')sendDurakChat()">
+                            <button onclick="sendDurakChat()">➤</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div id="d-hand"></div>
