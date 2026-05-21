@@ -211,10 +211,21 @@ function renderDHand(s){
 
     const tableRanks = new Set(s.table.flatMap(t=>[dRank(t.attack), t.defense?dRank(t.defense):null].filter(Boolean)));
 
+    // Сортування: масть (♠♣♦♥, козир останній), всередині — ранг по зростанню
+    const SUIT_ORD = {'♠':0,'♣':1,'♦':2,'♥':3};
+    const sorted = [...me.hand].sort((a, b) => {
+        const aTrump = dSuit(a)===s.trump ? 1 : 0;
+        const bTrump = dSuit(b)===s.trump ? 1 : 0;
+        if(aTrump !== bTrump) return aTrump - bTrump;
+        const sd = (SUIT_ORD[dSuit(a)]??0) - (SUIT_ORD[dSuit(b)]??0);
+        if(sd !== 0) return sd;
+        return D_RANK_IDX[dRank(a)] - D_RANK_IDX[dRank(b)];
+    });
+
     // Перший обраний ранг для атаки на порожньому столі
     const firstSelRank = dSelCards.size > 0 ? dRank([...dSelCards][0]) : null;
 
-    el.innerHTML = me.hand.map(card => {
+    el.innerHTML = sorted.map(card => {
         const color = dSuitColor(card);
         const isSel = (isAtk || isThrow) ? dSelCards.has(card) : card === dSelCard;
         const sel = isSel ? ' selected' : '';
