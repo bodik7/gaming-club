@@ -1400,7 +1400,17 @@ function startTysyachaTimer(room) {
             }));
             return;
         }
-        emitTysyachaUpdate(room, result, { text: '⏱️ Авто-хід', color: '#e65100' });
+        let toastText = `⏱️ Авто-хід: ${player.name}`;
+        if (st.phase === 'auction') {
+            toastText = player.onBarrel
+                ? `⏱️ ${player.name} ставить ${st.auction.current}`
+                : `⏱️ ${player.name} пасує (AFK)`;
+        } else if (st.phase === 'talon') {
+            toastText = st.talonPiles
+                ? `⏱️ ${player.name} бере стопку 1 (AFK)`
+                : `⏱️ ${player.name} роздає карту (AFK)`;
+        }
+        emitTysyachaUpdate(room, result, { text: toastText, color: '#e65100' });
         startTysyachaTimer(room);
     }, 60 * 1000);
 }

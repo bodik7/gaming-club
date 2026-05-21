@@ -148,19 +148,26 @@ function renderTScores(s) {
     const el = document.getElementById('t-scores');
     if (!el) return;
     el.innerHTML = s.players.map(p => {
-        const isActive = p.id === s.currentPlayer;
-        const isMe     = p.id === tMyIdx;
-        const isBidder = p.id === s.auction?.winner && s.phase !== 'auction';
-        const scoreCls = p.onBarrel ? 'barrel' : p.score >= 900 ? 'critical' : p.score >= 700 ? 'danger' : '';
-        const pct      = Math.min(100, Math.max(0, Math.round(p.score / 10)));
-        const inGame   = s.phase === 'playing' && p.trickPts;
+        const isActive    = p.id === s.currentPlayer;
+        const isMe        = p.id === tMyIdx;
+        const isBidder    = p.id === s.auction?.winner && s.phase !== 'auction';
+        const isDealer    = p.id === s.dealer;
+        const scoreCls    = p.onBarrel ? 'barrel' : p.score >= 900 ? 'critical' : p.score >= 700 ? 'danger' : '';
+        const pct         = Math.min(100, Math.max(0, Math.round(p.score / 10)));
+        const marriagePts = s.phase === 'playing'
+            ? (s.marriages?.[p.id] || []).reduce((sum, suit) => sum + T_MARRIAGE[suit], 0) : 0;
+        const totalPts    = p.trickPts + marriagePts;
+        const inGame      = s.phase === 'playing' && totalPts > 0;
         return `
         <div class="t-score-pill ${isActive ? 'active' : ''} ${isMe ? 'me' : ''} ${scoreCls}">
             <div class="t-score-top">
                 ${p.onBarrel ? `<span class="t-barrel-icon" title="Бочка ${p.barrelAttempts}/3">🛢️</span>` : ''}
+                ${isDealer ? `<span title="Роздає" style="font-size:11px">🃏</span>` : ''}
                 ${isBidder ? '👑&nbsp;' : ''}
                 <span class="t-score-name">${isMe ? '👤&nbsp;' : ''}${p.name}</span>
-                <span class="t-score-val">${p.score}${inGame ? `<span style="font-size:9px;color:#ff9800;margin-left:2px">+${p.trickPts}</span>` : ''}</span>
+                <span class="t-score-val">${p.score}${inGame
+                    ? `<span style="font-size:9px;color:#ff9800;margin-left:2px">+${totalPts}${marriagePts ? `<span style="color:#e8c547">(💍+${marriagePts})</span>` : ''}</span>`
+                    : ''}</span>
                 ${isActive ? `<span id="t-turn-elapsed" style="font-size:9px;color:rgba(245,230,200,0.35);font-family:sans-serif;margin-left:2px"></span>` : ''}
             </div>
             ${(() => {
@@ -185,7 +192,10 @@ function renderTPhaseInfo(s) {
     const trump = s.trump
         ? `Козир: <b style="color:${tIsRed(s.trump+'9')?'#e57373':'#aed581'}">${s.trump}</b>`
         : 'Козир: немає';
-    const bid   = s.declaredBid ? `Ставка: <b style="color:#e8c547">${s.declaredBid}</b>` : '';
+    const winner = s.auction?.winner !== undefined ? s.players[s.auction.winner] : null;
+    const bid = (s.phase === 'talon' || s.phase === 'playing') && winner && s.declaredBid
+        ? `👑&nbsp;${winner.name}:&nbsp;<b style="color:#e8c547">${s.declaredBid}</b>`
+        : s.declaredBid ? `Ставка:&nbsp;<b style="color:#e8c547">${s.declaredBid}</b>` : '';
     const round = `Раунд ${s.round}`;
     el.innerHTML = [round, phase, trump, bid].filter(Boolean).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
 }
@@ -510,10 +520,15 @@ function renderTActions(s) {
     // ── ГРА ──
     if (s.phase === 'playing') {
         if (!isMe) {
-            tSelectedCard = null; // скидаємо виділення якщо хід перейшов до іншого
+            tSelectedCard = null;
+            const bidderPlayer = s.players[s.auction?.winner];
+            const bidInfo = bidderPlayer && s.declaredBid
+                ? `<div style="font-size:10px;color:rgba(245,230,200,0.35);font-family:sans-serif;text-align:center;margin-top:8px">👑 ${bidderPlayer.name} грає на ${s.declaredBid}</div>`
+                : '';
             el.innerHTML = `
                 <div class="t-section-title">Хід</div>
-                <div class="t-wait">Ходить:<br><b style="color:#e8c547">${s.players[s.currentPlayer]?.name}</b></div>`;
+                <div class="t-wait">Ходить:<br><b style="color:#e8c547">${s.players[s.currentPlayer]?.name}</b></div>
+                ${bidInfo}`;
             return;
         }
         const me = s.players[tMyIdx];
@@ -714,8 +729,9 @@ function tShowRoundResult(results, onClose) {
     const rows = results.map(r => {
         const deltaSign = r.delta > 0 ? '+' : '';
         const deltaClass = r.delta >= 0 ? 'pos' : 'neg';
+        const shortBy = r.isBidder && !r.success ? r.bid - r.trickPts : 0;
         const bidderNote = r.isBidder
-            ? `<span style="font-size:10px;color:${r.success ? '#a5d6a7' : '#ef9a9a'}">(ставка ${r.bid}${r.success ? ' ✓' : ' ✗'})</span>`
+            ? `<span style="font-size:10px;color:${r.success ? '#a5d6a7' : '#ef9a9a'}">(${r.bid}${r.success ? ' ✓' : ` ✗ не добрав ${shortBy}`})</span>`
             : '';
         return `
         <div class="t-round-result-row">
