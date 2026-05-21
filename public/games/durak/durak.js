@@ -74,19 +74,37 @@ function dDeckIndicator(s){
     const tc = s.trumpCard;
     if(!tc) return '';
     const tColor = dSuitColor(tc);
-    const layers = s.deckCount > 0 ? Math.min(5, Math.max(1, Math.ceil(s.deckCount / 5))) : 0;
-    const stack = layers > 0
+    const cnt = s.deckCount;
+    const layers = cnt > 0 ? Math.min(6, Math.max(1, Math.ceil(cnt / 4))) : 0;
+    // Стос сорочкою
+    const stackCards = layers > 0
         ? Array.from({length: layers}, (_, i) =>
-            `<div class="d-deck-card" style="top:${-i*3}px;right:${i*2}px"></div>`
-          ).join('') + `<div class="d-deck-cnt">${s.deckCount}</div>`
+            `<div class="d-deck-card" style="top:${-i*4}px;left:${i*2}px;z-index:${i}"></div>`
+          ).join('')
         : '';
+    const cntBadge = cnt > 0
+        ? `<div class="d-deck-cnt">${cnt}</div>`
+        : '';
+    // Козирна карта — повноцінна, відкрита, вертикально
+    const trumpCard = `
+        <div class="d-deck-trump" style="border-top-color:${tColor}">
+            <div class="d-dt-corner" style="color:${tColor}">
+                <div class="d-dt-rank">${dRank(tc)}</div>
+                <div class="d-dt-suit-sm">${dSuit(tc)}</div>
+            </div>
+            <div class="d-dt-center" style="color:${tColor}">${dSuit(tc)}</div>
+            <div class="d-dt-corner br" style="color:${tColor}">
+                <div class="d-dt-rank">${dRank(tc)}</div>
+                <div class="d-dt-suit-sm">${dSuit(tc)}</div>
+            </div>
+        </div>`;
     return `
     <div class="d-deck-wrap">
-        <div class="d-deck-stack">${stack}</div>
-        <div class="d-deck-trump" style="border-left-color:${tColor};color:${tColor}">
-            <div class="d-dt-rank">${dRank(tc)}</div>
-            <div class="d-dt-suit">${dSuit(tc)}</div>
+        <div class="d-deck-stack">
+            ${stackCards}
+            ${cntBadge}
         </div>
+        ${trumpCard}
     </div>`;
 }
 

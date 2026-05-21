@@ -342,69 +342,96 @@
 /* ─ Колода на столі ─ */
 .d-deck-wrap {
     position: absolute;
-    bottom: 12px;
+    bottom: 14px;
     left: 16px;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 8px;
     pointer-events: none;
     z-index: 2;
 }
 
 .d-deck-stack {
     position: relative;
-    width: 44px;
-    height: 62px;
-    margin-bottom: -44px; /* козир виглядає з-під колоди */
+    width: 58px;
+    height: 84px;
+    flex-shrink: 0;
 }
 
 .d-deck-card {
     position: absolute;
-    width: 44px;
-    height: 62px;
-    background: linear-gradient(145deg, #1a237e 0%, #283593 100%);
-    border-radius: 6px;
-    border: 1.5px solid rgba(201,162,39,0.5);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+    width: 58px;
+    height: 84px;
+    background:
+        repeating-linear-gradient(-55deg, transparent, transparent 4px,
+            rgba(255,255,255,0.05) 4px, rgba(255,255,255,0.05) 8px),
+        linear-gradient(145deg, #1a237e 0%, #283593 100%);
+    border-radius: 8px;
+    border: 2px solid rgba(201,162,39,0.55);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.65);
 }
 .d-deck-card::after {
     content: '◆';
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%,-50%);
-    font-size: 12px;
-    color: rgba(201,162,39,0.5);
+    font-size: 16px;
+    color: rgba(201,162,39,0.6);
 }
 
 .d-deck-cnt {
     position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%,-50%);
-    font-size: 13px;
+    bottom: 6px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 15px;
     font-weight: 900;
-    color: rgba(201,162,39,0.9);
+    color: #fff;
     font-family: sans-serif;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+    text-shadow: 0 0 6px rgba(0,0,0,1), 0 1px 3px rgba(0,0,0,0.9);
     z-index: 10;
 }
 
-/* Козир — горизонтально під колодою */
+/* Козирна карта — вертикально поруч зі стосом */
 .d-deck-trump {
-    width: 62px;
-    height: 44px;
+    width: 58px;
+    height: 84px;
     background: #fff;
-    border-radius: 6px;
-    border-left: 4px solid #aaa; /* колір масті через inline */
+    border-radius: 8px;
+    border-top: 5px solid #aaa; /* колір масті через inline */
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    position: relative;
+    font-weight: 900;
+    font-family: 'Georgia', serif;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.7);
+    flex-shrink: 0;
+}
+.d-dt-corner {
+    position: absolute;
+    top: 4px; left: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.1;
+}
+.d-dt-corner.br {
+    top: auto; left: auto;
+    bottom: 4px; right: 5px;
+    align-items: flex-end;
+    transform: rotate(180deg);
+}
+.d-dt-center {
+    grid-row: 1 / -1;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    font-weight: 900;
-    font-family: 'Georgia', serif;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.65);
+    font-size: 36px;
+    opacity: 0.9;
 }
-.d-dt-rank { font-size: 14px; line-height: 1; }
-.d-dt-suit { font-size: 20px; line-height: 1; }
+.d-dt-rank    { font-size: 15px; line-height: 1; font-weight: 900; }
+.d-dt-suit-sm { font-size: 11px; line-height: 1; }
 
 /* ─ Кінець гри ─ */
 .d-gameover { text-align: center; display: flex; flex-direction: column; gap: 8px; }
