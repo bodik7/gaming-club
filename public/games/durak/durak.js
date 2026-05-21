@@ -252,19 +252,11 @@ function renderDHand(s){
             playable = tableRanks.has(dRank(card));
         }
 
-        // Під час захисту НЕ затемнюємо — бо "Забрати" теж законна дія
         const cantCls = (canAct && !isDef && !playable && !isSel) ? ' cant' : '';
-        // Inline стилі для захисту — надійніше за CSS клас (не залежить від кешу)
-        let extraStyle = '';
-        if(isDef && !isSel){
-            if(defBeatable){
-                extraStyle = ';box-shadow:0 0 0 3px #66bb6a,0 6px 20px rgba(102,187,106,0.55);transform:translateY(-10px)';
-            } else {
-                extraStyle = ';opacity:0.38;filter:grayscale(0.4)';
-            }
-        }
+        const beatCls = isDef && defBeatable  && !isSel ? ' def-beat' : '';
+        const dimCls  = isDef && !defBeatable && !isSel ? ' def-dim'  : '';
         return `
-        <div class="d-card${sel}${cantCls}" style="border-top-color:${color}${extraStyle}"
+        <div class="d-card${sel}${cantCls}${beatCls}${dimCls}" style="border-top-color:${color}"
              draggable="${canAct && playable ? 'true' : 'false'}"
              ondragstart="dDragStart('${card}',event)"
              ondblclick="dDblClick('${card}')"
