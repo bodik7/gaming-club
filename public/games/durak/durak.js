@@ -72,6 +72,7 @@ function renderDurak(){
     renderDTable(dState);
     renderDHand(dState);
     renderDActionBar(dState);
+    renderDHandActions(dState);
     renderDLog(dState);
 }
 
@@ -273,9 +274,48 @@ function renderDHand(s){
     }).join('');
 }
 
-// ── Панель дій (над рукою) ────────────────────
+// ── Статус-панель (фаза + обрані карти) ─────
 function renderDActionBar(s){
     const el = document.getElementById('d-action-bar');
+    if(!el) return;
+    const ph = s.phase;
+    const isAtk   = ph==='attack' && s.attacker===dMyIdx;
+    const isDef   = ph==='defend' && s.defender===dMyIdx;
+    const isThrow = ph==='throw'  && s.defender!==dMyIdx && !s.passedThrow.includes(dMyIdx);
+    const waiting  = ph==='throw'  && s.passedThrow.includes(dMyIdx);
+
+    if(ph==='gameover'){ el.innerHTML=''; return; }
+
+    if(isAtk){
+        const n = dSelCards.size;
+        el.innerHTML = `<span class="dab-label">⚔️ Атака</span>`
+            + (n>0 ? `<span class="dab-sel">${[...dSelCards].join('  ')}</span>` : `<span class="dab-hint">Натисніть карту(и) одного рангу</span>`);
+        return;
+    }
+    if(isDef){
+        el.innerHTML = `<span class="dab-label">🛡️ Захист</span>`
+            + (dSelAtk ? `<span class="dab-sel" style="color:#ef5350">${dSelAtk}</span><span style="color:rgba(245,230,200,0.4);font-size:11px;margin:0 2px">→</span>` : '')
+            + (dSelCard ? `<span class="dab-sel" style="color:#66bb6a">${dSelCard}</span>` : `<span class="dab-hint">Натисніть зелену карту</span>`);
+        return;
+    }
+    if(isThrow){
+        const n = dSelCards.size;
+        el.innerHTML = `<span class="dab-label">➕ Підкидання</span>`
+            + (n>0 ? `<span class="dab-sel">${[...dSelCards].join('  ')}</span>` : `<span class="dab-hint">Оберіть карту або Пас</span>`);
+        return;
+    }
+    if(waiting){
+        el.innerHTML = `<span class="dab-label">⏳</span><span class="dab-wait">Пас прийнятий</span>`;
+        return;
+    }
+    const who = s.players[ph==='defend' ? s.defender : s.attacker]?.name || '...';
+    const phLabel = {attack:'атакує',defend:'захищається',throw:'підкидає'}[ph]||'ходить';
+    el.innerHTML = `<span class="dab-wait">⏳ ${who} ${phLabel}...</span>`;
+}
+
+// ── Великі кнопки дій прямо над картами ─────
+function renderDHandActions(s){
+    const el = document.getElementById('d-hand-actions');
     if(!el) return;
     const ph = s.phase;
     const isAtk   = ph==='attack' && s.attacker===dMyIdx;
@@ -290,63 +330,42 @@ function renderDActionBar(s){
         if(!dGameoverProcessed){ dGameoverProcessed=true; updateStats('durak', iWon); playSound(iWon?'win':'lose'); }
         const st = getStats('durak');
         el.innerHTML = `
-            <div class="dab-gameover">
-                <span class="dab-title">${loser ? `🤡 ${loser} — ДУРЕНЬ!` : '🏁 Нічия!'}</span>
-                ${st.g>0?`<span class="dab-stat">${st.w}/${st.g} перемог</span>`:''}
-                ${isHost
-                    ? `<button class="dab-btn gold" onclick="dRequestRematch()">🔄 Реванш</button>`
-                    : `<span class="dab-wait">Чекаємо реваншу...</span>`}
-                <button class="dab-btn secondary" onclick="dGoLobby()">🏠 Нова гра</button>
-            </div>`;
+            <span class="dab-title" style="font-size:15px;font-weight:900;color:#c9a227">${loser?`🤡 ${loser} — ДУРЕНЬ!`:'🏁 Нічия!'}</span>
+            ${st.g>0?`<span class="dab-stat">${st.w}/${st.g} перемог</span>`:''}
+            ${isHost?`<button class="dha-btn gold" onclick="dRequestRematch()">🔄 Реванш</button>`:`<span class="dab-wait">Чекаємо реваншу...</span>`}
+            <button class="dha-btn secondary" onclick="dGoLobby()">🏠 Нова гра</button>`;
         return;
     }
-
     if(isAtk){
         const n = dSelCards.size;
         const allBeaten = s.table.length>0 && s.table.every(t=>t.defense);
-        el.innerHTML = `
-            <span class="dab-label">⚔️ Атака</span>
-            ${n>0
-                ? `<span class="dab-sel">${[...dSelCards].join('  ')}</span>
-                   <button class="dab-btn success" onclick="dPlayCards()">▶ Зіграти${n>1?' '+n+' карти':''}</button>
-                   <button class="dab-btn cancel" onclick="dClearSel()">✕</button>`
-                : `<span class="dab-hint">Оберіть карту(и)</span>`}
-            ${allBeaten ? `<button class="dab-btn secondary" onclick="dPass()">⏭ Завершити хід</button>` : ''}`;
+        el.innerHTML = (n>0
+            ? `<button class="dha-btn success" onclick="dPlayCards()">▶ Зіграти${n>1?' ('+n+')':''}</button>
+               <button class="dha-btn cancel" onclick="dClearSel()">✕</button>`
+            : '')
+            + (allBeaten ? `<button class="dha-btn secondary" onclick="dPass()">⏭ Завершити хід</button>` : '');
         return;
     }
     if(isDef){
         const total = s.table.flatMap(t=>[t.attack,t.defense]).filter(Boolean).length;
         const canTransfer = s.mode==='perevodnoj' && s.table.every(t=>!t.defense) && dSelCard;
-        el.innerHTML = `
-            <span class="dab-label">🛡️ Захист</span>
-            ${dSelAtk ? `<span class="dab-sel" style="color:#ef5350">${dSelAtk}</span><span style="color:rgba(245,230,200,0.4);font-size:11px">→</span>` : ''}
-            ${dSelCard ? `<span class="dab-sel" style="color:#66bb6a">${dSelCard}</span>` : ''}
-            ${dSelCard&&dSelAtk ? `<button class="dab-btn success" onclick="dBeat()">🛡️ Відбити</button>` : ''}
-            ${dSelCard ? `<button class="dab-btn cancel" onclick="dClearSel()">✕</button>` : ''}
-            ${canTransfer ? `<button class="dab-btn gold" onclick="dTransfer()">🔄 Перевести</button>` : ''}
-            <button class="dab-btn danger" onclick="dTake()">😵 Забрати (${total})</button>`;
+        el.innerHTML =
+            (dSelCard&&dSelAtk ? `<button class="dha-btn success" onclick="dBeat()">🛡️ Відбити</button>` : '')
+            + (dSelCard ? `<button class="dha-btn cancel" onclick="dClearSel()">✕</button>` : '')
+            + (canTransfer ? `<button class="dha-btn gold" onclick="dTransfer()">🔄 Перевести</button>` : '')
+            + `<button class="dha-btn danger" onclick="dTake()">😵 Забрати (${total})</button>`;
         return;
     }
     if(isThrow){
         const n = dSelCards.size;
-        el.innerHTML = `
-            <span class="dab-label">➕ Підкидання</span>
-            ${n>0
-                ? `<span class="dab-sel">${[...dSelCards].join('  ')}</span>
-                   <button class="dab-btn success" onclick="dPlayCards()">➕ Підкинути${n>1?' '+n:''}</button>
-                   <button class="dab-btn cancel" onclick="dClearSel()">✕</button>`
-                : `<span class="dab-hint">Оберіть карту(и)</span>`}
-            <button class="dab-btn secondary" onclick="dPass()">⏭ Пас</button>`;
+        el.innerHTML = (n>0
+            ? `<button class="dha-btn success" onclick="dPlayCards()">➕ Підкинути${n>1?' ('+n+')':''}</button>
+               <button class="dha-btn cancel" onclick="dClearSel()">✕</button>`
+            : '')
+            + `<button class="dha-btn secondary" onclick="dPass()">⏭ Пас</button>`;
         return;
     }
-    if(waiting){
-        el.innerHTML = `<span class="dab-label">⏳ Пас</span><span class="dab-wait">Чекаємо інших...</span>`;
-        return;
-    }
-    // Not my turn
-    const who = s.players[ph==='defend' ? s.defender : s.attacker]?.name || '...';
-    const phLabel = {attack:'атакує',defend:'захищається',throw:'підкидає'}[ph]||'ходить';
-    el.innerHTML = `<span class="dab-wait">⏳ ${who} ${phLabel}...</span>`;
+    el.innerHTML = '';
 }
 
 // ── Лог ──────────────────────────────────────
@@ -373,17 +392,17 @@ function dClickHandCard(card){
             // є виділена атака — вибираємо карту захисту
             if(dCanBeat(dSelAtk, card, s.trump)){
                 dSelCard = card;
-                renderDHand(s); renderDActionBar(s);
+                renderDHand(s); renderDActionBar(s); renderDHandActions(s);
             }
         } else {
             // підсвічуємо яку атаку б'є ця карта (якщо вона одна — відразу виділяємо)
             const beatable = s.table.filter(t=>!t.defense && dCanBeat(t.attack, card, s.trump));
             if(beatable.length === 1){
                 dSelAtk = beatable[0].attack; dSelCard = card;
-                renderDTable(s); renderDHand(s); renderDActionBar(s);
+                renderDTable(s); renderDHand(s); renderDActionBar(s); renderDHandActions(s);
             } else if(beatable.length > 1){
                 dSelCard = card;
-                renderDHand(s); renderDTable(s); renderDActionBar(s);
+                renderDHand(s); renderDTable(s); renderDActionBar(s); renderDHandActions(s);
             }
         }
         return;
@@ -407,7 +426,7 @@ function dClickHandCard(card){
             dSelCards.clear(); dSelCards.add(card); playSound('cardSelect');
         }
     }
-    renderDHand(s); renderDActionBar(s);
+    renderDHand(s); renderDActionBar(s); renderDHandActions(s);
 }
 
 function dClickAtkCard(attackCard){
@@ -417,7 +436,7 @@ function dClickAtkCard(attackCard){
     if(!slot) return;
     dSelAtk = dSelAtk===attackCard ? null : attackCard;
     dSelCard = null;
-    renderDTable(s); renderDHand(s); renderDActionBar(s);
+    renderDTable(s); renderDHand(s); renderDActionBar(s); renderDHandActions(s);
 }
 
 function dClearSel(){
