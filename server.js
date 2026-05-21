@@ -3013,7 +3013,7 @@ io.on('connection', (socket) => {
         socket.roomCode = code;
         socket.playerIndex = 0;
         console.log(`Кімната ${code} створена`);
-        cb({ code, playerIndex: 0 });
+        cb({ code, playerIndex: 0, gameType: rooms[code].gameType });
     });
 
     // Перегляд кімнати без входу
@@ -3038,8 +3038,8 @@ io.on('connection', (socket) => {
         socket.roomCode = code;
         socket.playerIndex = idx;
 
-        io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name), gameType: room.gameType });
-        cb({ code, playerIndex: idx });
+        io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name), bots: room.players.map(p => !!p.isBot), gameType: room.gameType });
+        cb({ code, playerIndex: idx, gameType: room.gameType });
     });
 
     // Вийти з кімнати (до початку гри)

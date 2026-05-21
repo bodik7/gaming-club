@@ -557,10 +557,11 @@ function createRoom() {
     const name = document.getElementById('lobby-name').value.trim();
     if (!name) return _lobbyError('Введіть своє ім\'я', 'lobby-name');
     saveName(name);
-    socket.emit('createRoom', { playerName: name, gameType: _selectedGame }, ({ code, playerIndex, error }) => {
+    socket.emit('createRoom', { playerName: name, gameType: _selectedGame }, ({ code, playerIndex, gameType, error }) => {
         if (error) return _lobbyError(error);
         myPlayerIndex = playerIndex;
         saveSession(code, playerIndex, name);
+        if (gameType === 'bunker') { location.href = '/bunker'; return; }
         showLobbyWaiting(code);
     });
 }
@@ -571,10 +572,11 @@ function joinRoom() {
     if (!name) return _lobbyError('Введіть своє ім\'я', 'lobby-name');
     if (!code) return _lobbyError('Немає коду кімнати — скористайтесь посиланням-запрошенням', 'lobby-name');
     saveName(name);
-    socket.emit('joinRoom', { code, playerName: name }, ({ code: c, playerIndex, error }) => {
+    socket.emit('joinRoom', { code, playerName: name }, ({ code: c, playerIndex, gameType, error }) => {
         if (error) return _lobbyError(error);
         myPlayerIndex = playerIndex;
         saveSession(c, playerIndex, name);
+        if (gameType === 'bunker') { location.href = '/bunker'; return; }
         showLobbyWaiting(c);
     });
 }
@@ -1069,11 +1071,12 @@ function quickJoin(code) {
         return;
     }
     saveName(name);
-    socket.emit('joinRoom', { code, playerName: name }, ({ code: c, playerIndex, error }) => {
+    socket.emit('joinRoom', { code, playerName: name }, ({ code: c, playerIndex, gameType, error }) => {
         if (error) { _lobbyError(error); return; }
         closeModal();
         myPlayerIndex = playerIndex;
         saveSession(c, playerIndex, name);
+        if (gameType === 'bunker') { location.href = '/bunker'; return; }
         showLobbyWaiting(c);
     });
 }

@@ -14,6 +14,8 @@ export function LobbyScreen() {
     return true
   }
 
+  const SESSION_KEY = 'monopolia_session'
+
   const createRoom = () => {
     if (!validate()) return
     setLoading(true)
@@ -21,6 +23,7 @@ export function LobbyScreen() {
     getSocket().emit('createRoom', { playerName: name.trim(), gameType: 'bunker' }, (res: { code: string; playerIndex: number; error?: string }) => {
       setLoading(false)
       if (res.error) { setError(res.error); return }
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ code: res.code, playerIndex: res.playerIndex, playerName: name.trim() }))
       setRoom(res.code, res.playerIndex, [name.trim()])
     })
   }
@@ -33,6 +36,7 @@ export function LobbyScreen() {
     getSocket().emit('joinRoom', { code: code.trim().toUpperCase(), playerName: name.trim() }, (res: { code: string; playerIndex: number; error?: string }) => {
       setLoading(false)
       if (res.error) { setError(res.error); return }
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ code: res.code, playerIndex: res.playerIndex, playerName: name.trim() }))
       setRoom(res.code, res.playerIndex, [])
     })
   }
