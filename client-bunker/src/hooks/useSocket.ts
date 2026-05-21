@@ -35,9 +35,17 @@ export function useSocket() {
 
     s.on('disconnect', () => setConnectionStatus('disconnected'))
 
-    s.on('stateUpdate', ({ state }) => handleStateUpdate(state))
-    s.on('gameStarted', ({ state }) => handleGameStarted(state))
-    s.on('gameOver',    ({ state }) => handleGameOver(state))
+    s.on('stateUpdate', ({ state })                      => handleStateUpdate(state))
+    s.on('gameStarted', ({ state, myPlayerIndex })       => {
+      if (myPlayerIndex !== undefined)
+        useGameStore.getState().setRoom(
+          useGameStore.getState().roomCode,
+          myPlayerIndex,
+          useGameStore.getState().roomPlayers,
+        )
+      handleGameStarted(state)
+    })
+    s.on('gameOver', ({ state }) => handleGameOver(state))
 
     s.on('chatMessage', ({ name, text, color }) => {
       useGameStore.getState().addChatMessage({ name, text, color })

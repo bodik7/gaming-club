@@ -70,11 +70,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setConnectionStatus: (connectionStatus) => set({ connectionStatus }),
 
-  handleStateUpdate: (state) => set({ gameState: state }),
+  handleStateUpdate: (state) => set((s) => ({
+    gameState: state,
+    // оновлюємо myIndex якщо він ще не встановлений (після rejoin)
+    myIndex: s.myIndex ?? state.myId,
+  })),
 
   handleGameStarted: (state) => set({
     gameState: state,
-    screen: 'game',
+    myIndex:   state.myId,   // сервер надсилає myId у стейті
+    screen:    'game',
   }),
 
   handleGameOver: (state) => set({ gameState: state }),

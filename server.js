@@ -1744,6 +1744,320 @@ function emitBunkerUpdate(room) {
     });
 }
 
+// ── Допоміжні ────────────────────────────────
+const BUNKER_ATTR_LABELS = {
+    profession: 'Професію', biology: 'Біологію', health: 'Здоров\'я',
+    hobby: 'Хобі', trait: 'Рису характеру', baggage: 'Багаж',
+};
+const BUNKER_PHASE_MS = {
+    game_start:   60_000,
+    round_reveal: 30_000,
+    discussion:  120_000,
+    voting:       60_000,
+};
+// Обов'язкові атрибути для розкриття по раундах
+const BUNKER_FORCED_ATTR = { 1: 'profession', 2: 'biology' };
+
+function addBunkerLog(state, text) {
+    state.log.unshift(text);
+    if (state.log.length > 40) state.log.length = 40;
+}
+
+function clearBunkerTimer(room) {
+    if (room.bunkerTimer) { clearTimeout(room.bunkerTimer); room.bunkerTimer = null; }
+}
+
+// ── Старт фази з таймером ─────────────────────
+function startBunkerPhase(room, phase) {
+    clearBunkerTimer(room);
+    const s = room.state;
+    s.phase       = phase;
+    s.timeDeadline = Date.now() + (BUNKER_PHASE_MS[phase] || 30_000);
+    emitBunkerUpdate(room);
+    room.bunkerTimer = setTimeout(() => onBunkerTimeout(room, phase), BUNKER_PHASE_MS[phase] || 30_000);
+}
+
+function onBunkerTimeout(room, phase) {
+    if (!room.state || room.state.phase !== phase) return;
+    const s = room.state;
+    switch (phase) {
+        case 'game_start':
+            startBunkerRound(room);
+            break;
+        case 'round_reveal': {
+            // Авто-розкриття для тих хто не встиг
+            const forced = BUNKER_FORCED_ATTR[s.round];
+            s.players.filter(p => p.isAlive && !p.hasRevealed).forEach(p => {
+                const attr = forced || Object.keys(p.attributes).find(k => !p.attributes[k].isRevealed);
+                if (attr && p.attributes[attr]) {
+                    p.attributes[attr].isRevealed = true;
+                    p.hasRevealed = true;
+                    addBunkerLog(s, `⏰ ${p.name} — авто-розкриття`);
+                }
+            });
+            startBunkerPhase(room, 'discussion');
+            break;
+        }
+        case 'discussion':
+            startBunkerPhase(room, 'voting');
+            break;
+        case 'voting':
+            resolveBunkerVoting(room);
+            break;
+    }
+}
+
+// ── Початок нового раунду ─────────────────────
+function startBunkerRound(room) {
+    const s = room.state;
+    s.round++;
+    s.votes = {};
+    s.players.forEach(p => {
+        p.hasRevealed = false;
+        if (p.isSilenced) p.isSilenced = false; // скидаємо мут
+    });
+    addBunkerLog(s, `📋 Раунд ${s.round} — розкриття карток`);
+    startBunkerPhase(room, 'round_reveal');
+}
+
+// ── Підрахунок голосів і вигнання ────────────
+function resolveBunkerVoting(room) {
+    clearBunkerTimer(room);
+    const s = room.state;
+    s.phase = 'voting_result';
+    s.timeDeadline = null;
+
+    // Рахуємо голоси
+    const counts = {};
+    Object.values(s.votes).forEach(t => { counts[t] = (counts[t] || 0) + 1; });
+
+    const alive = s.players.filter(p => p.isAlive);
+    const maxVotes = alive.reduce((m, p) => Math.max(m, counts[p.id] || 0), 0);
+    const tied     = alive.filter(p => (counts[p.id] || 0) === maxVotes && maxVotes > 0);
+
+    addBunkerLog(s, `🗳️ Голосування завершено`);
+    emitBunkerUpdate(room);
+
+    // Затримка щоб гравці побачили результат (4с)
+    setTimeout(() => {
+        if (!room.state || room.state.phase !== 'voting_result') return;
+
+        let toEliminate = null;
+        if (tied.length === 0) {
+            // Ніхто не проголосував — пропускаємо раунд
+            addBunkerLog(s, '🤷 Ніхто не проголосував — раунд пропущено');
+            startBunkerRound(room);
+            return;
+        } else if (tied.length === 1) {
+            toEliminate = tied[0];
+        } else {
+            // Нічия → жереб
+            toEliminate = tied[Math.floor(Math.random() * tied.length)];
+            addBunkerLog(s, `🎲 Нічия між ${tied.map(p=>p.name).join(', ')} — жереб: ${toEliminate.name}`);
+        }
+
+        // Перевірка імунітету
+        if (toEliminate.immunityRounds > 0) {
+            toEliminate.immunityRounds--;
+            addBunkerLog(s, `🛡️ ${toEliminate.name} має імунітет — захищений!`);
+            // Вигнати наступного по кількості голосів
+            const next = alive
+                .filter(p => p.id !== toEliminate.id)
+                .sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0))[0];
+            if (next) {
+                toEliminate = next;
+                addBunkerLog(s, `👉 Замість нього вигнано ${toEliminate.name}`);
+            }
+        }
+
+        // Вигнання: розкриваємо всі атрибути і позначаємо як неживого
+        toEliminate.isAlive = false;
+        Object.keys(toEliminate.attributes).forEach(k => {
+            toEliminate.attributes[k].isRevealed = true;
+        });
+        addBunkerLog(s, `🚫 ${toEliminate.name} покидає бункер`);
+
+        // Перевірка умови перемоги
+        const remaining = s.players.filter(p => p.isAlive);
+        if (remaining.length <= s.bunkerCapacity) {
+            // Гравці що вижили потрапляють до бункера
+            s.phase   = 'end_game';
+            s.winner  = remaining.map(p => p.id);
+            s.timeDeadline = null;
+            remaining.forEach(p => {
+                Object.keys(p.attributes).forEach(k => { p.attributes[k].isRevealed = true; });
+            });
+            addBunkerLog(s, `🏆 Бункер зачиняється! Виживають: ${remaining.map(p=>p.name).join(', ')}`);
+            saveGameStats(room, rp => s.winner.includes(rp.index));
+            db.deleteRoom(room.code);
+            emitBunkerUpdate(room);
+        } else {
+            startBunkerRound(room);
+        }
+    }, 4000);
+}
+
+// ── Обробка дій гравця ────────────────────────
+function processBunkerAction(room, type, data, pidx) {
+    const s   = room.state;
+    const p   = s.players[pidx];
+    if (!p?.isAlive) return;
+
+    switch (type) {
+        // Гравець підтвердив ознайомлення зі сценарієм
+        case 'b_ready': {
+            if (s.phase !== 'game_start') break;
+            p.hasRevealed = true;
+            addBunkerLog(s, `✅ ${p.name} готовий(а)`);
+            const allReady = s.players.every(pl => pl.hasRevealed);
+            if (allReady) {
+                s.players.forEach(pl => { pl.hasRevealed = false; });
+                clearBunkerTimer(room);
+                startBunkerRound(room);
+                return; // emitBunkerUpdate вже викликано в startBunkerRound
+            }
+            emitBunkerUpdate(room);
+            break;
+        }
+
+        // Гравець розкриває атрибут
+        case 'b_revealAttr': {
+            if (s.phase !== 'round_reveal') break;
+            if (p.hasRevealed) break;
+            const { attr } = data;
+            if (!attr || !p.attributes[attr]) break;
+            // Перевіряємо обов'язковий атрибут
+            const forced = BUNKER_FORCED_ATTR[s.round];
+            if (forced && attr !== forced) {
+                room.players[pidx] && io.to(room.players[pidx].socketId).emit('error',
+                    `У раунді ${s.round} потрібно розкрити ${BUNKER_ATTR_LABELS[forced]}`);
+                break;
+            }
+            if (p.attributes[attr].isRevealed) break;
+
+            p.attributes[attr].isRevealed = true;
+            p.hasRevealed = true;
+            addBunkerLog(s, `🔓 ${p.name} розкрив(ла) ${BUNKER_ATTR_LABELS[attr]}`);
+
+            const allRevealed = s.players.filter(pl => pl.isAlive).every(pl => pl.hasRevealed);
+            if (allRevealed) {
+                clearBunkerTimer(room);
+                startBunkerPhase(room, 'discussion');
+                return;
+            }
+            emitBunkerUpdate(room);
+            break;
+        }
+
+        // Гравець голосує
+        case 'b_vote': {
+            if (s.phase !== 'voting') break;
+            if (s.votes[pidx] !== undefined) break; // вже проголосував
+            const { target } = data;
+            if (typeof target !== 'number') break;
+            const targetP = s.players[target];
+            if (!targetP?.isAlive || target === pidx) break;
+
+            s.votes[pidx] = target;
+            addBunkerLog(s, `🗳️ ${p.name} проголосував(ла)`);
+
+            // Якщо всі живі проголосували — завершуємо достроково
+            const aliveIds  = s.players.filter(pl => pl.isAlive).map(pl => pl.id);
+            const allVoted  = aliveIds.every(id => s.votes[id] !== undefined);
+            if (allVoted) {
+                clearBunkerTimer(room);
+                resolveBunkerVoting(room);
+                return;
+            }
+            emitBunkerUpdate(room);
+            break;
+        }
+
+        // MVP-карти дій (решта реалізується пізніше)
+        case 'b_useCard': {
+            const { cardId, target } = data;
+            const card = p.actionCards.find(c => c.id === cardId && !c.used);
+            if (!card) break;
+            card.used = true;
+            applyBunkerCard(room, card, pidx, target);
+            break;
+        }
+    }
+}
+
+// ── Застосування карт дій (MVP-набір) ─────────
+function applyBunkerCard(room, card, pidx, target) {
+    const s = room.state;
+    const p = s.players[pidx];
+
+    switch (card.id) {
+        case 'act_luz': // Імунітет від голосів цього раунду
+            p.immunityRounds = Math.max(p.immunityRounds, 1);
+            addBunkerLog(s, `🎵 ${p.name} зіграв «Ой, у лузі...» — імунітет!`);
+            break;
+        case 'act_lustr': { // Розкрити Здоров'я або Рису іншого гравця
+            const t = s.players[target];
+            if (!t) break;
+            const hidden = ['health', 'trait'].find(k => !t.attributes[k].isRevealed);
+            if (hidden) {
+                t.attributes[hidden].isRevealed = true;
+                addBunkerLog(s, `🔍 ${p.name} — Люстрація: розкрито ${BUNKER_ATTR_LABELS[hidden]} гравця ${t.name}`);
+            }
+            break;
+        }
+        case 'act_bribe': { // Обмін багажем
+            const t = s.players[target];
+            if (!t) break;
+            const myBag = p.attributes.baggage.value;
+            p.attributes.baggage.value = t.attributes.baggage.value;
+            t.attributes.baggage.value = myBag;
+            addBunkerLog(s, `💰 ${p.name} — Хабар: обмін багажем з ${t.name}`);
+            break;
+        }
+        case 'act_ban': { // Заглушити гравця на наступне обговорення
+            const t = s.players[target];
+            if (!t) break;
+            t.isSilenced = true;
+            addBunkerLog(s, `🔇 ${p.name} — Тіньовий бан: ${t.name} не може писати в наступному раунді`);
+            break;
+        }
+        case 'act_martial': // Скасувати голосування
+            if (s.phase === 'voting') {
+                s.votes = {};
+                addBunkerLog(s, `⚔️ ${p.name} — Воєнний стан: голосування скасовано!`);
+                clearBunkerTimer(room);
+                startBunkerRound(room);
+                return;
+            }
+            break;
+        case 'act_donat': // Імунітет на 2 раунди, втрата багажу
+            p.immunityRounds = 2;
+            p.attributes.baggage.value = 'Порожні руки (донат на ЗСУ)';
+            addBunkerLog(s, `🫡 ${p.name} — Донат на ЗСУ: імунітет 2 раунди`);
+            break;
+        case 'act_breath': { // Нове здоров'я
+            const newHealth = BUNKER_HEALTH[Math.floor(Math.random() * BUNKER_HEALTH.length)];
+            p.attributes.health.value = newHealth;
+            addBunkerLog(s, `💨 ${p.name} — Друге дихання: нове здоров'я!`);
+            break;
+        }
+        case 'act_prof': { // Нова професія
+            const newProf = BUNKER_PROFESSIONS[Math.floor(Math.random() * BUNKER_PROFESSIONS.length)];
+            p.attributes.profession.value = newProf;
+            addBunkerLog(s, `📋 ${p.name} — Перекваліфікація: нова професія!`);
+            break;
+        }
+        case 'act_refut': // Спростування — скасувати власне вигнання (обробляється в resolveBunkerVoting)
+            addBunkerLog(s, `🛡️ ${p.name} грає «Спростування»`);
+            p.immunityRounds = Math.max(p.immunityRounds, 1);
+            p.isAlive = true; // відновити якщо вже вигнаний
+            break;
+        default:
+            addBunkerLog(s, `🃏 ${p.name} зіграв «${card.name}»`);
+    }
+    emitBunkerUpdate(room);
+}
+
 // ════════════════════════════════════════════
 // МАФІЯ
 // ════════════════════════════════════════════
@@ -2630,9 +2944,12 @@ io.on('connection', (socket) => {
             room.players.forEach(rp => {
                 io.to(rp.socketId).emit('gameStarted', {
                     state: sanitizeBunker(room.state, rp.index),
+                    myPlayerIndex: rp.index,
                     gameType: 'bunker',
                 });
             });
+            // Запускаємо таймер фази ознайомлення
+            startBunkerPhase(room, 'game_start');
         } else {
             if (room.players.length < 2) return io.to(socket.id).emit('error', 'Потрібно мінімум 2 гравці');
             room.started = true;
@@ -2704,6 +3021,12 @@ io.on('connection', (socket) => {
         const room = rooms[socket.roomCode];
         if (!room?.state) return;
         const state = room.state;
+
+        // ── Бункер ──
+        if (state.gameType === 'bunker') {
+            processBunkerAction(room, type, data || {}, socket.playerIndex);
+            return;
+        }
 
         // ── Дурак ──
         if (state.gameType === 'durak') {
