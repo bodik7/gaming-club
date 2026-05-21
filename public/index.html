@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="games/tysyacha/tysyacha.css">
     <link rel="stylesheet" href="games/mafia/mafia.css">
+    <link rel="stylesheet" href="games/durak/durak.css">
     <style>
     /* ═══════════════════════════════════════════════
        ЛОБІ — повний редизайн
@@ -633,6 +634,13 @@
                         <span class="game-card-wip-badge">🧪 Тестування</span>
                         <span class="game-rooms-badge" id="rooms-mafia"></span>
                     </button>
+                    <button class="game-card" data-game="durak" onclick="selectGame('durak')">
+                        <div class="game-card-icon">🂡</div>
+                        <div class="game-card-name">Дурак</div>
+                        <div class="game-card-desc">Підкидний і перевідний —<br>позбудься карт першим</div>
+                        <span class="game-card-badge">👥 2–6 гравців</span>
+                        <span class="game-rooms-badge" id="rooms-durak"></span>
+                    </button>
                 </div>
             </div>
 
@@ -680,6 +688,25 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+
+    <!-- ===== ДУРАК ===== -->
+    <div id="durak-screen" class="hidden">
+        <div class="d-topbar">
+            <div class="d-title">🂡 Дурак</div>
+            <div id="d-info"></div>
+            <button id="quit-btn-durak" class="hidden d-quit-btn" onclick="confirmAbandonGame()">🚪 Вийти</button>
+        </div>
+        <div class="d-game-area">
+            <div class="d-table-zone">
+                <div id="d-table"></div>
+                <div class="d-right-panel">
+                    <div id="d-actions"></div>
+                    <div id="d-log"></div>
+                </div>
+            </div>
+            <div id="d-hand"></div>
         </div>
     </div>
 
@@ -929,6 +956,7 @@
     <!-- Тисяча клієнт -->
     <script src="games/tysyacha/tysyacha.js"></script>
     <script src="games/mafia/mafia.js"></script>
+    <script src="games/durak/durak.js"></script>
 
     <script>
         // Перемикання viewport між desktop (Монополія) і mobile (Тисяча / лобі)

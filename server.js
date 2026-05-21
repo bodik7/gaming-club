@@ -1369,6 +1369,190 @@ function emitTysyachaUpdate(room, sideEffect, toast) {
 }
 
 // ════════════════════════════════════════════
+// ДУРАК
+// ════════════════════════════════════════════
+
+const D_RANKS = ['6','7','8','9','10','J','Q','K','A'];
+const D_SUITS = ['♠','♣','♦','♥'];
+const D_RANK_IDX = Object.fromEntries(D_RANKS.map((r,i)=>[r,i]));
+
+function dRank(c){ return c.slice(0,-1); }
+function dSuit(c){ return c.slice(-1); }
+function dCanBeat(atk, def, trump){
+    const as=dSuit(atk), ds=dSuit(def);
+    if(ds===trump && as!==trump) return true;
+    if(ds===as) return D_RANK_IDX[dRank(def)] > D_RANK_IDX[dRank(atk)];
+    return false;
+}
+function dNextActive(state, from){
+    const n=state.players.length;
+    for(let i=1;i<=n;i++){
+        const idx=(from+i)%n;
+        if(!state.finished.includes(idx)) return idx;
+    }
+    return from;
+}
+
+function createDurakState(roomPlayers, settings={}){
+    const deck = shuffle(D_SUITS.flatMap(s=>D_RANKS.map(r=>r+s)));
+    const players = roomPlayers.map((rp,i)=>({ id:i, name:rp.name, hand:deck.splice(0,6) }));
+    const trumpCard = deck[deck.length-1];
+    return {
+        gameType:'durak', mode: settings.mode||'podkidnoy',
+        players, deck,
+        trump: dSuit(trumpCard), trumpCard,
+        attacker:0, defender:1%roomPlayers.length,
+        phase:'attack', // 'attack'|'defend'|'throw'|'gameover'
+        table:[], passedThrow:[], finished:[],
+        log:[], loser:null,
+    };
+}
+
+function processDurakAction(state, type, data, pidx){
+    const player = state.players[pidx];
+    if(!player || state.phase==='gameover') return null;
+
+    switch(type){
+        case 'dPlay': {
+            const ph = state.phase;
+            if(ph==='attack' && pidx!==state.attacker) break;
+            if(ph==='throw' && (pidx===state.defender || state.passedThrow.includes(pidx))) break;
+            if(ph!=='attack' && ph!=='throw') break;
+            const { cards } = data||{};
+            if(!cards?.length) break;
+            const tableRanks = new Set(state.table.flatMap(t=>[dRank(t.attack), t.defense?dRank(t.defense):null].filter(Boolean)));
+            if(ph==='attack' && state.table.length===0){
+                const r=dRank(cards[0]);
+                if(!cards.every(c=>dRank(c)===r)) break;
+            } else {
+                if(!cards.every(c=>tableRanks.has(dRank(c)))) break;
+            }
+            const defHand = state.players[state.defender].hand.length;
+            const unbeaten = state.table.filter(t=>!t.defense).length;
+            if(unbeaten+cards.length > defHand) break;
+            if(state.table.length+cards.length > 6) break;
+            // validate all cards in hand
+            const tmp=[...player.hand];
+            for(const c of cards){ const i=tmp.indexOf(c); if(i===-1) return null; tmp.splice(i,1); }
+            for(const c of cards){ player.hand.splice(player.hand.indexOf(c),1); state.table.push({attack:c,defense:null}); }
+            state.phase='defend'; state.passedThrow=[];
+            addLog(state, ph==='attack'?`⚔️ ${player.name} ходить`:`➕ ${player.name} підкидає`);
+            break;
+        }
+        case 'dBeat': {
+            if(state.phase!=='defend'||pidx!==state.defender) break;
+            const { attackCard, defenseCard } = data||{};
+            const slot=state.table.find(t=>t.attack===attackCard&&!t.defense);
+            if(!slot) break;
+            const di=player.hand.indexOf(defenseCard);
+            if(di===-1) break;
+            if(!dCanBeat(attackCard, defenseCard, state.trump)) break;
+            player.hand.splice(di,1); slot.defense=defenseCard;
+            addLog(state,`🛡️ ${player.name} відбиває`);
+            if(state.table.every(t=>t.defense)){
+                state.phase='throw'; state.passedThrow=[state.defender];
+            }
+            break;
+        }
+        case 'dTake': {
+            if(state.phase!=='defend'||pidx!==state.defender) break;
+            player.hand.push(...state.table.flatMap(t=>[t.attack,t.defense].filter(Boolean)));
+            state.table=[];
+            addLog(state,`😵 ${player.name} забирає карти`);
+            return dAdvance(state, true);
+        }
+        case 'dTransfer': {
+            if(state.mode!=='perevodnoj'||state.phase!=='defend'||pidx!==state.defender) break;
+            if(state.table.some(t=>t.defense)) break; // already defended some
+            const { card } = data||{};
+            if(!state.table.map(t=>dRank(t.attack)).includes(dRank(card))) break;
+            const nextDef=dNextActive(state,state.defender);
+            if(nextDef===state.attacker) break;
+            if(state.players[nextDef].hand.length < state.table.length+1) break;
+            const i=player.hand.indexOf(card); if(i===-1) break;
+            player.hand.splice(i,1); state.table.push({attack:card,defense:null});
+            state.attacker=state.defender; state.defender=nextDef;
+            addLog(state,`🔄 ${player.name} переводить → ${state.players[nextDef].name}`);
+            break;
+        }
+        case 'dPass': {
+            if(state.phase!=='throw'||pidx===state.defender) break;
+            if(!state.passedThrow.includes(pidx)) state.passedThrow.push(pidx);
+            const nonDef=state.players.filter(p=>!p.finished&&p.id!==state.defender);
+            if(nonDef.every(p=>state.passedThrow.includes(p.id)))
+                return dAdvance(state, false);
+            break;
+        }
+    }
+    return null;
+}
+
+function dAdvance(state, defenderTook){
+    if(!defenderTook){
+        state.table=[]; // discard (we don't show discard pile separately)
+    }
+    // refill: attacker first, defender last
+    const n=state.players.length;
+    const order=[];
+    for(let i=0;i<n;i++){
+        const idx=(state.attacker+i)%n;
+        if(idx!==state.defender) order.push(idx);
+    }
+    order.push(state.defender);
+    for(const idx of order){
+        const p=state.players[idx];
+        while(p.hand.length<6 && state.deck.length>0) p.hand.push(state.deck.pop());
+        if(p.hand.length===0 && !state.finished.includes(idx)){
+            state.finished.push(idx);
+            addLog(state,`🏅 ${p.name} вийшов(ла) з гри`);
+        }
+    }
+    // check gameover
+    const active=state.players.filter(p=>!state.finished.includes(p.id));
+    if(active.length<=1){
+        state.phase='gameover';
+        state.loser=active.length===1?active[0].id:null;
+        addLog(state, state.loser!==null?`🤡 ${state.players[state.loser].name} — ДУРЕНЬ!`:`🏁 Нічия!`);
+        return { event:'dGameOver' };
+    }
+    // next attacker
+    state.attacker = defenderTook ? dNextActive(state,state.defender) : state.defender;
+    state.defender = dNextActive(state,state.attacker);
+    state.phase='attack'; state.passedThrow=[]; state.table=[];
+    addLog(state,`🃏 Хід ${state.players[state.attacker].name}`);
+    return null;
+}
+
+function sanitizeDurak(state, forIdx){
+    return {
+        gameType:'durak', mode:state.mode, myId:forIdx,
+        players: state.players.map((p,i)=>({
+            id:p.id, name:p.name, handCount:p.hand.length,
+            hand: i===forIdx ? p.hand : null,
+            finished: state.finished.includes(p.id),
+        })),
+        deckCount: state.deck.length,
+        trump: state.trump, trumpCard: state.trumpCard,
+        attacker: state.attacker, defender: state.defender,
+        phase: state.phase,
+        table: state.table,
+        passedThrow: state.passedThrow,
+        finished: state.finished,
+        log: state.log.slice(0,25),
+        loser: state.loser,
+    };
+}
+
+function emitDurakUpdate(room, sideEffect){
+    room.players.forEach(rp=>{
+        io.to(rp.socketId).emit('stateUpdate',{
+            state: sanitizeDurak(room.state, rp.index),
+            sideEffect: sideEffect||null,
+        });
+    });
+}
+
+// ════════════════════════════════════════════
 // МАФІЯ
 // ════════════════════════════════════════════
 
@@ -1942,7 +2126,7 @@ io.on('connection', (socket) => {
             players: [{ socketId: socket.id, name: playerName, index: 0 }],
             started: false,
             state: null,
-            gameType: gameType === 'tysyacha' ? 'tysyacha' : gameType === 'mafia' ? 'mafia' : 'monopoly',
+            gameType: gameType === 'tysyacha' ? 'tysyacha' : gameType === 'mafia' ? 'mafia' : gameType === 'durak' ? 'durak' : 'monopoly',
             createdAt: Date.now(),
             lastActivityAt: Date.now(),
         };
@@ -1957,7 +2141,7 @@ io.on('connection', (socket) => {
     socket.on('peekRoom', ({ code }, cb) => {
         const room = rooms[code?.toUpperCase()];
         if (!room) return cb({ error: 'not_found' });
-        const maxPlayers = room.gameType === 'tysyacha' ? 3 : room.gameType === 'mafia' ? 15 : 6;
+        const maxPlayers = room.gameType === 'tysyacha' ? 3 : room.gameType === 'mafia' ? 15 : room.gameType === 'durak' ? 6 : 6;
         cb({ players: room.players.length, max: maxPlayers, gameType: room.gameType, started: room.started });
     });
 
@@ -1966,7 +2150,7 @@ io.on('connection', (socket) => {
         const room = rooms[code];
         if (!room)        return cb({ error: 'Кімнату не знайдено' });
         if (room.started) return cb({ error: 'Гра вже почалась' });
-        const maxPlayers = room.gameType === 'tysyacha' ? 3 : room.gameType === 'mafia' ? 15 : 6;
+        const maxPlayers = room.gameType === 'tysyacha' ? 3 : room.gameType === 'mafia' ? 15 : room.gameType === 'durak' ? 6 : 6;
         if (room.players.length >= maxPlayers) return cb({ error: `Кімната повна (макс ${maxPlayers})` });
 
         const idx = room.players.length;
@@ -2200,6 +2384,18 @@ io.on('connection', (socket) => {
             setTimeout(() => {
                 if (room.state?.phase === 'role_reveal') startNightPhase(room);
             }, 25000);
+        } else if (room.gameType === 'durak') {
+            const n = room.players.length;
+            if (n < 2 || n > 6) return io.to(socket.id).emit('error', 'Дурак: потрібно 2–6 гравців');
+            room.started = true;
+            if (settings) room.settings = { ...(room.settings||{}), ...settings };
+            room.state = createDurakState(room.players, room.settings||{});
+            room.players.forEach(rp => {
+                io.to(rp.socketId).emit('gameStarted', {
+                    state: sanitizeDurak(room.state, rp.index),
+                    gameType: 'durak',
+                });
+            });
         } else if (room.gameType === 'tysyacha') {
             if (room.players.length < 2 || room.players.length > 3)
                 return io.to(socket.id).emit('error', 'Тисяча: потрібно 2 або 3 гравці');
@@ -2227,7 +2423,17 @@ io.on('connection', (socket) => {
         const room = rooms[socket.roomCode];
         if (!room || socket.playerIndex !== 0) return;
         const gameType = room.state?.gameType || room.gameType;
-        if (gameType === 'tysyacha') {
+        if (gameType === 'durak') {
+            room.state = createDurakState(room.players, room.settings||{});
+            room.started = true;
+            room.players.forEach(rp => {
+                io.to(rp.socketId).emit('gameStarted', {
+                    state: sanitizeDurak(room.state, rp.index),
+                    myPlayerIndex: rp.index,
+                    gameType: 'durak',
+                });
+            });
+        } else if (gameType === 'tysyacha') {
             clearTysyachaTimer(room);
             room.state = createTysyachaState(room.players);
             room.started = true;
@@ -2265,6 +2471,23 @@ io.on('connection', (socket) => {
         const room = rooms[socket.roomCode];
         if (!room?.state) return;
         const state = room.state;
+
+        // ── Дурак ──
+        if (state.gameType === 'durak') {
+            room.lastActivityAt = Date.now();
+            const result = processDurakAction(state, type, data||{}, socket.playerIndex);
+            if (result?.event === 'dGameOver') {
+                room.players.forEach(rp => {
+                    io.to(rp.socketId).emit('gameOver', {
+                        state: sanitizeDurak(state, rp.index),
+                        gameType: 'durak',
+                    });
+                });
+            } else {
+                emitDurakUpdate(room, result);
+            }
+            return;
+        }
 
         // ── Мафія ──
         if (state.gameType === 'mafia') {

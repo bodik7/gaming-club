@@ -1,0 +1,310 @@
+/* ===== ДУРАК — стиль Тисячі ===== */
+
+#durak-screen {
+    height: 100vh;
+    background:
+        radial-gradient(ellipse at 50% 0%, #1a2e14 0%, transparent 55%),
+        radial-gradient(ellipse at 50% 100%, #0d1a0b 0%, transparent 60%),
+        #080e07;
+    display: flex;
+    flex-direction: column;
+    color: #f5e6c8;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    overflow: hidden;
+    user-select: none;
+}
+
+/* ─ Топбар ─ */
+.d-topbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: rgba(0,0,0,0.72);
+    border-bottom: 3px solid #b22222;
+    flex-shrink: 0;
+}
+.d-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: #c9a227;
+    letter-spacing: 2px;
+    white-space: nowrap;
+}
+#d-info {
+    flex: 1;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.d-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0,0,0,0.5);
+    border: 1.5px solid rgba(255,255,255,0.12);
+    border-radius: 5px;
+    padding: 3px 9px;
+    font-size: 11px;
+    transition: all 0.3s;
+}
+.d-pill-cnt { opacity: 0.6; font-size: 10px; margin-left: 3px; }
+.d-pill.atk { border-color: #ef5350; background: rgba(239,83,80,0.15); }
+.d-pill.def { border-color: #42a5f5; background: rgba(66,165,245,0.15); }
+.d-pill.me  { border-color: #c9a227; }
+.d-pill.done{ opacity: 0.4; text-decoration: line-through; }
+.d-pill.info{ color: rgba(245,230,200,0.45); font-size: 10px; font-style: italic; }
+.d-pill.trump-pill { font-weight: 700; font-size: 12px; }
+
+.d-quit-btn {
+    background: rgba(180,30,30,0.75);
+    color: white; border: none; border-radius: 6px;
+    padding: 4px 10px; font-size: 12px; font-weight: 700;
+    cursor: pointer; flex-shrink: 0;
+}
+.d-quit-btn:hover { background: rgba(198,40,40,0.95); }
+
+/* ─ Гральна область ─ */
+.d-game-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 12px 6px;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.d-table-zone {
+    flex: 1;
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+    min-height: 0;
+}
+
+/* ─ Стіл (покерний стиль) ─ */
+#d-table {
+    flex: 1;
+    background:
+        radial-gradient(ellipse 75% 55% at 50% 40%, rgba(255,255,255,0.04) 0%, transparent 100%),
+        linear-gradient(175deg, #1e5c1a 0%, #124012 55%, #0a2c09 100%);
+    border: 3px solid #6b4c10;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 18px 24px;
+    position: relative;
+    box-shadow:
+        inset 0 4px 40px rgba(0,0,0,0.6),
+        inset 0 0 0 5px rgba(10,22,8,0.4),
+        0 6px 28px rgba(0,0,0,0.75);
+    overflow: hidden;
+}
+#d-table::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+        repeating-linear-gradient(0deg,   transparent, transparent 2px, rgba(0,0,0,0.018) 2px, rgba(0,0,0,0.018) 3px),
+        repeating-linear-gradient(90deg,  transparent, transparent 2px, rgba(0,0,0,0.018) 2px, rgba(0,0,0,0.018) 3px);
+    pointer-events: none; border-radius: inherit;
+}
+
+.d-table-empty {
+    color: rgba(255,255,255,0.12);
+    font-style: italic;
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+/* ─ Слот (пара атака+захист) ─ */
+.d-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    animation: dSlotIn 0.22s ease-out;
+}
+@keyframes dSlotIn {
+    from { transform: translateY(-20px) scale(1.1); opacity: 0; }
+    to   { transform: none; opacity: 1; }
+}
+
+.d-card-table {
+    background: #fff;
+    border-radius: 7px;
+    border-top: 4px solid #aaa;
+    width: 54px;
+    height: 76px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-family: 'Georgia', serif;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.6);
+    cursor: default;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.d-card-table.clickable { cursor: pointer; }
+.d-card-table.clickable:hover { transform: translateY(-4px); box-shadow: 0 6px 16px rgba(0,0,0,0.7); }
+.d-card-table.selected {
+    box-shadow: 0 0 0 3px #42a5f5, 0 6px 16px rgba(66,165,245,0.4);
+    transform: translateY(-4px);
+}
+.d-card-table.def { opacity: 0.8; transform: translateY(6px) rotate(3deg); }
+.d-tr { font-size: 14px; line-height: 1; }
+.d-tc { font-size: 26px; line-height: 1; }
+
+.d-slot-empty {
+    width: 54px; height: 76px;
+    border: 2px dashed rgba(255,255,255,0.12);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.15);
+    font-size: 20px;
+    transform: translateY(6px);
+}
+
+/* ─ Права панель ─ */
+.d-right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 190px;
+    min-width: 190px;
+    flex-shrink: 0;
+}
+
+#d-actions {
+    background: rgba(0,0,0,0.6);
+    border: 2px solid #b22222;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    flex-shrink: 0;
+}
+
+.d-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: #c9a227;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-align: center;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(201,162,39,0.3);
+    font-family: sans-serif;
+}
+.d-hint { font-size: 11px; color: rgba(245,230,200,0.35); text-align: center; font-style: italic; font-family: sans-serif; }
+.d-hint-atk { font-size: 11px; color: #42a5f5; text-align: center; font-family: sans-serif; }
+.d-selected { font-size: 12px; color: #c9a227; text-align: center; font-family: sans-serif; font-weight: 700; }
+.d-wait { font-size: 12px; color: rgba(245,230,200,0.4); text-align: center; font-style: italic; padding: 8px 0; font-family: sans-serif; }
+
+/* ─ Лог ─ */
+#d-log {
+    flex: 1;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-height: 60px;
+}
+.d-log-entry {
+    font-size: 10px;
+    color: rgba(245,230,200,0.6);
+    font-family: sans-serif;
+    line-height: 1.4;
+    padding: 2px 4px;
+    border-left: 2px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.02);
+    border-radius: 0 3px 3px 0;
+}
+.d-log-empty { font-size: 11px; color: rgba(245,230,200,0.2); text-align: center; padding: 12px; font-style: italic; font-family: sans-serif; }
+
+/* ─ Кнопки ─ */
+.d-btn {
+    padding: 9px 12px;
+    border: none; border-radius: 6px;
+    font-size: 12px; font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Georgia', serif;
+    width: 100%;
+}
+.d-btn.success { background: #1b5e20; color: #c8e6c9; border: 1px solid rgba(255,255,255,0.15); }
+.d-btn.success:hover { background: #2e7d32; transform: translateY(-1px); }
+.d-btn.danger  { background: #b22222; color: #f5e6c8; border: 1px solid rgba(255,255,255,0.12); }
+.d-btn.danger:hover  { background: #d63f3f; transform: translateY(-1px); }
+.d-btn.secondary { background: rgba(245,230,200,0.1); color: #f5e6c8; border: 1px solid rgba(245,230,200,0.2); }
+.d-btn.secondary:hover { background: rgba(245,230,200,0.18); }
+.d-btn.gold { background: linear-gradient(135deg, #c9a227, #9a7a10); color: #1a0800; font-weight: 900; border: 1px solid rgba(255,255,255,0.2); }
+.d-btn.gold:hover { filter: brightness(1.15); transform: translateY(-1px); }
+.d-btn:active { transform: translateY(1px) !important; }
+
+/* ─ Моя рука ─ */
+#d-hand {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 6px 12px;
+    flex-shrink: 0;
+    min-height: 110px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+#d-hand::-webkit-scrollbar { display: none; }
+
+.d-card {
+    background: #fff;
+    border-radius: 8px;
+    border-top: 5px solid #aaa;
+    width: 60px; height: 90px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "tl ." ". ct" ". br";
+    padding: 4px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    position: relative;
+    font-family: 'Georgia', serif;
+    flex-shrink: 0;
+}
+.d-cr    { grid-area: tl; display: flex; flex-direction: column; align-items: flex-start; line-height: 1.1; }
+.d-cc    { grid-area: ct; display: flex; align-items: center; justify-content: center; font-size: 32px; opacity: 0.88; }
+.d-cr.br { grid-area: br; align-items: flex-end; transform: rotate(180deg); align-self: end; justify-self: end; }
+.d-crn   { font-size: 14px; line-height: 1; }
+.d-crs   { font-size: 10px; line-height: 1; }
+
+.d-card:hover        { transform: translateY(-18px); box-shadow: 0 18px 30px rgba(0,0,0,0.7); }
+.d-card.selected     { transform: translateY(-22px); box-shadow: 0 0 0 3px #c9a227, 0 22px 36px rgba(201,162,39,0.4); }
+.d-card.cant         { opacity: 0.3; filter: grayscale(0.5); cursor: not-allowed; }
+.d-card.cant:hover   { transform: none !important; box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important; }
+.d-card:not(.d-card.cant) { cursor: pointer; }
+
+/* ─ Кінець гри ─ */
+.d-gameover { text-align: center; display: flex; flex-direction: column; gap: 8px; }
+.d-gameover-title { font-size: 17px; font-weight: 900; color: #c9a227; text-shadow: 0 2px 8px rgba(201,162,39,0.4); }
+
+/* ─ Мобайл ─ */
+@media (max-width: 520px) {
+    .d-card { width: 48px; height: 72px; }
+    .d-cc   { font-size: 22px; }
+    .d-right-panel { width: 145px; min-width: 145px; }
+}

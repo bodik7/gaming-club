@@ -1025,10 +1025,15 @@ socket.on('kicked', ({ reason }) => {
     showRejoinError(`❌ ${reason}`);
 });
 
-socket.on('gameStarted', ({ state, gameType }) => {
+socket.on('gameStarted', ({ state, gameType, myPlayerIndex: mpi }) => {
+    if (mpi !== undefined) myPlayerIndex = mpi;
     document.getElementById('waiting-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.add('hidden');
     setQuitBtn(true);
+    if (gameType === 'durak' || state?.gameType === 'durak') {
+        initDurak(state, myPlayerIndex);
+        return;
+    }
     if (gameType === 'mafia' || state?.gameType === 'mafia') {
         initMafia(state, myPlayerIndex);
         return;
@@ -1043,14 +1048,9 @@ socket.on('gameStarted', ({ state, gameType }) => {
 });
 
 socket.on('stateUpdate', ({ state, sideEffect, toast }) => {
-    if (state?.gameType === 'mafia') {
-        updateMafia(state, sideEffect);
-        return;
-    }
-    if (state?.gameType === 'tysyacha') {
-        updateTysyacha(state, sideEffect);
-        return;
-    }
+    if (state?.gameType === 'durak') { updateDurak(state, sideEffect); return; }
+    if (state?.gameType === 'mafia') { updateMafia(state, sideEffect); return; }
+    if (state?.gameType === 'tysyacha') { updateTysyacha(state, sideEffect); return; }
     const [d1, d2] = state.lastDiceRoll;
     const diceRolled = (d1 !== _prevDice[0] || d2 !== _prevDice[1]) && d1 > 0;
     const landingPos = sideEffect?.landingPos ?? null;
@@ -1067,14 +1067,9 @@ socket.on('stateUpdate', ({ state, sideEffect, toast }) => {
 
 socket.on('gameOver', ({ winner, state }) => {
     clearSession();
-    if (state?.gameType === 'mafia') {
-        updateMafia(state, null);
-        return;
-    }
-    if (state?.gameType === 'tysyacha') {
-        updateTysyacha(state);
-        return;
-    }
+    if (state?.gameType === 'durak') { updateDurak(state, null); return; }
+    if (state?.gameType === 'mafia') { updateMafia(state, null); return; }
+    if (state?.gameType === 'tysyacha') { updateTysyacha(state); return; }
     applyState(state, false, null, () => announceWinner(winner, state.players));
 });
 
