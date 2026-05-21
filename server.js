@@ -27,13 +27,12 @@ function saveUsers(users) {
 }
 
 app.use(express.json());
+// TODO: перед деплоєм на постійний сервер — прибрати no-store і повернути etag/lastModified
 app.use(express.static(path.join(__dirname, 'public'), {
-    etag: true,
-    lastModified: true,
-    setHeaders(res, filePath) {
-        if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
-            res.setHeader('Cache-Control', 'no-cache');
-        }
+    etag: false,
+    lastModified: false,
+    setHeaders(res) {
+        res.setHeader('Cache-Control', 'no-store');
     },
 }));
 
