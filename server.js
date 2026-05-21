@@ -1413,6 +1413,40 @@ function dFindFirstAttacker(players, trump){
     return best >= 0 ? best : 0;
 }
 
+const DURAK_TURN_MS = 45_000;
+
+function dStartTurnTimer(room) {
+    if (room.durakTimer) clearTimeout(room.durakTimer);
+    const state = room.state;
+    if (!state || state.phase === 'gameover') return;
+    state.turnDeadline = Date.now() + DURAK_TURN_MS;
+    room.durakTimer = setTimeout(() => {
+        if (!room.state || room.state.phase === 'gameover') return;
+        const s = room.state;
+        let result = null;
+        if (s.phase === 'attack') {
+            const atk = s.players[s.attacker];
+            if (s.table.length === 0 && atk?.hand?.length > 0) {
+                result = processDurakAction(s, 'dPlay', { cards: [atk.hand[0]] }, s.attacker);
+            } else if (s.table.every(t => t.defense)) {
+                result = processDurakAction(s, 'dPass', {}, s.attacker);
+            }
+        } else if (s.phase === 'defend') {
+            result = processDurakAction(s, 'dTake', {}, s.defender);
+        } else if (s.phase === 'throw') {
+            s.players.forEach((p, i) => {
+                if (i !== s.defender && !s.passedThrow.includes(i))
+                    processDurakAction(s, 'dPass', {}, i);
+            });
+        }
+        if (result?.event === 'dGameOver') {
+            room.players.forEach(rp => io.to(rp.socketId).emit('gameOver', { state: sanitizeDurak(s, rp.index) }));
+        } else {
+            emitDurakUpdate(room, null);
+        }
+    }, DURAK_TURN_MS);
+}
+
 function createDurakState(roomPlayers, settings={}){
     const deck = shuffle(D_SUITS.flatMap(s=>D_RANKS.map(r=>r+s)));
     const players = roomPlayers.map((rp,i)=>({ id:i, name:rp.name, hand:deck.splice(0,6) }));
@@ -1426,7 +1460,7 @@ function createDurakState(roomPlayers, settings={}){
         attacker, defender:(attacker+1)%roomPlayers.length,
         phase:'attack',
         table:[], passedThrow:[], finished:[],
-        log:[], loser:null,
+        log:[], loser:null, turnDeadline: null,
     };
 }
 
@@ -1579,10 +1613,12 @@ function sanitizeDurak(state, forIdx){
         finished: state.finished,
         log: state.log.slice(0,25),
         loser: state.loser,
+        turnDeadline: state.turnDeadline || null,
     };
 }
 
 function emitDurakUpdate(room, sideEffect){
+    dStartTurnTimer(room);
     room.players.forEach(rp=>{
         io.to(rp.socketId).emit('stateUpdate',{
             state: sanitizeDurak(room.state, rp.index),
@@ -2430,6 +2466,7 @@ io.on('connection', (socket) => {
             room.started = true;
             if (settings) room.settings = { ...(room.settings||{}), ...settings };
             room.state = createDurakState(room.players, room.settings||{});
+            dStartTurnTimer(room);
             room.players.forEach(rp => {
                 io.to(rp.socketId).emit('gameStarted', {
                     state: sanitizeDurak(room.state, rp.index),
@@ -2466,6 +2503,7 @@ io.on('connection', (socket) => {
         if (gameType === 'durak') {
             room.state = createDurakState(room.players, room.settings||{});
             room.started = true;
+            dStartTurnTimer(room);
             room.players.forEach(rp => {
                 io.to(rp.socketId).emit('gameStarted', {
                     state: sanitizeDurak(room.state, rp.index),

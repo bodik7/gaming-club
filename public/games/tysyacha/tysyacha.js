@@ -465,7 +465,8 @@ function renderTActions(s) {
                 ).join('')}
             </div>
             <div class="t-bid-custom">
-                <input type="number" id="t-bid-input" min="${cur + 10}" step="10" value="${cur + 10}">
+                <input type="number" id="t-bid-input" min="${cur + 10}" step="10" value="${cur + 10}"
+                       onkeydown="if(event.key==='Enter')tBidCustom()">
                 <button class="t-btn primary" onclick="tBidCustom()">OK</button>
             </div>`;
         return;
@@ -507,7 +508,8 @@ function renderTActions(s) {
                 ).join('')}
             </div>
             <div class="t-bid-custom">
-                <input type="number" id="t-set-bid-input" min="${minBid}" step="10" value="${curBid}">
+                <input type="number" id="t-set-bid-input" min="${minBid}" step="10" value="${curBid}"
+                       onkeydown="if(event.key==='Enter')tSetBidCustom()">
                 <button class="t-btn gold" onclick="tSetBidCustom()">OK</button>
             </div>`;
         // Action bar — кнопки «Дати карту»

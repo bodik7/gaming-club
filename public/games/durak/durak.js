@@ -3,11 +3,12 @@
 // ============================================
 let dState        = null;
 let dMyIdx        = null;
-let dSelCards     = new Set(); // attack / throw: multi-select
-let dSelCard      = null;      // defense: single selected defense card
-let dSelAtk       = null;      // defense: selected attack card on table
+let dSelCards     = new Set();
+let dSelCard      = null;
+let dSelAtk       = null;
 let dDragCard          = null;
 let dGameoverProcessed = false;
+let dTimerInterval     = null;
 
 const D_SUIT_COLORS = { '♠':'#1565c0', '♣':'#2e7d32', '♦':'#e53935', '♥':'#c62828' };
 const D_RANK_IDX    = {'6':0,'7':1,'8':2,'9':3,'10':4,'J':5,'Q':6,'K':7,'A':8};
@@ -26,6 +27,7 @@ function dCanBeat(atk, def, trump){
 function initDurak(state, myIdx){
     dState = state; dMyIdx = myIdx;
     dSelCards.clear(); dSelCard = null; dSelAtk = null; dGameoverProcessed = false;
+    if(dTimerInterval){ clearInterval(dTimerInterval); dTimerInterval = null; }
     document.getElementById('game-screen').classList.add('hidden');
     const scr = document.getElementById('durak-screen');
     scr.classList.remove('hidden');
@@ -38,7 +40,25 @@ function updateDurak(state, sideEffect){
     dState = state;
     dSelCards.clear(); dSelCard = null; dSelAtk = null;
     renderDurak();
+    dStartClientTimer();
     if(state.phase==='attack' && state.attacker===dMyIdx) playSound('myTurn');
+}
+
+function dStartClientTimer(){
+    if(dTimerInterval) clearInterval(dTimerInterval);
+    dTimerInterval = setInterval(()=>{
+        const el = document.getElementById('d-timer');
+        if(!el || !dState?.turnDeadline){ if(el) el.textContent=''; return; }
+        const sec = Math.max(0, Math.ceil((dState.turnDeadline - Date.now()) / 1000));
+        const urgent = sec <= 10;
+        el.textContent = `⏱ ${sec}с`;
+        el.style.cssText = `display:inline-block;padding:2px 10px;border-radius:12px;font-size:13px;
+            font-weight:900;font-family:sans-serif;
+            background:${urgent?'rgba(178,34,34,0.9)':'rgba(0,0,0,0.5)'};
+            color:${urgent?'#fff':'rgba(245,230,200,0.7)'};
+            ${urgent?'animation:dTimerPulse 0.5s ease-in-out infinite alternate':''}`;
+        if(sec === 0) clearInterval(dTimerInterval);
+    }, 500);
 }
 
 function renderDurak(){
@@ -84,7 +104,7 @@ function renderDInfo(s){
         attack:'Атака', defend:'Захист', throw:'Підкидання', gameover:'Гра завершена'
     }[s.phase] || s.phase;
     const mode = s.mode==='perevodnoj' ? 'Перевідний' : 'Підкидний';
-    el.innerHTML = s.players.map(p => {
+    el.innerHTML = `<div id="d-timer" style="margin-right:4px"></div>` + s.players.map(p => {
         const isAtk = p.id===s.attacker && s.phase!=='gameover';
         const isDef = p.id===s.defender && s.phase!=='gameover';
         const isMe  = p.id===dMyIdx;

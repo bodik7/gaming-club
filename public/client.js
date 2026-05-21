@@ -494,7 +494,7 @@ function _showDndHint(game) {
     const key = 'igclub_dnd_' + game;
     if (localStorage.getItem(key)) return;
     localStorage.setItem(key, '1');
-    setTimeout(() => showToast('💡 Перетягніть карту або двічі клікніть щоб зіграти', { color: '#1565c0', duration: 5000 }), 1200);
+    setTimeout(() => showToast('💡 Перетягніть карту або двічі клікніть щоб зіграти', { color: '#1565c0', duration: 5000 }), 2500);
 }
 
 // ── Заглушки функцій engine.js (сервер все обробляє) ─
@@ -636,11 +636,19 @@ function showLobbyWaiting(code) {
     _inviteCode = code;
     document.getElementById('lobby-screen').classList.add('hidden');
     document.getElementById('waiting-screen').classList.remove('hidden');
-    document.getElementById('room-code-display').innerText = code;
+    const codeEl = document.getElementById('room-code-display');
+    if (codeEl) { codeEl.innerText = code; codeEl.title = 'Клікніть щоб скопіювати'; codeEl.style.cursor = 'pointer'; }
     document.getElementById('start-btn').classList.toggle('hidden', myPlayerIndex !== 0);
     fetchRoomCounts();
     const shareBtn = document.getElementById('copy-link-btn');
     if (shareBtn && navigator.share) shareBtn.textContent = '📤 Поділитись запрошенням';
+}
+
+function copyRoomCode() {
+    if (!_inviteCode) return;
+    navigator.clipboard.writeText(_inviteCode).then(() => {
+        showToast('✅ Код скопійовано: ' + _inviteCode, { color: '#1b5e20', duration: 2000 });
+    }).catch(() => {});
 }
 
 function leaveRoom() {
@@ -976,6 +984,9 @@ function showTradeOfferModal(state, trade) {
 
 function findRoom() {
     socket.emit('getRooms', ({ rooms: list }) => {
+        const filtered = list.filter(r => r.gameType === _selectedGame);
+        list = filtered.length > 0 ? filtered : list; // якщо нема — показуємо всі
+        const gameNames = { monopoly:'Монополія', tysyacha:'Тисяча', durak:'Дурак', mafia:'Мафія' };
         let body;
         if (list.length === 0) {
             body = `<p style="text-align:center;color:#888;padding:16px 0 8px;font-size:15px">
@@ -1008,7 +1019,7 @@ function findRoom() {
         }
 
         showModal({
-            title: '🔍 Вільні кімнати',
+            title: `🔍 Вільні кімнати${filtered.length > 0 ? ' · ' + (gameNames[_selectedGame]||_selectedGame) : ''}`,
             body,
             buttons: [
                 { text: '🔄 Оновити', class: 'btn-secondary', action: () => { closeModal(); setTimeout(findRoom, 100); } },
