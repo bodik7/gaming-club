@@ -456,18 +456,17 @@ function renderTActions(s) {
         }
         el.innerHTML = `
             <div class="t-section-title">Ваша ставка</div>
-            ${onBarrel ? `<div class="t-barrel-notice">🛢️ Бочка<br><small>Спроба ${meInAuction.barrelAttempts}/3</small></div>` : ''}
-            <div class="t-auction-cur">${cur}</div>`;
-        if (ab) ab.innerHTML = `
-            ${!onBarrel ? `<button class="t-btn danger t-bar-btn" onclick="tPass()">✕ Пас</button>` : ''}
-            ${[10, 20, 50].map(d =>
-                `<button class="t-btn primary t-bar-btn" onclick="tBid(${cur + d})">+${d}<small style="display:block;font-size:10px;opacity:.8">${cur + d}</small></button>`
-            ).join('')}
-            <div style="display:flex;gap:4px;align-items:center">
-                <input type="number" id="t-bid-input" min="${cur + 10}" step="10" value="${cur + 10}"
-                       style="width:62px;background:rgba(255,255,255,0.1);border:1px solid rgba(245,230,200,0.25);
-                              color:#f5e6c8;border-radius:6px;padding:7px 6px;font-size:13px;text-align:center;font-family:sans-serif">
-                <button class="t-btn primary t-bar-btn" onclick="tBidCustom()">OK</button>
+            ${onBarrel ? `<div class="t-barrel-notice">🛢️ Бочка — не можна пасувати<br><small>Спроба ${meInAuction.barrelAttempts}/3</small></div>` : ''}
+            <div class="t-auction-cur">${cur}</div>
+            <div class="t-bid-row">
+                ${!onBarrel ? `<button class="t-btn danger" onclick="tPass()" style="flex:0 0 auto;padding:7px 10px">✕</button>` : ''}
+                ${[10, 20, 50].map(d =>
+                    `<button class="t-btn primary" onclick="tBid(${cur + d})">+${d}<br><small>${cur + d}</small></button>`
+                ).join('')}
+            </div>
+            <div class="t-bid-custom">
+                <input type="number" id="t-bid-input" min="${cur + 10}" step="10" value="${cur + 10}">
+                <button class="t-btn primary" onclick="tBidCustom()">OK</button>
             </div>`;
         return;
     }
@@ -570,13 +569,10 @@ function renderTActions(s) {
                 <div class="t-scores-final">
                     ${s.players.map(p => `${p.name}: <b>${p.score}</b>`).join('<br>')}
                 </div>
-                ${st.g > 0 ? `<div style="font-size:10px;color:rgba(245,230,200,0.35);font-family:sans-serif;margin:4px 0 2px">Статистика: ${st.w}/${st.g}</div>` : ''}
+                ${st.g > 0 ? `<div style="font-size:10px;color:rgba(245,230,200,0.35);font-family:sans-serif;margin:4px 0 8px">Ваша статистика: ${st.w}/${st.g} перемог</div>` : ''}
+                ${isHost ? `<button class="t-btn gold" onclick="tRequestRematch()" style="margin-bottom:6px">🔄 Реванш</button>` : '<div class="t-hint" style="margin-bottom:6px">Чекаємо реваншу від хоста...</div>'}
+                <button class="t-btn secondary" onclick="tGoLobby()">🏠 Нова гра</button>
             </div>`;
-        if (ab) ab.innerHTML = isHost
-            ? `<button class="t-btn gold t-bar-btn" onclick="tRequestRematch()">🔄 Реванш</button>
-               <button class="t-btn secondary t-bar-btn" onclick="tGoLobby()">🏠 Нова гра</button>`
-            : `<span class="t-bar-hint">Чекаємо реваншу від хоста...</span>
-               <button class="t-btn secondary t-bar-btn" onclick="tGoLobby()">🏠 Нова гра</button>`;
     }
 }
 
