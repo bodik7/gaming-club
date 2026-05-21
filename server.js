@@ -2690,6 +2690,8 @@ io.on('connection', (socket) => {
                 ? sanitizeTysyacha(room.state, playerIndex)
                 : room.state.gameType === 'mafia'
                 ? sanitizeMafia(room.state, playerIndex)
+                : room.state.gameType === 'durak'
+                ? sanitizeDurak(room.state, playerIndex)
                 : sanitize(room.state);
             cb({ success: true, started: true, state: st, gameType: room.gameType });
         } else {
