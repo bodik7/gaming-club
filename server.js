@@ -2719,7 +2719,7 @@ function sanitize(state) {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`🇺🇦 Монополія України запущена: http://localhost:${PORT}`);
+    console.log(`🇺🇦 Ігровий Клуб запущено: http://localhost:${PORT}`);
     // Self-ping щоб Render не засипав (тільки на продакшені)
     if (process.env.RENDER_EXTERNAL_URL) {
         setInterval(() => {

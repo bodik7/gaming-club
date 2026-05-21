@@ -1,7 +1,7 @@
 {
   "name": "monopolia-ukraine",
   "version": "1.0.0",
-  "description": "Монополія України — онлайн мультиплеєр",
+  "description": "Ігровий Клуб — онлайн мультиплеєр",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

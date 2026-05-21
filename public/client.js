@@ -154,7 +154,7 @@ function _enterLobby(username, joinCode) {
             const peekEl = document.getElementById('join-room-peek');
             if (!peekEl) return;
             if (error || !players) { peekEl.textContent = ''; return; }
-            const gNames = { tysyacha: 'Тисяча', mafia: 'Мафія', monopoly: 'Монополія' };
+            const gNames = { tysyacha: 'Тисяча', mafia: 'Мафія', monopoly: 'Монополія', durak: 'Дурак' };
             peekEl.textContent = started
                 ? '⚠️ Гра вже почалась'
                 : `${gNames[gameType] || gameType} · ${players}/${max} гравців`;
@@ -935,11 +935,11 @@ function findRoom() {
                     onmouseover="this.style.background='#e8f0fe';this.style.borderColor='#0057b7'"
                     onmouseout="this.style.background='#f8faff';this.style.borderColor='#e0e8f5'">
                     <div>
-                        <div style="font-weight:700;color:#004494;font-size:15px">${r.gameType==='tysyacha'?'🃏':'🏦'} ${r.hostName}</div>
-                        <div style="font-size:12px;color:#999;margin-top:2px">${r.gameType==='tysyacha'?'Тисяча':'Монополія'} · ${r.code}</div>
+                        <div style="font-weight:700;color:#004494;font-size:15px">${{monopoly:'🏦',tysyacha:'🃏',durak:'🂡',mafia:'🔫'}[r.gameType]||'🎮'} ${r.hostName}</div>
+                        <div style="font-size:12px;color:#999;margin-top:2px">${{monopoly:'Монополія',tysyacha:'Тисяча',durak:'Дурак',mafia:'Мафія'}[r.gameType]||r.gameType} · ${r.code}</div>
                     </div>
                     <div style="text-align:right">
-                        <div style="font-size:14px;color:#0057b7;font-weight:700">${r.playerCount}/${r.gameType==='tysyacha'?3:6}</div>
+                        <div style="font-size:14px;color:#0057b7;font-weight:700">${r.playerCount}/${{monopoly:6,tysyacha:3,durak:6,mafia:15}[r.gameType]||6}</div>
                         <div style="font-size:11px;color:#4caf50;margin-top:2px">● вільна</div>
                     </div>
                 </div>

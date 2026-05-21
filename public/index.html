@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="Ігровий Клуб">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="/manifest.json">
-    <title>Монополія України</title>
+    <title>Ігровий Клуб</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="games/tysyacha/tysyacha.css">
     <link rel="stylesheet" href="games/mafia/mafia.css">
@@ -666,11 +666,20 @@
 
                     <div class="lobby-divider">або приєднатись до існуючої</div>
 
+                    <div>
+                        <label class="lobby-label" for="lobby-code">Або введіть код кімнати</label>
+                        <div class="lobby-row">
+                            <input id="lobby-code" class="lobby-input" type="text"
+                                   placeholder="Код (напр. ABCD)" maxlength="6"
+                                   style="text-transform:uppercase;letter-spacing:3px;font-weight:700"
+                                   onkeydown="if(event.key==='Enter')joinRoom()">
+                            <button class="lobby-btn lobby-btn-blue" onclick="joinRoom()" style="padding:13px 18px">🔗</button>
+                        </div>
+                    </div>
+
                     <button class="lobby-btn lobby-btn-outline" onclick="findRoom()">
                         🔍 Знайти вільну кімнату
                     </button>
-
-                    <input id="lobby-code" type="hidden" maxlength="15">
 
                     <div id="join-invite-banner" class="hidden"
                          style="background:rgba(0,87,183,0.15);border:1px solid rgba(0,87,183,0.4);
