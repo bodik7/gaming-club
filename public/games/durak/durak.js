@@ -119,12 +119,19 @@ function renderDTable(s){
         el.innerHTML = `<div class="d-table-empty">— стіл порожній —</div>${deck}`;
         return;
     }
+    // Якщо є вибрана карта захисту — підсвічуємо карти які нею можна відбити
+    const beatableBySelected = dSelCard && s.phase==='defend' && s.defender===dMyIdx
+        ? new Set(s.table.filter(t=>!t.defense && dCanBeat(t.attack, dSelCard, s.trump)).map(t=>t.attack))
+        : new Set();
+
     el.innerHTML = s.table.map((slot, i) => {
         const atkColor  = dSuitColor(slot.attack);
         const defColor  = slot.defense ? dSuitColor(slot.defense) : '';
         const beaten    = !!slot.defense;
         const isSelAtk  = !beaten && s.phase==='defend' && s.defender===dMyIdx;
-        const highlight = !beaten && dSelAtk===slot.attack ? ' selected' : '';
+        const isBeatable = beatableBySelected.has(slot.attack);
+        const highlight = !beaten && dSelAtk===slot.attack ? ' selected'
+                        : !beaten && isBeatable ? ' beatable' : '';
         return `
         <div class="d-slot">
             <div class="d-card-table${highlight}${isSelAtk?' clickable':''}"
@@ -393,15 +400,22 @@ function dActWithCard(card){
         dSelCard = card;
         dPlayCards();
     } else if(isDef){
-        // Автоматично відбиваємо найближчу невідбиту карту атаки
         const unbeaten = s.table.filter(t=>!t.defense);
-        const target = unbeaten.find(t=>dCanBeat(t.attack, card, s.trump));
-        if(target){
+        // Можна відбити кілька карт — беремо найслабшу щоб зберегти козирі на важке
+        const beatable = unbeaten
+            .filter(t => dCanBeat(t.attack, card, s.trump))
+            .sort((a,b) => D_RANK_IDX[dRank(b.attack)] - D_RANK_IDX[dRank(a.attack)]); // найсильніша атака першою
+        if(beatable.length === 1 || (beatable.length > 1 && dSelAtk)){
+            // Або одна варіація, або вже є виділена картка атаки — б'ємо її
+            const target = dSelAtk ? beatable.find(t=>t.attack===dSelAtk) || beatable[0] : beatable[0];
             dSelAtk = target.attack;
             dSelCard = card;
             dBeat();
+        } else if(beatable.length > 1){
+            // Кілька варіантів — виділяємо карту і підсвічуємо доступні цілі
+            dSelCard = card;
+            renderDHand(s); renderDTable(s); renderDActions(s);
         } else {
-            // Карта не може відбити жодної — просто виділяємо
             dSelCard = card;
             renderDHand(s); renderDActions(s);
         }

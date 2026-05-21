@@ -228,18 +228,27 @@ function renderTOpponents(s) {
     const el = document.getElementById('t-opponents');
     if (!el) return;
     const others = s.players.filter(p => p.id !== tMyIdx);
+    const isTalonWinner = s.phase === 'talon' && s.auction?.winner === tMyIdx && !s.talonPiles;
+    const givenCards = s.givenCards || [];
+
     el.innerHTML = others.map(p => {
         const isActive = p.id === s.currentPlayer;
         const isBidder = p.id === s.auction?.winner && s.phase !== 'auction';
         const count = p.handCount || 0;
-        // карти з ефектом фану (перекриваються)
+        const alreadyGiven = givenCards.includes(p.id);
+        // Дроп-зона для роздачі карт у фазі талону
+        const dropAttrs = isTalonWinner && !alreadyGiven
+            ? `ondragover="tOppDragOver(event)" ondragleave="tOppDragLeave(event)" ondrop="tOppDrop(event,${p.id})"`
+            : '';
+        const dropCls = isTalonWinner && !alreadyGiven ? ' t-opp-droptarget' : '';
+        const givenBadge = alreadyGiven ? '<span class="t-opp-given">✅</span>' : '';
         const cards = Array.from({ length: count }, (_, i) =>
             `<div class="t-card-back" style="margin-left:${i > 0 ? '-20px' : '0'};z-index:${i}"></div>`
         ).join('');
         return `
-        <div class="t-opponent ${isActive ? 'active' : ''}">
+        <div class="t-opponent ${isActive ? 'active' : ''}${dropCls}" ${dropAttrs}>
             <div class="t-opp-info">
-                ${isBidder ? '👑&nbsp;' : ''}${p.name}
+                ${isBidder ? '👑&nbsp;' : ''}${p.name}${givenBadge}
                 <span style="opacity:0.55;font-size:10px;font-style:italic">${p.score} оч.</span>
             </div>
             <div class="t-opp-cards">${cards}</div>
@@ -660,6 +669,26 @@ function tPlayCard(marriage) {
     playSound('cardPlay');
     socket.emit('action', { type: 'tPlayCard', data: { card: tSelectedCard, marriage } });
     tSelectedCard = null;
+}
+
+// ── Drag на суперника (талон) ─────────────────
+function tOppDragOver(event) {
+    const s = tState;
+    if (!s || s.phase !== 'talon' || !tDragCard && !tSelectedCard) return;
+    event.preventDefault();
+    event.currentTarget.classList.add('t-opp-hover');
+}
+function tOppDragLeave(event) {
+    event.currentTarget.classList.remove('t-opp-hover');
+}
+function tOppDrop(event, opponentId) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('t-opp-hover');
+    const card = tDragCard || event.dataTransfer.getData('text/plain');
+    tDragCard = null;
+    if (!card) return;
+    tSelectedCard = card;
+    tGiveCard(opponentId);
 }
 
 // ── Drag & Drop і Double-click ───────────────
