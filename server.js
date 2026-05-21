@@ -1474,6 +1474,7 @@ function createDurakState(roomPlayers, settings={}){
         phase:'attack',
         table:[], passedThrow:[], finished:[],
         log:[], loser:null, turnDeadline: null,
+        isSecretVoting: false, kumData: null, quarantined: [],
     };
 }
 
@@ -1690,11 +1691,13 @@ function createBunkerState(roomPlayers, settings = {}) {
         bunkerCapacity,
         scenario,
         players,
-        votes:          {},   // { voterIdx: targetIdx }
-        revealOrder:    [],   // ['profession','biology','hobby',...] — порядок обов'язкових розкриттів
+        votes:          {},
         timeDeadline:   null,
         log:            [],
-        winner:         null, // масив id тих хто вижив
+        winner:         null,
+        isSecretVoting: false,
+        kumData:        null,   // { voter, against } — кумівство
+        quarantined:    [],     // масив id гравців без права голосу
     };
 }
 
@@ -1727,10 +1730,13 @@ function sanitizeBunker(state, forIdx) {
                 ? p.actionCards
                 : p.actionCards.map(c => ({ id: c.id, name: c.name, used: c.used })),
         })),
-        // Відкрите голосування — показуємо всі голоси під час voting
-        votes: state.phase === 'voting' || state.phase === 'voting_result'
+        // Голоси: показуємо якщо відкрите голосування
+        votes: (state.phase === 'voting' || state.phase === 'voting_result') && !state.isSecretVoting
             ? state.votes
+            : state.phase === 'voting_result' && state.isSecretVoting
+            ? state.votes   // після підрахунку результати все одно показуємо
             : {},
+        isSecretVoting: state.isSecretVoting || false,
         log:    state.log.slice(0, 40),
         winner: state.winner,
     };
@@ -1811,10 +1817,13 @@ function onBunkerTimeout(room, phase) {
 function startBunkerRound(room) {
     const s = room.state;
     s.round++;
-    s.votes = {};
+    s.votes          = {};
+    s.isSecretVoting = false;
+    s.kumData        = null;
+    s.quarantined    = [];
     s.players.forEach(p => {
         p.hasRevealed = false;
-        if (p.isSilenced) p.isSilenced = false; // скидаємо мут
+        if (p.isSilenced) p.isSilenced = false;
     });
     addBunkerLog(s, `📋 Раунд ${s.round} — розкриття карток`);
     startBunkerPhase(room, 'round_reveal');
@@ -1830,6 +1839,15 @@ function resolveBunkerVoting(room) {
     // Рахуємо голоси
     const counts = {};
     Object.values(s.votes).forEach(t => { counts[t] = (counts[t] || 0) + 1; });
+    // Кумівство: голос від voter проти against рахується втричі
+    if (s.kumData) {
+        const { voter, against } = s.kumData;
+        if (s.votes[voter] === against) {
+            counts[against] = (counts[against] || 0) + 2; // +2 до вже наявного 1
+            addBunkerLog(s, `🤝 Кумівство спрацювало: +2 голоси проти ${s.players[against]?.name}`);
+        }
+        s.kumData = null;
+    }
 
     const alive = s.players.filter(p => p.isAlive);
     const maxVotes = alive.reduce((m, p) => Math.max(m, counts[p.id] || 0), 0);
@@ -1952,7 +1970,8 @@ function processBunkerAction(room, type, data, pidx) {
         // Гравець голосує
         case 'b_vote': {
             if (s.phase !== 'voting') break;
-            if (s.votes[pidx] !== undefined) break; // вже проголосував
+            if (s.votes[pidx] !== undefined) break;
+            if (s.quarantined?.includes(pidx)) break; // карантин — без права голосу
             const { target } = data;
             if (typeof target !== 'number') break;
             const targetP = s.players[target];
@@ -2047,10 +2066,74 @@ function applyBunkerCard(room, card, pidx, target) {
             addBunkerLog(s, `📋 ${p.name} — Перекваліфікація: нова професія!`);
             break;
         }
-        case 'act_refut': // Спростування — скасувати власне вигнання (обробляється в resolveBunkerVoting)
+        case 'act_bavovna': { // Знищити багаж іншого гравця
+            const t = s.players[target];
+            if (!t?.isAlive) break;
+            t.attributes.baggage.value = '💥 Спалений брухт — нічого немає';
+            t.attributes.baggage.isRevealed = true;
+            addBunkerLog(s, `💥 ${p.name} — Бавовна: багаж ${t.name} знищено!`);
+            break;
+        }
+        case 'act_human': { // Додатковий предмет багажу собі або іншому
+            const t = s.players[target] || p;
+            const extra = BUNKER_BAGGAGE[Math.floor(Math.random() * BUNKER_BAGGAGE.length)];
+            const extraName = extra.split('(')[0].trim();
+            t.attributes.baggage.value += ` + ${extraName}`;
+            addBunkerLog(s, `📦 ${p.name} — Гуманітарка: ${t.name} отримав додатковий предмет!`);
+            break;
+        }
+        case 'act_kum': { // Голос + голос союзника = 3 голоси проти цілі
+            const t = s.players[target];
+            if (!t?.isAlive) break;
+            s.kumData = { voter: pidx, against: target };
+            addBunkerLog(s, `🤝 ${p.name} — Кумівство: голос проти ${t.name} рахуватиметься втричі!`);
+            break;
+        }
+        case 'act_quar': { // Гравець без права голосу цього раунду
+            const t = s.players[target];
+            if (!t?.isAlive) break;
+            if (!s.quarantined.includes(target)) s.quarantined.push(target);
+            addBunkerLog(s, `🏥 ${p.name} — Карантин: ${t.name} не зможе голосувати!`);
+            break;
+        }
+        case 'act_reform': { // Всі живі отримують нове здоров'я
+            s.players.filter(pl => pl.isAlive).forEach(pl => {
+                pl.attributes.health.value = BUNKER_HEALTH[Math.floor(Math.random() * BUNKER_HEALTH.length)];
+                pl.attributes.health.isRevealed = true;
+            });
+            addBunkerLog(s, `💊 ${p.name} — Медична реформа: всі отримали нове здоров'я!`);
+            break;
+        }
+        case 'act_blackout': // Таємне голосування цього раунду
+            s.isSecretVoting = true;
+            addBunkerLog(s, `🌑 ${p.name} — Блекаут: голосування буде таємним!`);
+            break;
+        case 'act_deport': { // Обмін рисою характеру з іншим гравцем
+            const t = s.players[target];
+            if (!t?.isAlive) break;
+            const myTrait = p.attributes.trait.value;
+            const myRev   = p.attributes.trait.isRevealed;
+            p.attributes.trait.value      = t.attributes.trait.value;
+            p.attributes.trait.isRevealed = t.attributes.trait.isRevealed;
+            t.attributes.trait.value      = myTrait;
+            t.attributes.trait.isRevealed = myRev;
+            addBunkerLog(s, `🔄 ${p.name} — Депортація: обмін рисами з ${t.name}!`);
+            break;
+        }
+        case 'act_nat': { // Перерозподіл багажу між живими
+            const alive  = s.players.filter(pl => pl.isAlive);
+            const bags   = shuffle(alive.map(pl => pl.attributes.baggage.value));
+            alive.forEach((pl, i) => {
+                pl.attributes.baggage.value = bags[i];
+                pl.attributes.baggage.isRevealed = true;
+            });
+            addBunkerLog(s, `🏛️ ${p.name} — Націоналізація: весь багаж перерозподілено!`);
+            break;
+        }
+        case 'act_refut': // Спростування — скасувати власне вигнання
             addBunkerLog(s, `🛡️ ${p.name} грає «Спростування»`);
             p.immunityRounds = Math.max(p.immunityRounds, 1);
-            p.isAlive = true; // відновити якщо вже вигнаний
+            p.isAlive = true;
             break;
         default:
             addBunkerLog(s, `🃏 ${p.name} зіграв «${card.name}»`);
