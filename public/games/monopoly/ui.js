@@ -1339,7 +1339,7 @@ function announceWinner(player, allPlayers) {
                 <tbody>${statsRows}</tbody>
             </table>`,
         buttons: [
-            { text: '🎮 Нова гра', class: 'btn-primary', action: () => { if(typeof clearSession==='function') clearSession(); location.reload(); } }
+            { text: '🎮 Нова гра', class: 'btn-primary', action: () => { if(typeof clearSession==='function') clearSession(); location.href='/'; } }
         ]
     });
 }

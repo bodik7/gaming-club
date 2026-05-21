@@ -605,6 +605,24 @@
     font-style: italic;
 }
 
+/* Роздільник раундів у чаті */
+.m-chat-round-sep {
+    text-align: center;
+    font-size: 10px;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 2px;
+    padding: 6px 0 4px;
+    font-style: italic;
+    font-family: sans-serif;
+}
+
+/* Кнопки голосування — більші на мобайлі */
+@media (max-width: 500px) {
+    .m-candidate-btn { min-height: 48px; font-size: 15px; }
+    .m-vote-confirm  { min-height: 48px; font-size: 15px; }
+    .m-day-ui, .m-vote-ui { gap: 10px; }
+}
+
 /* ── Чат мертвих ── */
 .m-dead-chat-wrap {
     width: 100%;

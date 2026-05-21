@@ -2147,6 +2147,7 @@ io.on('connection', (socket) => {
             playerId: socket.playerIndex,
             name: esc(player.name),
             text: esc(String(text || '').slice(0, 200)),
+            round: room.state.round,
         });
     });
 

@@ -44,6 +44,8 @@ function playSound(type) {
             case 'tick':        note(1200,'sine',0.03,0.05); break;
             case 'tick-last':   note(1500,'sine',0.07,0.07); break;
             case 'jail':        note(250,'square',0.06,0.35,0,180); note(200,'sine',0.05,0.4,0.2); break;
+            case 'roll':        [1,2,3].forEach(i=>note(400+i*80,'triangle',0.04,0.07,i*0.04)); break;
+            case 'double':      note(880,'sine',0.1,0.15); note(1100,'sine',0.1,0.15,0.1); note(1320,'sine',0.1,0.2,0.2); break;
             // ── Загальні ──
             case 'win':         [523,659,784,1047].forEach((f,i)=>note(f,'sine',0.11,0.35,i*0.13)); break;
             case 'lose':        note(330,'sine',0.09,0.45,0,220); note(277,'sine',0.07,0.55,0.22); break;
@@ -254,7 +256,13 @@ async function fetchRoomCounts() {
 window.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     fetchRoomCounts();
-    setInterval(fetchRoomCounts, 15000); // оновлення кожні 15с
+    setInterval(fetchRoomCounts, 15000);
+    // Відновлюємо ім'я з localStorage
+    const saved = loadName();
+    if (saved) {
+        const el = document.getElementById('lobby-name');
+        if (el && !el.value) el.value = saved;
+    }
 });
 
 // ── Збереження сесії ─────────────────────────
@@ -364,8 +372,10 @@ function showToast(text, { color = '#333', duration = 3500 } = {}) {
         max-width:280px;word-wrap:break-word;pointer-events:none`;
     el.textContent = text;
     container.appendChild(el);
+    el.style.pointerEvents = duration === 0 ? 'auto' : 'none';
+    if (duration === 0) el.style.cursor = 'pointer';
     requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateX(0)'; });
-    setTimeout(() => {
+    if (duration > 0) setTimeout(() => {
         el.style.opacity = '0'; el.style.transform = 'translateX(60px)';
         setTimeout(() => el.remove(), 320);
     }, duration);
@@ -408,7 +418,13 @@ socket.on('connect', () => {
     setConnectionStatus(true);
     tryRejoin();
 });
-socket.on('disconnect', () => setConnectionStatus(false));
+socket.on('disconnect', (reason) => {
+    setConnectionStatus(false);
+    // Якщо сервер рестартував — показуємо зрозуміле повідомлення
+    if (reason === 'transport close' || reason === 'transport error') {
+        showToast('🔄 Сервер оновився. Оновіть сторінку щоб продовжити.', { color: '#c62828', duration: 0 });
+    }
+});
 
 // ── Чат ──────────────────────────────────────
 const _esc = s => String(s).replace(/[&<>"']/g, c =>
@@ -1244,6 +1260,7 @@ function applyState(state, diceRolled, landingPos, onDone) {
         document.getElementById('die1').innerText = '?';
         document.getElementById('die2').innerText = '?';
         animateDice();
+        playSound(d1 === d2 ? 'double' : 'roll');
         setTimeout(() => {
             document.getElementById('die1').innerText = d1;
             document.getElementById('die2').innerText = d2;

@@ -247,6 +247,10 @@ function mRenderActions() {
                         : `<div class="m-day-chat-muted">${isSilenced ? '🔇 Ви заглушені' : '💀 Ви загинули'}</div>`
                     }
                 </div>
+                <button class="m-btn secondary" onclick="mShowMyRole()"
+                    style="margin-top:6px;font-size:11px;padding:5px 10px;width:auto;align-self:center">
+                    👤 Моя роль
+                </button>
             </div>`;
         mStartTimer('m-day-timer', s.dayDeadline);
         return;
@@ -590,15 +594,34 @@ function mSendDeadChat() {
     input.value = '';
 }
 
+// ── Переглянути свою роль ────────────────────
+function mShowMyRole() {
+    if (!mState) return;
+    const me = mState.players[mMyIdx];
+    if (!me?.role) return;
+    const rl = M_ROLE_LABELS[me.role] || { ua: me.role, icon: '?', color: '#888' };
+    const desc = mRoleDesc(me.role);
+    showToast(`${rl.icon} ${rl.ua}${desc ? ' — ' + desc.slice(0, 60) : ''}`, { color: rl.color || '#333', duration: 4000 });
+}
+
 // ── Денний чат ────────────────────────────────
-socket.on('dayChatMsg', ({ playerId, name, text }) => {
+let _mChatRound = 0; // відстежуємо раунд для роздільника
+socket.on('dayChatMsg', ({ playerId, name, text, round }) => {
     const log = document.getElementById('m-day-chat-log');
     if (!log) return;
     const empty = log.querySelector('.m-log-empty');
     if (empty) empty.remove();
+    // Роздільник нового раунду
+    if (round && round !== _mChatRound) {
+        _mChatRound = round;
+        const sep = document.createElement('div');
+        sep.className = 'm-chat-round-sep';
+        sep.textContent = `— День ${round} —`;
+        log.appendChild(sep);
+    }
     const msg = document.createElement('div');
     msg.className = 'm-day-chat-msg' + (playerId === mMyIdx ? ' me' : '');
-    msg.innerHTML = `<span class="m-day-chat-name">${name}:</span> ${text}`;
+    msg.innerHTML = `<span class="m-day-chat-name">${name}:</span> ${_esc ? _esc(text) : text}`;
     log.appendChild(msg);
     log.scrollTop = log.scrollHeight;
 });

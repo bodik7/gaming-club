@@ -565,12 +565,17 @@ function renderTActions(s) {
                 </div>
                 ${st.g > 0 ? `<div style="font-size:10px;color:rgba(245,230,200,0.35);font-family:sans-serif;margin:4px 0 8px">Ваша статистика: ${st.w}/${st.g} перемог</div>` : ''}
                 ${isHost ? `<button class="t-btn gold" onclick="tRequestRematch()" style="margin-bottom:6px">🔄 Реванш</button>` : '<div class="t-hint" style="margin-bottom:6px">Чекаємо реваншу від хоста...</div>'}
-                <button class="t-btn secondary" onclick="location.reload()">🏠 Нова гра</button>
+                <button class="t-btn secondary" onclick="tGoLobby()">🏠 Нова гра</button>
             </div>`;
     }
 }
 
 function tRequestRematch() { socket.emit('restartGame'); }
+function tGoLobby() {
+    clearInterval(tTurnTimer);
+    if (typeof clearSession === 'function') clearSession();
+    location.href = '/';
+}
 
 // ── Дії гравця ───────────────────────────────
 function tSelectCard(card) {
