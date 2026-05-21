@@ -6,6 +6,7 @@ const express = require('express');
 const http    = require('http');
 const { Server } = require('socket.io');
 const path    = require('path');
+const fs      = require('fs');
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const db      = require('./db');
@@ -25,6 +26,17 @@ app.use(express.static(path.join(__dirname, 'public'), {
         res.setHeader('Cache-Control', 'no-store');
     },
 }));
+
+// ── Бункер React SPA ─────────────────────────
+const bunkerBuild = path.join(__dirname, 'public/bunker');
+if (fs.existsSync(bunkerBuild)) {
+    app.use('/bunker', express.static(bunkerBuild, { etag: false, setHeaders: res => res.setHeader('Cache-Control','no-store') }));
+    // SPA fallback — будь-який /bunker/* повертає index.html
+    app.get('/bunker/*', (req, res) => res.sendFile(path.join(bunkerBuild, 'index.html')));
+} else {
+    // У dev-режимі — редірект на Vite dev server
+    app.get('/bunker*', (req, res) => res.redirect('http://localhost:5173' + req.path.replace('/bunker', '') + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '')));
+}
 
 // ── REST Auth API ─────────────────────────────
 app.post('/api/register', async (req, res) => {
@@ -3089,6 +3101,18 @@ io.on('connection', (socket) => {
             setTimeout(() => {
                 if (room.state?.phase === 'role_reveal') startNightPhase(room);
             }, 25000);
+        } else if (gameType === 'bunker') {
+            clearBunkerTimer(room);
+            room.state = createBunkerState(room.players, room.settings || {});
+            room.started = true;
+            room.players.forEach(rp => {
+                io.to(rp.socketId).emit('gameStarted', {
+                    state: sanitizeBunker(room.state, rp.index),
+                    myPlayerIndex: rp.index,
+                    gameType: 'bunker',
+                });
+            });
+            startBunkerPhase(room, 'game_start');
         } else {
             // Монополія
             room.state = createGameState(room.players);
