@@ -137,9 +137,9 @@ function renderDHand(s){
         return `
         <div class="d-card${sel}${cantCls}" style="border-top-color:${color}"
              onclick="dClickHandCard('${card}')">
-            <div class="d-cr"><div class="d-crn">${dRank(card)}</div><div class="d-crs">${dSuit(card)}</div></div>
+            <div class="d-cr" style="color:${color}"><div class="d-crn">${dRank(card)}</div><div class="d-crs">${dSuit(card)}</div></div>
             <div class="d-cc" style="color:${color}">${dSuit(card)}</div>
-            <div class="d-cr br"><div class="d-crn">${dRank(card)}</div><div class="d-crs">${dSuit(card)}</div></div>
+            <div class="d-cr br" style="color:${color}"><div class="d-crn">${dRank(card)}</div><div class="d-crs">${dSuit(card)}</div></div>
         </div>`;
     }).join('');
 }
