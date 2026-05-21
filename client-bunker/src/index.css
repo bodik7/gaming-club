@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+  --bunker-bg:      #111212;
+  --bunker-surface: #1c1e1e;
+  --bunker-border:  #2e3232;
+  --bunker-red:     #cc2200;
+  --bunker-yellow:  #f5c400;
+  --bunker-green:   #2a7a2a;
+  --bunker-text:    #d4cfc8;
+  --bunker-muted:   #6b7070;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bunker-bg);
+  color: var(--bunker-text);
+  min-height: 100svh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}

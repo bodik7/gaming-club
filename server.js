@@ -152,6 +152,11 @@ const TOKEN_ICONS  = ['🎩','🚗','🐕','🚀','🐎','👑','⚓','🎯'];
 // Картки шансу і екскурсій — всі тексти в public/games/monopoly/messages.js
 // Податкові (pos 4, 38) і тюремні (pos 30) тексти — inline нижче (використовують ${player.name})
 const { CHANCE_CARDS, EXCURSION_CARDS } = require('./public/games/monopoly/messages.js');
+const {
+    BUNKER_PROFESSIONS, BUNKER_HEALTH, BUNKER_HOBBIES,
+    BUNKER_TRAITS, BUNKER_BAGGAGE, BUNKER_ACTION_CARDS, ACTION_CARD_PHASES,
+} = require('./public/games/bunker/attributes.js');
+const { BUNKER_SCENARIOS } = require('./public/games/bunker/scenarios.js');
 
 // ── Утиліти ──────────────────────────────────
 function shuffle(arr) {
@@ -1638,6 +1643,108 @@ function emitDurakUpdate(room, sideEffect){
 }
 
 // ════════════════════════════════════════════
+// БУНКЕР
+// ════════════════════════════════════════════
+
+function createBunkerState(roomPlayers, settings = {}) {
+    const bunkerCapacity = Math.floor(roomPlayers.length / 2);
+
+    let profs   = shuffle(BUNKER_PROFESSIONS);
+    let healths = shuffle(BUNKER_HEALTH);
+    let hobbies = shuffle(BUNKER_HOBBIES);
+    let traits  = shuffle(BUNKER_TRAITS);
+    let bags    = shuffle(BUNKER_BAGGAGE);
+    let actions = shuffle(BUNKER_ACTION_CARDS);
+
+    const players = roomPlayers.map((rp, i) => {
+        const gender = Math.random() > 0.5 ? 'Чоловік' : 'Жінка';
+        const age    = Math.floor(Math.random() * (77 - 18 + 1)) + 18;
+        const repro  = Math.random() > 0.2 ? 'плідний(а)' : 'безплідний(а)';
+        return {
+            id:       i,
+            name:     rp.name,
+            isAlive:  true,
+            isSilenced:     false,
+            immunityRounds: 0,
+            hasRevealed:    false, // чи вже розкрив атрибут у поточному раунді
+            attributes: {
+                profession: { value: profs.pop(),   isRevealed: false },
+                biology:    { value: `${gender}, ${age} років, ${repro}`, isRevealed: false },
+                health:     { value: healths.pop(), isRevealed: false },
+                hobby:      { value: hobbies.pop(), isRevealed: false },
+                trait:      { value: traits.pop(),  isRevealed: false },
+                baggage:    { value: bags.pop(),    isRevealed: false },
+            },
+            actionCards: [{ ...actions.pop(), used: false }],
+            localMarkers: {}, // клієнтська функція, не в стейті
+        };
+    });
+
+    const scenarioId = settings.scenarioId || Math.floor(Math.random() * BUNKER_SCENARIOS.length);
+    const scenario   = BUNKER_SCENARIOS[scenarioId] || BUNKER_SCENARIOS[0];
+
+    return {
+        gameType:       'bunker',
+        phase:          'game_start',
+        round:          0,
+        bunkerCapacity,
+        scenario,
+        players,
+        votes:          {},   // { voterIdx: targetIdx }
+        revealOrder:    [],   // ['profession','biology','hobby',...] — порядок обов'язкових розкриттів
+        timeDeadline:   null,
+        log:            [],
+        winner:         null, // масив id тих хто вижив
+    };
+}
+
+function sanitizeBunker(state, forIdx) {
+    return {
+        gameType:       'bunker',
+        phase:          state.phase,
+        round:          state.round,
+        bunkerCapacity: state.bunkerCapacity,
+        scenario:       state.scenario,
+        timeDeadline:   state.timeDeadline,
+        myId:           forIdx,
+        players: state.players.map((p, i) => ({
+            id:         p.id,
+            name:       p.name,
+            isAlive:    p.isAlive,
+            isSilenced: p.isSilenced,
+            immunityRounds: p.immunityRounds,
+            hasRevealed:    p.hasRevealed,
+            // Свої атрибути — всі, чужі — тільки isRevealed:true
+            attributes: i === forIdx
+                ? p.attributes
+                : Object.fromEntries(
+                    Object.entries(p.attributes).map(([k, v]) => [
+                        k, v.isRevealed ? v : { value: '???', isRevealed: false }
+                    ])
+                ),
+            // Свої карти дій — повні, чужі — тільки назва і чи використана
+            actionCards: i === forIdx
+                ? p.actionCards
+                : p.actionCards.map(c => ({ id: c.id, name: c.name, used: c.used })),
+        })),
+        // Відкрите голосування — показуємо всі голоси під час voting
+        votes: state.phase === 'voting' || state.phase === 'voting_result'
+            ? state.votes
+            : {},
+        log:    state.log.slice(0, 40),
+        winner: state.winner,
+    };
+}
+
+function emitBunkerUpdate(room) {
+    room.players.forEach(rp => {
+        io.to(rp.socketId).emit('stateUpdate', {
+            state: sanitizeBunker(room.state, rp.index),
+        });
+    });
+}
+
+// ════════════════════════════════════════════
 // МАФІЯ
 // ════════════════════════════════════════════
 
@@ -2230,7 +2337,7 @@ io.on('connection', (socket) => {
             players: [{ socketId: socket.id, name: playerName, index: 0, username: socket.username || null }],
             started: false,
             state: null,
-            gameType: gameType === 'tysyacha' ? 'tysyacha' : gameType === 'mafia' ? 'mafia' : gameType === 'durak' ? 'durak' : 'monopoly',
+            gameType: gameType === 'tysyacha' ? 'tysyacha' : gameType === 'mafia' ? 'mafia' : gameType === 'durak' ? 'durak' : gameType === 'bunker' ? 'bunker' : 'monopoly',
             createdAt: Date.now(),
             lastActivityAt: Date.now(),
         };
@@ -2245,7 +2352,7 @@ io.on('connection', (socket) => {
     socket.on('peekRoom', ({ code }, cb) => {
         const room = rooms[code?.toUpperCase()];
         if (!room) return cb({ error: 'not_found' });
-        const maxPlayers = room.gameType === 'tysyacha' ? 3 : room.gameType === 'mafia' ? 15 : room.gameType === 'durak' ? 6 : 6;
+        const maxPlayers = room.gameType === 'tysyacha' ? 3 : room.gameType === 'mafia' ? 15 : room.gameType === 'durak' ? 6 : room.gameType === 'bunker' ? 15 : 6;
         cb({ players: room.players.length, max: maxPlayers, gameType: room.gameType, started: room.started });
     });
 
@@ -2254,7 +2361,7 @@ io.on('connection', (socket) => {
         const room = rooms[code];
         if (!room)        return cb({ error: 'Кімнату не знайдено' });
         if (room.started) return cb({ error: 'Гра вже почалась' });
-        const maxPlayers = room.gameType === 'tysyacha' ? 3 : room.gameType === 'mafia' ? 15 : room.gameType === 'durak' ? 6 : 6;
+        const maxPlayers = room.gameType === 'tysyacha' ? 3 : room.gameType === 'mafia' ? 15 : room.gameType === 'durak' ? 6 : room.gameType === 'bunker' ? 15 : 6;
         if (room.players.length >= maxPlayers) return cb({ error: `Кімната повна (макс ${maxPlayers})` });
 
         const idx = room.players.length;
@@ -2414,7 +2521,7 @@ io.on('connection', (socket) => {
 
     // Отримати список вільних кімнат
     socket.on('getRooms', (cb) => {
-        const _maxP = { tysyacha: 3, mafia: 15, durak: 6, monopoly: 6 };
+        const _maxP = { tysyacha: 3, mafia: 15, durak: 6, bunker: 15, monopoly: 6 };
         const available = Object.values(rooms)
             .filter(r => !r.started && r.players.length > 0 && r.players.length < (_maxP[r.gameType] || 6))
             .map(r => ({
@@ -2514,6 +2621,18 @@ io.on('connection', (socket) => {
                 });
             });
             startTysyachaTimer(room);
+        } else if (room.gameType === 'bunker') {
+            const n = room.players.length;
+            if (n < 4 || n > 15) return io.to(socket.id).emit('error', 'Бункер: потрібно 4–15 гравців');
+            room.started = true;
+            if (settings) room.settings = { ...(room.settings||{}), ...settings };
+            room.state = createBunkerState(room.players, room.settings||{});
+            room.players.forEach(rp => {
+                io.to(rp.socketId).emit('gameStarted', {
+                    state: sanitizeBunker(room.state, rp.index),
+                    gameType: 'bunker',
+                });
+            });
         } else {
             if (room.players.length < 2) return io.to(socket.id).emit('error', 'Потрібно мінімум 2 гравці');
             room.started = true;
@@ -2725,6 +2844,8 @@ io.on('connection', (socket) => {
                 ? sanitizeMafia(room.state, playerIndex)
                 : room.state.gameType === 'durak'
                 ? sanitizeDurak(room.state, playerIndex)
+                : room.state.gameType === 'bunker'
+                ? sanitizeBunker(room.state, playerIndex)
                 : sanitize(room.state);
             cb({ success: true, started: true, state: st, gameType: room.gameType });
         } else {
