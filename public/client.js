@@ -237,7 +237,7 @@ async function fetchRoomCounts() {
         const res = await fetch('/api/rooms/count');
         if (!res.ok) return;
         const counts = await res.json();
-        ['monopoly', 'tysyacha', 'mafia'].forEach(type => {
+        ['monopoly', 'tysyacha', 'mafia', 'durak'].forEach(type => {
             const el = document.getElementById(`rooms-${type}`);
             if (!el) return;
             const n = counts[type] || 0;
@@ -611,24 +611,12 @@ socket.on('roomClosed', ({ reason }) => {
 });
 
 function confirmAbandonGame() {
-    const isTysyacha = !document.getElementById('tysyacha-screen').classList.contains('hidden');
+    const isMonopoly  = !document.getElementById('game-screen').classList.contains('hidden');
+    const isTysyacha  = !document.getElementById('tysyacha-screen').classList.contains('hidden');
+    const isMafia     = !document.getElementById('mafia-screen').classList.contains('hidden');
+    const isDurak     = !document.getElementById('durak-screen').classList.contains('hidden');
 
-    if (isTysyacha) {
-        showModal({
-            title: '🚪 Завершити гру?',
-            body: `<p style="text-align:center;padding:12px 0;color:#555">
-                Гра буде скасована для всіх гравців.<br>
-                <span style="font-size:13px;color:#999">Цю дію неможливо скасувати.</span>
-            </p>`,
-            buttons: [
-                { text: '🚪 Завершити гру', class: 'btn-danger', action: () => {
-                    closeModal();
-                    socket.emit('abandonGame');
-                }},
-                { text: 'Залишитись', class: 'btn-secondary', action: closeModal }
-            ]
-        });
-    } else {
+    if (isMonopoly) {
         showModal({
             title: '🏳️ Здатись?',
             body: `<p style="text-align:center;padding:12px 0;color:#555">
@@ -644,6 +632,21 @@ function confirmAbandonGame() {
                 { text: 'Продовжити гру', class: 'btn-secondary', action: closeModal }
             ]
         });
+    } else {
+        showModal({
+            title: '🚪 Завершити гру?',
+            body: `<p style="text-align:center;padding:12px 0;color:#555">
+                Гра буде скасована для всіх гравців.<br>
+                <span style="font-size:13px;color:#999">Цю дію неможливо скасувати.</span>
+            </p>`,
+            buttons: [
+                { text: '🚪 Завершити гру', class: 'btn-danger', action: () => {
+                    closeModal();
+                    socket.emit('abandonGame');
+                }},
+                { text: 'Залишитись', class: 'btn-secondary', action: closeModal }
+            ]
+        });
     }
 }
 
@@ -653,6 +656,8 @@ socket.on('gameAbandoned', ({ reason }) => {
     closeModal();
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('tysyacha-screen').classList.add('hidden');
+    document.getElementById('mafia-screen')?.classList.add('hidden');
+    document.getElementById('durak-screen')?.classList.add('hidden');
     setQuitBtn(false);
     document.getElementById('lobby-screen').classList.remove('hidden');
     showRejoinError(`🚪 ${reason}`);
