@@ -2,18 +2,18 @@ import { useEffect, useState } from 'react'
 import { getSocket } from '../hooks/useSocket'
 import { useGameStore } from '../store/gameStore'
 
-// Список сценаріїв (синхронізовано з scenarios.js на сервері)
+// Список сценаріїв — дзеркало scenarios.js
 const SCENARIOS = [
-  { id: 0, emoji: '☢️', title: 'Останній брязкіт прибацаного сусіда', subtitle: 'Ядерний апокаліпсис' },
-  { id: 1, emoji: '🦢', title: 'Помста бойових гусей',                subtitle: 'Біо-техногенний хаос' },
-  { id: 2, emoji: '⚡', title: 'Великий Блекаут та Електро-Монстри', subtitle: 'Аномальна зима' },
-  { id: 3, emoji: '🌊', title: 'Повінь на Говерлі',                  subtitle: 'Ноїв Ковчег' },
-  { id: 4, emoji: '🍉', title: 'Повстання Херсонських Кавунів',      subtitle: 'Агро-мутація' },
-  { id: 5, emoji: '🕶️', title: 'Портал на Троєщині',                subtitle: 'Містичний злам' },
-  { id: 6, emoji: '💅', title: 'Буковельський VIP-Апокаліпсис',     subtitle: 'Гламурні Зомбі' },
-  { id: 7, emoji: '☕', title: 'Кавовий Апокаліпсис у Львові',       subtitle: 'Кава-Кома' },
-  { id: 8, emoji: '🚜', title: 'Повстання Розумних Комбайнів',       subtitle: 'Кібер-Степ' },
-  { id: 9, emoji: '🪼', title: 'Одеський Дрейф та Навала Медуз',    subtitle: 'Біологічна загроза' },
+  { id: 0, emoji: '☢️', title: 'Останній брязкіт прибацаного сусіда',   subtitle: 'Ядерний апокаліпсис' },
+  { id: 1, emoji: '🦢', title: 'Помста бойових гусей',                   subtitle: 'Біо-техногенний хаос' },
+  { id: 2, emoji: '⚡', title: 'Великий Блекаут та Електро-Монстри',     subtitle: 'Аномальна зима' },
+  { id: 3, emoji: '🌊', title: 'Повінь на Говерлі',                      subtitle: 'Ноїв Ковчег' },
+  { id: 4, emoji: '🍉', title: 'Повстання Херсонських Кавунів-Убивць',   subtitle: 'Агро-мутація' },
+  { id: 5, emoji: '🕶️', title: 'Портал на Троєщині та Потойбічні Гопники', subtitle: 'Містичний злам' },
+  { id: 6, emoji: '💅', title: 'Буковельський VIP-Апокаліпсис',          subtitle: 'Гламурні Зомбі' },
+  { id: 7, emoji: '☕', title: 'Кавовий Апокаліпсис у Львові',            subtitle: 'Кава-Кома' },
+  { id: 8, emoji: '🚜', title: 'Повстання Розумних Комбайнів',            subtitle: 'Кібер-Степ' },
+  { id: 9, emoji: '🪼', title: 'Одеський Дрейф та Навала Медуз',         subtitle: 'Біологічна загроза' },
 ]
 
 export function WaitingScreen() {
