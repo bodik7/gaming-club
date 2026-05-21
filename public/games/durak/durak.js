@@ -229,7 +229,7 @@ function renderDLog(s){
     const el = document.getElementById('d-log');
     if(!el) return;
     if(!s.log?.length){ el.innerHTML='<div class="d-log-empty">Лог порожній</div>'; return; }
-    el.innerHTML = s.log.map(e=>`<div class="d-log-entry">${e}</div>`).join('');
+    el.innerHTML = s.log.map(e=>`<div class="d-log-entry">${e?.text ?? e}</div>`).join('');
 }
 
 // ── Обробники кліків ─────────────────────────

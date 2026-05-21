@@ -1476,9 +1476,18 @@ function processDurakAction(state, type, data, pidx){
             break;
         }
         case 'dPass': {
+            // Атакуючий завершує хід якщо всі карти відбиті
+            const isEndTurn = state.phase==='attack' && pidx===state.attacker
+                && state.table.length>0 && state.table.every(t=>t.defense);
+            if(isEndTurn) return dAdvance(state, false);
             if(state.phase!=='throw'||pidx===state.defender) break;
             if(!state.passedThrow.includes(pidx)) state.passedThrow.push(pidx);
-            const nonDef=state.players.filter(p=>!p.finished&&p.id!==state.defender);
+            // Гравці з 0 карт авто-пасують (вони не можуть підкидати)
+            state.players.forEach(p => {
+                if(p.id!==state.defender && p.hand.length===0 && !state.passedThrow.includes(p.id))
+                    state.passedThrow.push(p.id);
+            });
+            const nonDef=state.players.filter(p=>!state.finished.includes(p.id)&&p.id!==state.defender);
             if(nonDef.every(p=>state.passedThrow.includes(p.id)))
                 return dAdvance(state, false);
             break;
@@ -1515,9 +1524,17 @@ function dAdvance(state, defenderTook){
         addLog(state, state.loser!==null?`🤡 ${state.players[state.loser].name} — ДУРЕНЬ!`:`🏁 Нічия!`);
         return { event:'dGameOver' };
     }
-    // next attacker
-    state.attacker = defenderTook ? dNextActive(state,state.defender) : state.defender;
-    state.defender = dNextActive(state,state.attacker);
+    // next attacker — якщо захисник вийшов з гри, шукаємо наступного активного
+    const prevDefender = state.defender;
+    if(defenderTook){
+        state.attacker = dNextActive(state, prevDefender);
+    } else {
+        // захисник відбив — стає атакуючим, але тільки якщо ще в грі
+        state.attacker = state.finished.includes(prevDefender)
+            ? dNextActive(state, prevDefender)
+            : prevDefender;
+    }
+    state.defender = dNextActive(state, state.attacker);
     state.phase='attack'; state.passedThrow=[]; state.table=[];
     addLog(state,`🃏 Хід ${state.players[state.attacker].name}`);
     return null;
