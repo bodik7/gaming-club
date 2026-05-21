@@ -62,6 +62,7 @@ export interface BunkerState {
   votes:          Record<number, number>   // voterIdx → targetIdx
   log:            string[]
   winner:         number[] | null
+  epilogue:       string | null
 }
 
 // Socket events client → server

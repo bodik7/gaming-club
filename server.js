@@ -11,6 +11,17 @@ const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const db      = require('./db');
 
+// Завантажуємо .env якщо є
+try {
+    const envPath = path.join(__dirname, '.env');
+    if (fs.existsSync(envPath)) {
+        fs.readFileSync(envPath, 'utf8').split('\n').forEach(line => {
+            const [k, ...v] = line.trim().split('=');
+            if (k && !k.startsWith('#') && !process.env[k]) process.env[k] = v.join('=');
+        });
+    }
+} catch {}
+
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server);
@@ -1707,9 +1718,10 @@ function createBunkerState(roomPlayers, settings = {}) {
         timeDeadline:   null,
         log:            [],
         winner:         null,
+        epilogue:       null,   // AI-генерований текст після кінця гри
         isSecretVoting: false,
-        kumData:        null,   // { voter, against } — кумівство
-        quarantined:    [],     // масив id гравців без права голосу
+        kumData:        null,
+        quarantined:    [],
     };
 }
 
@@ -1749,8 +1761,9 @@ function sanitizeBunker(state, forIdx) {
             ? state.votes   // після підрахунку результати все одно показуємо
             : {},
         isSecretVoting: state.isSecretVoting || false,
-        log:    state.log.slice(0, 40),
-        winner: state.winner,
+        log:      state.log.slice(0, 40),
+        winner:   state.winner,
+        epilogue: state.epilogue || null,
     };
 }
 
@@ -1760,6 +1773,47 @@ function emitBunkerUpdate(room) {
             state: sanitizeBunker(room.state, rp.index),
         });
     });
+}
+
+// ── Gemini AI — генерація епілогу ────────────
+async function generateBunkerEpilogue(state) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key || key === 'YOUR_KEY_HERE') return null;
+
+    const survivors = state.players
+        .filter(p => p.isAlive)
+        .map(p => `${p.name} (${p.attributes.profession.value.split('(')[0].trim()}, ${p.attributes.health.value}, ${p.attributes.hobby.value.split('(')[0].trim()})`)
+        .join('; ');
+
+    const eliminated = state.players
+        .filter(p => !p.isAlive)
+        .map(p => p.attributes.profession.value.split('(')[0].trim())
+        .join(', ');
+
+    const prompt = `Ти — саркастичний ведучий постапокаліптичного шоу «Бункер».
+Катастрофа: ${state.scenario.title} (${state.scenario.subtitle}).
+Бункер: ${state.scenario.bunker.slice(0, 120)}.
+Хто вижив: ${survivors}.
+Вигнані: ${eliminated || 'ніхто'}.
+
+Напиши смішний та іронічний епілог 2-3 речення — що буде з цими людьми через рік у бункері. Згадай конкретні характеристики вижилих. Відповідь тільки текст епілогу, без зайвих слів. Українською мовою.`;
+
+    try {
+        const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+                signal: AbortSignal.timeout(10_000),
+            }
+        );
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null;
+    } catch {
+        return null;
+    }
 }
 
 // ── Допоміжні ────────────────────────────────
@@ -1921,6 +1975,12 @@ function resolveBunkerVoting(room) {
             saveGameStats(room, rp => s.winner.includes(rp.index));
             db.deleteRoom(room.code);
             emitBunkerUpdate(room);
+            // Генеруємо AI-епілог асинхронно (не блокує гру)
+            generateBunkerEpilogue(s).then(text => {
+                if (!text || !room.state) return;
+                room.state.epilogue = text;
+                emitBunkerUpdate(room);
+            }).catch(() => {});
         } else {
             startBunkerRound(room);
         }
