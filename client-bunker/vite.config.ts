@@ -18,6 +18,7 @@ export default defineConfig({
       },
     },
   },
+  base: '/bunker/',
   build: {
     outDir: '../public/bunker',
     emptyOutDir: true,
