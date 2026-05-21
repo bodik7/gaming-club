@@ -16,10 +16,39 @@ const SCENARIOS = [
   { id: 9, emoji: '🪼', title: 'Одеський Дрейф та Навала Медуз',         subtitle: 'Біологічна загроза' },
 ]
 
+const HOW_TO_PLAY = [
+  {
+    icon: '🎭',
+    title: 'Персонаж',
+    text: 'Кожен гравець отримує унікального персонажа з 5 прихованими атрибутами: професія, здоров\'я, хобі, риса характеру та багаж. Усі атрибути закриті на початку.',
+  },
+  {
+    icon: '🔍',
+    title: 'Розкриття',
+    text: 'Кожен раунд гравці по черзі відкривають один свій атрибут на вибір. Стратегічно обирайте що показати — від цього залежить ваше виживання.',
+  },
+  {
+    icon: '💬',
+    title: 'Дискусія і голосування',
+    text: 'Після розкриття — відкрите обговорення. Переконуйте, сваріться, блефуйте. Потім кожен голосує за того, кого виключити з бункера. Хто набрав найбільше голосів — вибуває.',
+  },
+  {
+    icon: '🃏',
+    title: 'Карти дій',
+    text: 'У кожного є набір карт дій. Їх можна зіграти у відповідну фазу: переглянути чужий атрибут, обмінятись картками, заблокувати голос суперника тощо.',
+  },
+  {
+    icon: '🏚️',
+    title: 'Мета',
+    text: 'Бункер розрахований на обмежену кількість людей. Завдання — потрапити до нього. Голосуйте розумно: до бункера мають увійти найкорисніші для виживання гравці.',
+  },
+]
+
 export function WaitingScreen() {
   const { roomCode, roomPlayers, isHost, myName, reset } = useGameStore()
   const [selectedScenario, setSelectedScenario] = useState<number>(0)
   const [showScenarios, setShowScenarios] = useState(false)
+  const [showHowTo, setShowHowTo] = useState(false)
 
   useEffect(() => {
     const s = getSocket()
@@ -156,6 +185,34 @@ export function WaitingScreen() {
             )}
           </div>
         )}
+
+        {/* Як грати */}
+        <div className="rounded-2xl overflow-hidden"
+             style={{ background: 'var(--bunker-surface)', border: '1px solid var(--bunker-border)' }}>
+          <button
+            onClick={() => setShowHowTo(v => !v)}
+            className="w-full flex items-center justify-between px-4 py-3 text-left"
+          >
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--bunker-muted)' }}>
+              📖 Як грати
+            </span>
+            <span className="text-xs" style={{ color: 'var(--bunker-muted)' }}>{showHowTo ? '▲' : '▼'}</span>
+          </button>
+
+          {showHowTo && (
+            <div className="px-4 pb-4 flex flex-col gap-3">
+              {HOW_TO_PLAY.map((step, i) => (
+                <div key={i} className="flex gap-3">
+                  <span className="text-xl flex-shrink-0 mt-0.5">{step.icon}</span>
+                  <div>
+                    <div className="text-xs font-bold text-white mb-0.5">{step.title}</div>
+                    <div className="text-xs leading-relaxed" style={{ color: 'var(--bunker-muted)' }}>{step.text}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Кнопки */}
         {isHost ? (
