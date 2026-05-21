@@ -339,8 +339,18 @@ function renderDHandActions(s){
     if(isAtk){
         const n = dSelCards.size;
         const allBeaten = s.table.length>0 && s.table.every(t=>t.defense);
+        // Підказка: є ще карти того ж рангу — можна вибрати більше
+        let moreHint = '';
+        if(n >= 1 && s.table.length === 0){
+            const selRank = dRank([...dSelCards][0]);
+            const me = s.players[dMyIdx];
+            const more = (me?.hand||[]).filter(c => dRank(c)===selRank && !dSelCards.has(c)).length;
+            if(more > 0) moreHint = `<span style="font-size:12px;color:#c9a227;font-family:sans-serif">
+                ← ще ${more} ${selRank}</span>`;
+        }
         el.innerHTML = (n>0
             ? `<button class="dha-btn success" onclick="dPlayCards()">▶ Зіграти${n>1?' ('+n+')':''}</button>
+               ${moreHint}
                <button class="dha-btn cancel" onclick="dClearSel()">✕</button>`
             : '')
             + (allBeaten ? `<button class="dha-btn secondary" onclick="dPass()">⏭ Завершити хід</button>` : '');
@@ -358,8 +368,17 @@ function renderDHandActions(s){
     }
     if(isThrow){
         const n = dSelCards.size;
+        let moreHint = '';
+        if(n >= 1){
+            const selRank = dRank([...dSelCards][0]);
+            const me = s.players[dMyIdx];
+            const tableRanks = new Set(s.table.flatMap(t=>[dRank(t.attack), t.defense?dRank(t.defense):null].filter(Boolean)));
+            const more = (me?.hand||[]).filter(c => tableRanks.has(dRank(c)) && !dSelCards.has(c)).length;
+            if(more > 0) moreHint = `<span style="font-size:12px;color:#c9a227;font-family:sans-serif">← ще ${more}</span>`;
+        }
         el.innerHTML = (n>0
             ? `<button class="dha-btn success" onclick="dPlayCards()">➕ Підкинути${n>1?' ('+n+')':''}</button>
+               ${moreHint}
                <button class="dha-btn cancel" onclick="dClearSel()">✕</button>`
             : '')
             + `<button class="dha-btn secondary" onclick="dPass()">⏭ Пас</button>`;
