@@ -5,6 +5,12 @@
 
 const socket = io();
 
+// Передаємо токен серверу одразу після підключення (для статистики)
+socket.on('connect', () => {
+    const auth = (() => { try { return JSON.parse(localStorage.getItem('monopolia_auth')); } catch { return null; } })();
+    if (auth?.token) socket.emit('authenticate', { token: auth.token });
+});
+
 // Мій індекс гравця у цій сесії
 let myPlayerIndex = null;
 

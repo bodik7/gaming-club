@@ -1,30 +1,20 @@
 // ============================================
-// МОНОПОЛІЯ УКРАЇНИ — server.js
-// Node.js + Express + Socket.io
+// ІГРОВИЙ КЛУБ — server.js
+// Node.js + Express + Socket.io + SQLite
 // ============================================
 const express = require('express');
 const http    = require('http');
 const { Server } = require('socket.io');
 const path    = require('path');
-const fs      = require('fs');
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
+const db      = require('./db');
 
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server);
 
-const JWT_SECRET = process.env.JWT_SECRET || 'monopolia-dev-secret-change-in-prod';
-const USERS_FILE = path.join(__dirname, 'users.json');
-
-// ── Зберігання користувачів (JSON-файл) ──────
-function loadUsers() {
-    try { return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); }
-    catch { return {}; }
-}
-function saveUsers(users) {
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-}
+const JWT_SECRET = process.env.JWT_SECRET || 'igclub-dev-secret-change-in-prod';
 
 app.use(express.json());
 // TODO: перед деплоєм на постійний сервер — прибрати no-store і повернути etag/lastModified
@@ -46,13 +36,15 @@ app.post('/api/register', async (req, res) => {
     if (password.length < 6)
         return res.status(400).json({ error: 'Пароль: мінімум 6 символів' });
 
-    const users = loadUsers();
-    if (users[username.toLowerCase()])
+    if (db.getUser(username))
         return res.status(409).json({ error: 'Цей логін вже зайнятий' });
 
     const hash = await bcrypt.hash(password, 10);
-    users[username.toLowerCase()] = { username, hash, createdAt: new Date().toISOString() };
-    saveUsers(users);
+    try {
+        db.createUser(username, hash);
+    } catch {
+        return res.status(409).json({ error: 'Цей логін вже зайнятий' });
+    }
 
     const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, username });
@@ -63,8 +55,7 @@ app.post('/api/login', async (req, res) => {
     if (!username || !password)
         return res.status(400).json({ error: 'Заповніть усі поля' });
 
-    const users = loadUsers();
-    const user  = users[username.toLowerCase()];
+    const user = db.getUser(username);
     if (!user) return res.status(401).json({ error: 'Невірний логін або пароль' });
 
     const ok = await bcrypt.compare(password, user.hash);
@@ -89,10 +80,23 @@ app.get('/api/me', (req, res) => {
         return res.status(401).json({ error: 'Не авторизовано' });
     try {
         const payload = jwt.verify(auth.slice(7), JWT_SECRET);
-        res.json({ username: payload.username });
+        const stats   = db.getStats(payload.username);
+        res.json({ username: payload.username, stats });
     } catch {
         res.status(401).json({ error: 'Токен недійсний або прострочений' });
     }
+});
+
+// Статистика конкретного гравця
+app.get('/api/stats/:username', (req, res) => {
+    const stats = db.getStats(req.params.username);
+    res.json({ username: req.params.username, stats });
+});
+
+// Лідерборд по грі
+app.get('/api/leaderboard/:gameType', (req, res) => {
+    const rows = db.getLeaderboard(req.params.gameType);
+    res.json(rows);
 });
 
 // ── Кімнати: { [code]: Room } ───────────────
@@ -2196,15 +2200,34 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 // ── Socket.io ─────────────────────────────────
+// ── Helper: зберегти результат гри для всіх гравців ──
+function saveGameStats(room, winnerFn) {
+    // winnerFn(rp) → true якщо цей гравець виграв
+    if (!room?.players) return;
+    room.players.forEach(rp => {
+        if (!rp.username) return; // гість — не зберігаємо
+        const gameType = room.state?.gameType || room.gameType || 'monopoly';
+        db.addStat(rp.username, gameType, winnerFn(rp));
+    });
+}
+
 io.on('connection', (socket) => {
     console.log('+ підключення:', socket.id);
+
+    // Автентифікація через токен при підключенні (опційно)
+    socket.on('authenticate', ({ token }) => {
+        try {
+            const payload = jwt.verify(token, JWT_SECRET);
+            socket.username = payload.username;
+        } catch {}
+    });
 
     // Створити кімнату
     socket.on('createRoom', ({ playerName, gameType = 'monopoly' }, cb) => {
         const code = generateCode();
         rooms[code] = {
             code,
-            players: [{ socketId: socket.id, name: playerName, index: 0 }],
+            players: [{ socketId: socket.id, name: playerName, index: 0, username: socket.username || null }],
             started: false,
             state: null,
             gameType: gameType === 'tysyacha' ? 'tysyacha' : gameType === 'mafia' ? 'mafia' : gameType === 'durak' ? 'durak' : 'monopoly',
@@ -2235,7 +2258,7 @@ io.on('connection', (socket) => {
         if (room.players.length >= maxPlayers) return cb({ error: `Кімната повна (макс ${maxPlayers})` });
 
         const idx = room.players.length;
-        room.players.push({ socketId: socket.id, name: playerName, index: idx });
+        room.players.push({ socketId: socket.id, name: playerName, index: idx, username: socket.username || null });
         socket.join(code);
         socket.roomCode = code;
         socket.playerIndex = idx;
@@ -2568,6 +2591,8 @@ io.on('connection', (socket) => {
             room.lastActivityAt = Date.now();
             const result = processDurakAction(state, type, data||{}, socket.playerIndex);
             if (result?.event === 'dGameOver') {
+                saveGameStats(room, rp => state.loser !== rp.index);
+                db.deleteRoom(room.code);
                 room.players.forEach(rp => {
                     io.to(rp.socketId).emit('gameOver', {
                         state: sanitizeDurak(state, rp.index),
@@ -2613,6 +2638,8 @@ io.on('connection', (socket) => {
             clearTysyachaTimer(room);
             const result = processTysyachaAction(state, type, data || {}, socket.playerIndex);
             if (result?.event === 'tGameOver') {
+                saveGameStats(room, rp => state.winner === rp.index);
+                db.deleteRoom(room.code);
                 room.players.forEach(rp => {
                     io.to(rp.socketId).emit('gameOver', {
                         winner: state.players[state.winner],
@@ -2771,13 +2798,46 @@ function sanitize(state) {
     };
 }
 
+// ── Відновлення кімнат після перезапуску ─────
+function restoreRoomsFromDB() {
+    db.cleanOldRooms();
+    const saved = db.getAllRooms();
+    let restored = 0;
+    for (const { code, gameType, state } of saved) {
+        if (rooms[code]) continue; // вже є
+        // Відновлюємо кімнату без гравців (вони підключаться через rejoin)
+        rooms[code] = {
+            code,
+            players: [],
+            started: true,
+            state,
+            gameType,
+            createdAt: Date.now(),
+            lastActivityAt: Date.now(),
+        };
+        restored++;
+    }
+    if (restored > 0) console.log(`♻️  Відновлено ${restored} кімнат з БД`);
+}
+
+// Автозбереження активних кімнат кожні 30 секунд
+function autoSaveRooms() {
+    Object.values(rooms).forEach(room => {
+        if (room.started && room.state) {
+            db.saveRoom(room.code, room.gameType || room.state.gameType || 'monopoly', room.state);
+        }
+    });
+}
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`🇺🇦 Ігровий Клуб запущено: http://localhost:${PORT}`);
+    restoreRoomsFromDB();
+    setInterval(autoSaveRooms, 30_000);
     // Self-ping щоб Render не засипав (тільки на продакшені)
     if (process.env.RENDER_EXTERNAL_URL) {
         setInterval(() => {
             http.get(process.env.RENDER_EXTERNAL_URL).on('error', () => {});
-        }, 14 * 60 * 1000); // кожні 14 хвилин
+        }, 14 * 60 * 1000);
     }
 });
