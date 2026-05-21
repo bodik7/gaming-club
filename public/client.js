@@ -967,7 +967,7 @@ function quickJoin(code) {
 }
 
 // ── Налаштування гри ─────────────────────────
-const _gameSettings = { nightDuration: 90, dayDuration: 120, voteDuration: 60 };
+const _gameSettings = { nightDuration: 90, dayDuration: 120, voteDuration: 60, mode: 'podkidnoy' };
 
 function setSetting(key, value) {
     _gameSettings[key] = value;
@@ -980,17 +980,19 @@ function setSetting(key, value) {
 }
 
 function updateGameSettings(gameType) {
-    const panel    = document.getElementById('game-settings');
-    const nightRow = document.getElementById('settings-night-timer');
-    const dayRow   = document.getElementById('settings-day-timer');
-    const voteRow  = document.getElementById('settings-vote-timer');
-    const isHost   = myPlayerIndex === 0;
+    const panel      = document.getElementById('game-settings');
+    const nightRow   = document.getElementById('settings-night-timer');
+    const dayRow     = document.getElementById('settings-day-timer');
+    const voteRow    = document.getElementById('settings-vote-timer');
+    const durakMode  = document.getElementById('settings-durak-mode');
+    const isHost     = myPlayerIndex === 0;
     if (!panel) return;
-    const showPanel = isHost && gameType === 'mafia';
+    const showPanel = isHost && (gameType === 'mafia' || gameType === 'durak');
     panel.classList.toggle('hidden', !showPanel);
-    if (nightRow) nightRow.classList.toggle('hidden', gameType !== 'mafia');
-    if (dayRow)   dayRow.classList.toggle('hidden',   gameType !== 'mafia');
-    if (voteRow)  voteRow.classList.toggle('hidden',  gameType !== 'mafia');
+    if (nightRow)  nightRow.classList.toggle('hidden',  gameType !== 'mafia');
+    if (dayRow)    dayRow.classList.toggle('hidden',    gameType !== 'mafia');
+    if (voteRow)   voteRow.classList.toggle('hidden',   gameType !== 'mafia');
+    if (durakMode) durakMode.classList.toggle('hidden', gameType !== 'durak');
 }
 
 function startGame() {
