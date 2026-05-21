@@ -30,15 +30,29 @@ export function VotingPhase() {
 
       {phase === 'voting_result' ? (
         <div className="flex flex-col gap-2">
-          {players.filter(p => p.isAlive).map(p => (
-            <div key={p.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg text-sm"
-                 style={{ background: 'rgba(255,255,255,0.04)' }}>
-              <span className="text-white">{p.name}</span>
-              <span className="font-bold" style={{ color: (voteCounts[p.id] || 0) > 0 ? 'var(--bunker-red)' : 'var(--bunker-muted)' }}>
-                {voteCounts[p.id] || 0} голосів
-              </span>
-            </div>
-          ))}
+          {(() => {
+            const alive = players.filter(p => p.isAlive)
+            const maxVotes = alive.reduce((m, p) => Math.max(m, voteCounts[p.id] || 0), 0)
+            return alive
+              .sort((a, b) => (voteCounts[b.id] || 0) - (voteCounts[a.id] || 0))
+              .map(p => {
+                const cnt = voteCounts[p.id] || 0
+                const isMax = cnt === maxVotes && maxVotes > 0
+                return (
+                  <div key={p.id}
+                       className="flex items-center justify-between py-2 px-3 rounded-lg text-sm transition-all"
+                       style={{
+                         background: isMax ? 'rgba(204,34,0,0.2)' : 'rgba(255,255,255,0.04)',
+                         border: `1px solid ${isMax ? 'rgba(204,34,0,0.5)' : 'transparent'}`,
+                       }}>
+                    <span className="text-white font-bold">{p.name}</span>
+                    <span className="font-black" style={{ color: isMax ? 'var(--bunker-red)' : 'var(--bunker-muted)' }}>
+                      {cnt} {cnt === 1 ? 'голос' : 'голосів'}
+                    </span>
+                  </div>
+                )
+              })
+          })()}
         </div>
       ) : (
         <>

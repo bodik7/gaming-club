@@ -49,7 +49,7 @@ function PlayerCard({
       {/* Ім'я і маркери */}
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-bold text-white truncate">
-          {!player.isAlive && '💀 '}{player.name}
+          {!player.isAlive ? '💀 ' : player.hasRevealed ? '✅ ' : ''}{player.name}
         </span>
         <div className="flex gap-1 flex-shrink-0">
           <button onClick={() => onMarker(marker === '🟢' ? null : '🟢')}
