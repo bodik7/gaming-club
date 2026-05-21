@@ -670,10 +670,7 @@ socket.on('roomClosed', ({ reason }) => {
 });
 
 function confirmAbandonGame() {
-    const isMonopoly  = !document.getElementById('game-screen').classList.contains('hidden');
-    const isTysyacha  = !document.getElementById('tysyacha-screen').classList.contains('hidden');
-    const isMafia     = !document.getElementById('mafia-screen').classList.contains('hidden');
-    const isDurak     = !document.getElementById('durak-screen').classList.contains('hidden');
+    const isMonopoly = !document.getElementById('game-screen').classList.contains('hidden');
 
     if (isMonopoly) {
         showModal({
@@ -692,21 +689,48 @@ function confirmAbandonGame() {
             ]
         });
     } else {
-        showModal({
-            title: '🚪 Завершити гру?',
-            body: `<p style="text-align:center;padding:12px 0;color:#555">
-                Гра буде скасована для всіх гравців.<br>
-                <span style="font-size:13px;color:#999">Цю дію неможливо скасувати.</span>
-            </p>`,
-            buttons: [
-                { text: '🚪 Завершити гру', class: 'btn-danger', action: () => {
-                    closeModal();
-                    socket.emit('abandonGame');
-                }},
-                { text: 'Залишитись', class: 'btn-secondary', action: closeModal }
-            ]
-        });
+        _showQuitOverlay();
     }
+}
+
+function _showQuitOverlay() {
+    if (document.getElementById('quit-overlay')) return;
+    const ov = document.createElement('div');
+    ov.id = 'quit-overlay';
+    ov.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.82);
+        display:flex;align-items:center;justify-content:center;z-index:9999;
+        backdrop-filter:blur(6px);font-family:'Segoe UI',sans-serif`;
+    ov.innerHTML = `
+        <div style="background:#1a1a2e;border:1px solid rgba(255,255,255,0.15);border-radius:16px;
+                    padding:28px 32px;max-width:340px;width:90%;text-align:center">
+            <div style="font-size:32px;margin-bottom:12px">🚪</div>
+            <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:8px">Завершити гру?</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:24px">
+                Гра буде скасована для всіх гравців.
+            </div>
+            <div style="display:flex;gap:10px;justify-content:center">
+                <button onclick="_doAbandon()" style="
+                    background:#b71c1c;color:#fff;border:none;border-radius:8px;
+                    padding:11px 22px;font-size:14px;font-weight:700;cursor:pointer">
+                    Завершити
+                </button>
+                <button onclick="_closeQuitOverlay()" style="
+                    background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);
+                    border-radius:8px;padding:11px 22px;font-size:14px;font-weight:700;cursor:pointer">
+                    Залишитись
+                </button>
+            </div>
+        </div>`;
+    document.body.appendChild(ov);
+}
+
+function _closeQuitOverlay() {
+    document.getElementById('quit-overlay')?.remove();
+}
+
+function _doAbandon() {
+    _closeQuitOverlay();
+    socket.emit('abandonGame');
 }
 
 socket.on('gameAbandoned', ({ reason }) => {
