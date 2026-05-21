@@ -64,7 +64,7 @@ function PlayerCard({
       {/* Атрибути */}
       <div className="flex flex-col gap-1">
         {Object.entries(player.attributes).map(([key, attr]) => (
-          <AttributeRow key={key} icon={ATTR_ICONS[key]} attrKey={key} attr={attr} />
+          <AttributeRow key={key} icon={ATTR_ICONS[key]} attr={attr} />
         ))}
       </div>
 
@@ -88,9 +88,8 @@ function PlayerCard({
   )
 }
 
-function AttributeRow({ icon, attrKey, attr }: {
+function AttributeRow({ icon, attr }: {
   icon: string
-  attrKey: string
   attr: Attribute
 }) {
   // Відстежуємо зміну isRevealed → анімація

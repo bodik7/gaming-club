@@ -1,5 +1,3 @@
-import { useGameStore } from '../../store/gameStore'
-
 export function DiscussionPhase() {
   return (
     <div className="rounded-xl p-4 flex flex-col gap-2"

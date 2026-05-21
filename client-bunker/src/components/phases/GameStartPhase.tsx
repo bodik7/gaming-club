@@ -3,12 +3,11 @@ import { getSocket } from '../../hooks/useSocket'
 import { useGameStore } from '../../store/gameStore'
 
 export function GameStartPhase() {
-  const { gameState, myIndex } = useGameStore()
+  const { gameState } = useGameStore()
   const [ready, setReady] = useState(false)
   if (!gameState) return null
 
   const { scenario, bunkerCapacity, players } = gameState
-  const me = myIndex !== null ? players[myIndex] : null
   const readyCount = players.filter(p => p.hasRevealed).length
 
   const markReady = () => {

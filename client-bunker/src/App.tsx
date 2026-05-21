@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useSocket } from './hooks/useSocket'
 import { useGameStore } from './store/gameStore'
 import { LobbyScreen }   from './screens/LobbyScreen'

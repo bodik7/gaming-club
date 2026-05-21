@@ -40,7 +40,7 @@ interface GameStore {
   reset:                () => void
 }
 
-export const useGameStore = create<GameStore>((set, get) => ({
+export const useGameStore = create<GameStore>((set) => ({
   screen:           'lobby',
   myName:           localStorage.getItem('bunker_name') || '',
   myIndex:          null,

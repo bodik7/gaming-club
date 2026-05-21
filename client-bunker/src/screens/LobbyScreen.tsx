@@ -18,7 +18,7 @@ export function LobbyScreen() {
     if (!validate()) return
     setLoading(true)
     setMyName(name.trim())
-    getSocket().emit('createRoom', { playerName: name.trim(), gameType: 'bunker' }, (res) => {
+    getSocket().emit('createRoom', { playerName: name.trim(), gameType: 'bunker' }, (res: { code: string; playerIndex: number; error?: string }) => {
       setLoading(false)
       if (res.error) { setError(res.error); return }
       setRoom(res.code, res.playerIndex, [name.trim()])
@@ -30,7 +30,7 @@ export function LobbyScreen() {
     if (!code.trim()) { setError('Введіть код кімнати'); return }
     setLoading(true)
     setMyName(name.trim())
-    getSocket().emit('joinRoom', { code: code.trim().toUpperCase(), playerName: name.trim() }, (res) => {
+    getSocket().emit('joinRoom', { code: code.trim().toUpperCase(), playerName: name.trim() }, (res: { code: string; playerIndex: number; error?: string }) => {
       setLoading(false)
       if (res.error) { setError(res.error); return }
       setRoom(res.code, res.playerIndex, [])

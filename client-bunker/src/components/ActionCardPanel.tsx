@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { getSocket } from '../hooks/useSocket'
 import { useGameStore } from '../store/gameStore'
-import type { ActionCard, BunkerPlayer } from '../types/bunker'
+import type { ActionCard } from '../types/bunker'
 import { ACTION_CARD_PHASES } from '../constants/cardPhases'
 
 // Карти що потребують вибору цілі
