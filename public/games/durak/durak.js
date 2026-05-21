@@ -34,6 +34,7 @@ function initDurak(state, myIdx){
     setQuitBtn(true);
     if(typeof switchViewport==='function') switchViewport('durak');
     renderDurak();
+    dStartClientTimer();
 }
 
 function updateDurak(state, sideEffect){
@@ -253,9 +254,17 @@ function renderDHand(s){
 
         // Під час захисту НЕ затемнюємо — бо "Забрати" теж законна дія
         const cantCls = (canAct && !isDef && !playable && !isSel) ? ' cant' : '';
-        const beatCls = defBeatable && !isSel ? ' def-beat' : '';
+        // Inline стилі для захисту — надійніше за CSS клас (не залежить від кешу)
+        let extraStyle = '';
+        if(isDef && !isSel){
+            if(defBeatable){
+                extraStyle = ';box-shadow:0 0 0 3px #66bb6a,0 6px 20px rgba(102,187,106,0.55);transform:translateY(-10px)';
+            } else {
+                extraStyle = ';opacity:0.38;filter:grayscale(0.4)';
+            }
+        }
         return `
-        <div class="d-card${sel}${cantCls}${beatCls}" style="border-top-color:${color}"
+        <div class="d-card${sel}${cantCls}" style="border-top-color:${color}${extraStyle}"
              draggable="${canAct && playable ? 'true' : 'false'}"
              ondragstart="dDragStart('${card}',event)"
              ondblclick="dDblClick('${card}')"
