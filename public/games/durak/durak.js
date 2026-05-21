@@ -6,7 +6,7 @@ let dMyIdx        = null;
 let dSelCard      = null; // картка з руки (вибрана)
 let dSelAtk       = null; // картка атаки на столі (для відбиття)
 
-const D_SUIT_COLORS = { '♠':'#1a237e', '♣':'#1b5e20', '♦':'#c62828', '♥':'#880e4f' };
+const D_SUIT_COLORS = { '♠':'#1565c0', '♣':'#2e7d32', '♦':'#e53935', '♥':'#c62828' };
 const D_RANK_IDX    = {'6':0,'7':1,'8':2,'9':3,'10':4,'J':5,'Q':6,'K':7,'A':8};
 
 function dSuitColor(card){ return D_SUIT_COLORS[card.slice(-1)] || '#333'; }
@@ -60,17 +60,13 @@ function renderDInfo(s){
         const isDef = p.id===s.defender && s.phase!=='gameover';
         const isMe  = p.id===dMyIdx;
         const done  = p.finished;
-        const cls   = [
-            'd-pill',
-            isAtk ? 'atk' : isDef ? 'def' : '',
-            isMe  ? 'me'  : '',
-            done  ? 'done': '',
-        ].filter(Boolean).join(' ');
-        const icon = isAtk ? '⚔️' : isDef ? '🛡️' : done ? '🏅' : '';
-        return `<div class="${cls}">${icon} <b>${isMe?'👤 ':''}${p.name}</b> <span class="d-pill-cnt">${done?'✓':p.handCount+'🂠'}</span></div>`;
+        const cls   = ['d-pill', isAtk?'atk':isDef?'def':'', isMe?'me':'', done?'done':''].filter(Boolean).join(' ');
+        const badge = isAtk ? '<span class="d-role-badge atk">⚔</span>' : isDef ? '<span class="d-role-badge def">🛡</span>' : '';
+        const cnt   = done ? '✓' : `${p.handCount}<span style="font-size:8px;opacity:.5">🂠</span>`;
+        return `<div class="${cls}">${badge}<b>${isMe?'👤 ':''}${p.name}</b><span class="d-pill-cnt">${cnt}</span></div>`;
     }).join('') +
     `<div class="d-pill info">${mode} · ${phaseLabel}</div>` +
-    `<div class="d-pill trump-pill" style="color:${dSuitColor(s.trumpCard)}">Козир: ${s.trump} · 🂠${s.deckCount}</div>`;
+    `<div class="d-pill trump-pill" style="color:${dSuitColor(s.trumpCard)}">${s.trump} козир <span style="opacity:.5;font-size:10px">(${s.deckCount}🂠)</span></div>`;
 }
 
 // ── Стіл ─────────────────────────────────────
@@ -100,7 +96,7 @@ function renderDTable(s){
                        <div class="d-tr">${dRank(slot.defense)}</div>
                        <div class="d-tc">${dSuit(slot.defense)}</div>
                    </div>`
-                : `<div class="d-slot-empty">?</div>`}
+                : `<div class="d-slot-empty"></div>`}
         </div>`;
     }).join('');
 }
@@ -162,7 +158,7 @@ function renderDActions(s){
         const loser = s.loser!==null ? s.players[s.loser]?.name : null;
         const iWon = s.loser !== dMyIdx;
         const isHost = dMyIdx===0;
-        updateStats('durak', iWon);
+        if(!el.dataset.gameoverDone){ el.dataset.gameoverDone='1'; updateStats('durak', iWon); playSound(iWon?'win':'lose'); }
         const st = getStats('durak');
         el.innerHTML = `
             <div class="d-gameover">
@@ -174,7 +170,6 @@ function renderDActions(s){
                         :`<div class="d-wait">Чекаємо реваншу від хоста...</div>`}
                 <button class="d-btn secondary" onclick="dGoLobby()">🏠 Нова гра</button>
             </div>`;
-        playSound(iWon?'win':'lose');
         return;
     }
 
