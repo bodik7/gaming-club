@@ -88,7 +88,11 @@ function mRenderPlayers() {
     const isGameover = mState.phase === 'gameover';
     const isMorning  = mState.phase === 'morning';
     const newlyDead  = isMorning ? (mState.lastDeaths || []) : [];
-    el.innerHTML = mState.players.map(p => {
+    // Живі гравці спочатку, мертві знизу (крім gameover де важливий порядок перемоги)
+    const displayPlayers = isGameover
+        ? mState.players
+        : [...mState.players].sort((a, b) => (b.isAlive ? 1 : 0) - (a.isAlive ? 1 : 0));
+    el.innerHTML = displayPlayers.map(p => {
         const isMe = p.id === mMyIdx;
         const roleLabel = p.role ? mRoleLabel(p.role) : null;
         const showRole  = p.role && (p.id === mMyIdx || isGameover ||

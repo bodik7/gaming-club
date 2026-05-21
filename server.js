@@ -2009,6 +2009,14 @@ io.on('connection', (socket) => {
         cb({ code, playerIndex: 0 });
     });
 
+    // Перегляд кімнати без входу
+    socket.on('peekRoom', ({ code }, cb) => {
+        const room = rooms[code?.toUpperCase()];
+        if (!room) return cb({ error: 'not_found' });
+        const maxPlayers = room.gameType === 'tysyacha' ? 3 : room.gameType === 'mafia' ? 15 : 6;
+        cb({ players: room.players.length, max: maxPlayers, gameType: room.gameType, started: room.started });
+    });
+
     // Приєднатись до кімнати
     socket.on('joinRoom', ({ code, playerName }, cb) => {
         const room = rooms[code];

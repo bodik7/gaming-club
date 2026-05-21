@@ -24,16 +24,27 @@ function playSound(type) {
             o.start(t + delay); o.stop(t + delay + dur);
         };
         switch (type) {
+            // ── Тисяча ──
             case 'cardSelect':  note(1100,'sine',0.04,0.06); break;
             case 'cardPlay':    note(600,'triangle',0.1,0.16,0,280); break;
             case 'trickTaken':  note(380,'sine',0.12,0.24,0,180); break;
             case 'myTurn':      note(660,'sine',0.08,0.2); note(880,'sine',0.08,0.2,0.13); break;
             case 'marriage':    [523,659,784].forEach((f,i)=>note(f,'sine',0.1,0.3,i*0.1)); break;
             case 'roundEnd':    note(440,'sine',0.08,0.45,0,220); break;
+            // ── Мафія ──
             case 'night':       note(140,'sine',0.14,1.3,0,80); note(110,'sine',0.09,1.6,0.25); break;
             case 'day':         note(550,'sine',0.08,0.28,0,720); note(700,'sine',0.06,0.22,0.16); break;
             case 'vote':        note(820,'sine',0.06,0.1); break;
             case 'death':       note(220,'sawtooth',0.07,0.5,0,110); note(165,'sine',0.05,0.6,0.12); break;
+            // ── Монополія ──
+            case 'step':        note(900,'sine',0.04,0.07,0,700); break;
+            case 'buy':         note(523,'sine',0.09,0.2); note(659,'sine',0.09,0.2,0.12); break;
+            case 'rent':        note(280,'sawtooth',0.07,0.3,0,180); break;
+            case 'card':        note(700,'triangle',0.07,0.13,0,420); break;
+            case 'tick':        note(1200,'sine',0.03,0.05); break;
+            case 'tick-last':   note(1500,'sine',0.07,0.07); break;
+            case 'jail':        note(250,'square',0.06,0.35,0,180); note(200,'sine',0.05,0.4,0.2); break;
+            // ── Загальні ──
             case 'win':         [523,659,784,1047].forEach((f,i)=>note(f,'sine',0.11,0.35,i*0.13)); break;
             case 'lose':        note(330,'sine',0.09,0.45,0,220); note(277,'sine',0.07,0.55,0.22); break;
         }
@@ -136,6 +147,16 @@ function _enterLobby(username, joinCode) {
         if (codeEl)  codeEl.textContent = code.toUpperCase();
         if (banner)  banner.classList.remove('hidden');
         sessionStorage.removeItem('pendingJoin');
+        // Peek: показуємо скільки гравців вже в кімнаті
+        socket.emit('peekRoom', { code: code.toUpperCase() }, ({ players, max, gameType, started, error } = {}) => {
+            const peekEl = document.getElementById('join-room-peek');
+            if (!peekEl) return;
+            if (error || !players) { peekEl.textContent = ''; return; }
+            const gNames = { tysyacha: 'Тисяча', mafia: 'Мафія', monopoly: 'Монополія' };
+            peekEl.textContent = started
+                ? '⚠️ Гра вже почалась'
+                : `${gNames[gameType] || gameType} · ${players}/${max} гравців`;
+        });
     } else {
         if (banner) banner.classList.add('hidden');
     }
@@ -483,6 +504,48 @@ function joinRoom() {
         saveSession(c, playerIndex, name);
         showLobbyWaiting(c);
     });
+}
+
+const HOW_TO_PLAY = {
+    tysyacha: `<b>🃏 Тисяча</b> — карткова гра на очки.<br><br>
+<b>Мета:</b> першим набрати 1000 очок.<br><br>
+<b>Торги:</b> гравці по колу підвищують ставку (мінімум 100). Хто виграв — бере прикуп (3 зайві карти), роздає по 1 суперникам і оголошує свою ставку.<br><br>
+<b>Гра:</b> переможець торгів ходить першим. Потрібно йти в масть ведучого. Хто більший — бере взятку і ходить наступним.<br><br>
+<b>Шлюб:</b> якщо є Дама + Король однієї масті — оголошується автоматично при грі першою картою. ♠=40, ♣=60, ♦=80, ♥=100. Перший шлюб стає козирем.<br><br>
+<b>Козир</b> б'є будь-яку масть.<br><br>
+<b>Підрахунок:</b> 9=0, J=2, Q=3, K=4, 10=10, A=11. Якщо набрав ≥ ставки — отримуєш ставку. Ні — мінус ставка.<br><br>
+<b>🛢️ Бочка:</b> при 900 очках — 3 спроби виграти торги і зробити ставку. Не вдалось — рахунок падає на 800.`,
+
+    mafia: `<b>🔫 Мафія</b> — гра на дедукцію і переконання.<br><br>
+<b>Ролі:</b><br>
+👤 Мирний — голосує вдень, шукає мафію<br>
+🔍 Комісар — вночі перевіряє гравця (мафія чи ні)<br>
+🛡️ Помічник — успадковує роль Комісара якщо він гине<br>
+💊 Лікар — вночі захищає одного гравця від вбивства<br>
+🔫 Мафія — вночі вбиває мирного<br>
+👑 Дон — вночі перевіряє чи є хтось Комісаром<br>
+🔪 Маньяк — вбиває всіх, виграє один<br><br>
+<b>Ніч:</b> всі закривають очі, кожна роль виконує дію.<br>
+<b>Ранок:</b> оголошують хто загинув.<br>
+<b>День:</b> обговорення і голосування — виганяєте підозрюваного.<br><br>
+<b>Перемога:</b> Мирні — якщо мафіозних не більше мирних. Мафія — якщо їх стільки ж або більше. Маньяк — якщо всі загинули.`,
+
+    monopoly: `<b>🎲 Монополія України</b> — класична гра на нерухомість.<br><br>
+<b>Хід:</b> кидаєш кубики, пересуваєш фішку.<br><br>
+<b>Купівля:</b> якщо клітинка вільна — можна купити. Якщо зайнята — платиш ренту власнику.<br><br>
+<b>Будинки:</b> маючи всі міста одного кольору — будуй будинки та готелі. Рента зростає.<br><br>
+<b>Тюрма:</b> потрапляєш якщо перейшов клітинку тюрми або випав дубль тричі. Виходиш сплативши 50 або дублем.<br><br>
+<b>Банкрутство:</b> якщо не можеш сплатити — продаєш майно. Якщо нічого немає — вибуваєш.<br><br>
+<b>Перемога:</b> останній гравець що не збанкрутував.`
+};
+
+function showHowToPlay() {
+    const gameType = typeof _selectedGame !== 'undefined' ? _selectedGame : 'monopoly';
+    const modal = document.getElementById('howtoplay-modal');
+    const titles = { tysyacha: '📖 Як грати — Тисяча', mafia: '📖 Як грати — Мафія', monopoly: '📖 Як грати — Монополія' };
+    document.getElementById('htp-title').textContent = titles[gameType] || '📖 Як грати';
+    document.getElementById('htp-content').innerHTML = HOW_TO_PLAY[gameType] || 'Правила для цієї гри ще не додані.';
+    modal.style.display = 'flex';
 }
 
 function showLobbyWaiting(code) {
