@@ -46,7 +46,7 @@ function initTysyacha(state, myIdx) {
     if (typeof switchViewport === 'function') switchViewport('tysyacha');
     tCheckOrientation();
     renderTysyacha();
-    setTimeout(() => { tDealing = false; }, 800);
+    setTimeout(() => { tDealing = false; renderTHand(tState); }, 1200);
 }
 
 function tCheckOrientation() {
@@ -91,7 +91,7 @@ function updateTysyacha(state, sideEffect) {
         tDealing = true;
         tShowRoundResult(sideEffect.results, () => {
             renderTysyacha();
-            setTimeout(() => { tDealing = false; }, 800);
+            setTimeout(() => { tDealing = false; renderTHand(tState); }, 1200);
         });
         return;
     }
@@ -393,7 +393,7 @@ function renderTHand(s) {
         const canMarry = (myTurn || inTalon) && !trickStarted && tHasMarriagePartner(card, me.hand);
 
         const cardIdx = sorted.indexOf(card);
-        const dealDelay = tDealing ? `animation-delay:${cardIdx * 60}ms` : '';
+        const dealDelay = tDealing ? `animation-delay:${cardIdx * 90}ms` : '';
         const pts = tCardPts(card);
         const draggable = (canPlayThisCard || inTalon) ? 'true' : 'false';
         return `

@@ -9,6 +9,7 @@ let dSelAtk       = null;
 let dDragCard          = null;
 let dGameoverProcessed = false;
 let dTimerInterval     = null;
+let dDealing           = false;
 
 const D_SUIT_COLORS = { '♠':'#1565c0', '♣':'#2e7d32', '♦':'#e53935', '♥':'#c62828' };
 const D_RANK_IDX    = {'6':0,'7':1,'8':2,'9':3,'10':4,'J':5,'Q':6,'K':7,'A':8};
@@ -28,6 +29,7 @@ function initDurak(state, myIdx){
     dState = state; dMyIdx = myIdx;
     dSelCards.clear(); dSelCard = null; dSelAtk = null; dGameoverProcessed = false;
     if(dTimerInterval){ clearInterval(dTimerInterval); dTimerInterval = null; }
+    dDealing = true;
     document.getElementById('game-screen').classList.add('hidden');
     const scr = document.getElementById('durak-screen');
     scr.classList.remove('hidden');
@@ -35,6 +37,7 @@ function initDurak(state, myIdx){
     if(typeof switchViewport==='function') switchViewport('durak');
     renderDurak();
     dStartClientTimer();
+    setTimeout(() => { dDealing = false; renderDHand(dState); }, 1100);
 }
 
 function updateDurak(state, sideEffect){
@@ -226,10 +229,11 @@ function renderDHand(s){
     // Перший обраний ранг для атаки на порожньому столі
     const firstSelRank = dSelCards.size > 0 ? dRank([...dSelCards][0]) : null;
 
-    el.innerHTML = sorted.map(card => {
+    el.innerHTML = sorted.map((card, cardIdx) => {
         const color = dSuitColor(card);
         const isSel = (isAtk || isThrow) ? dSelCards.has(card) : card === dSelCard;
         const sel = isSel ? ' selected' : '';
+        const dealStyle = dDealing ? `animation-delay:${cardIdx * 85}ms` : '';
 
         let playable = false;
         let defBeatable = false; // зелений glow під час захисту
@@ -255,8 +259,9 @@ function renderDHand(s){
         const cantCls = (canAct && !isDef && !playable && !isSel) ? ' cant' : '';
         const beatCls = isDef && defBeatable  && !isSel ? ' def-beat' : '';
         const dimCls  = isDef && !defBeatable && !isSel ? ' def-dim'  : '';
+        const dealCls = dDealing ? ' d-dealing' : '';
         return `
-        <div class="d-card${sel}${cantCls}${beatCls}${dimCls}" style="border-top-color:${color}"
+        <div class="d-card${sel}${cantCls}${beatCls}${dimCls}${dealCls}" style="border-top-color:${color};${dealStyle}"
              draggable="${canAct && playable ? 'true' : 'false'}"
              ondragstart="dDragStart('${card}',event)"
              ondblclick="dDblClick('${card}')"

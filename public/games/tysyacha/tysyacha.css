@@ -617,11 +617,12 @@
 
 /* ─ Анімація роздачі карт ─ */
 @keyframes dealCard {
-    from { transform: translateX(-80px) rotate(-8deg); opacity: 0; }
-    to   { transform: translateX(0)     rotate(0deg);  opacity: 1; }
+    0%   { transform: translateY(-110px) rotate(-18deg) scale(0.55); opacity: 0; }
+    65%  { transform: translateY(5px) rotate(2deg) scale(1.04); opacity: 1; }
+    100% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
 }
 .t-card.dealing {
-    animation: dealCard 0.3s ease-out both;
+    animation: dealCard 0.38s cubic-bezier(0.22,1,0.36,1) both;
 }
 
 /* ─ Банер шлюбу ─ */
