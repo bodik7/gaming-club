@@ -35,7 +35,7 @@ export function PlayerGrid() {
 
   return (
     <div className="grid gap-2"
-         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
+         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', maxWidth: `min(100%, ${Math.max(2, Math.ceil(others.length / 2)) * 220 + (Math.max(2, Math.ceil(others.length / 2)) - 1) * 8}px)` }}>
       {others.map((player, i) => (
         <PlayerCard
           key={player.id}

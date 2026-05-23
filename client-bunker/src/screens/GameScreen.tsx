@@ -104,28 +104,25 @@ export function GameScreen() {
       {/* ── Основне тіло ── */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
 
-        {/* Центр */}
-        <div className="flex-1 flex flex-col gap-2 p-2 min-w-0 overflow-hidden game-bg-texture">
-          <div className="flex-1 overflow-y-auto min-h-0">
-            <PlayerGrid />
-          </div>
-          <div className="flex-shrink-0">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={phase}
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.22, ease: 'easeOut' }}
-              >
-                {phase === 'game_start'   && <GameStartPhase />}
-                {phase === 'round_reveal' && <RoundRevealPhase />}
-                {phase === 'discussion'   && <DiscussionPhase />}
-                {(phase === 'voting' || phase === 'voting_result') && <VotingPhase />}
-                {phase === 'end_game'     && <EndGamePhase />}
-              </motion.div>
-            </AnimatePresence>
-          </div>
+        {/* Центр — природній потік, скрол всього вмісту */}
+        <div className="flex-1 flex flex-col gap-2 p-2 min-w-0 overflow-y-auto game-bg-texture">
+          <PlayerGrid />
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={phase}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              {phase === 'game_start'   && <GameStartPhase />}
+              {phase === 'round_reveal' && <RoundRevealPhase />}
+              {phase === 'discussion'   && <DiscussionPhase />}
+              {(phase === 'voting' || phase === 'voting_result') && <VotingPhase />}
+              {phase === 'end_game'     && <EndGamePhase />}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* Вертикальний сепаратор */}
