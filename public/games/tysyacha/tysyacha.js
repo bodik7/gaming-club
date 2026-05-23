@@ -49,18 +49,6 @@ function initTysyacha(state, myIdx) {
     setTimeout(() => { tDealing = false; renderTHand(tState); }, 1200);
 }
 
-function tCheckOrientation() {
-    const hint = document.getElementById('t-portrait-hint');
-    if (!hint) return;
-    // Показуємо тільки на мобільних пристроях у портретному режимі
-    const isMobile  = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    const isPortrait = window.innerHeight > window.innerWidth;
-    hint.classList.toggle('hidden', !(isMobile && isPortrait));
-}
-
-// Слухаємо зміну орієнтації
-window.addEventListener('orientationchange', () => setTimeout(tCheckOrientation, 150));
-window.addEventListener('resize', tCheckOrientation);
 
 function updateTysyacha(state, sideEffect) {
     if (sideEffect?.event === 'trickComplete') {
