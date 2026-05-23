@@ -141,57 +141,65 @@ export function GameScreen() {
         <div className="flex-shrink-0 w-px self-stretch my-2"
              style={{ background: 'var(--bunker-border)' }} />
 
-        {/* Права колонка */}
-        <div className="w-72 flex-shrink-0 flex flex-col overflow-hidden"
-             style={{ background: 'rgba(0,0,0,0.15)' }}>
+        {/* Права частина: 2 колонки */}
+        <div className="flex-shrink-0 flex min-h-0 overflow-hidden"
+             style={{ background: 'rgba(0,0,0,0.15)', width: 480 }}>
 
-          {/* Мій персонаж */}
-          {me && (
-            <div className="flex-shrink-0 p-2.5 overflow-y-auto"
-                 style={{ borderBottom: '1px solid var(--bunker-border)', maxHeight: '50%' }}>
-              <div className="text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-1.5"
-                   style={{ color: 'var(--bunker-yellow)' }}>
-                👤 Ваш персонаж
-              </div>
-              <div className="flex flex-col gap-1">
-                {Object.entries(me.attributes).map(([key, attr]) => {
-                  const color = ATTR_COLORS[key] || '#e09600'
-                  return (
-                    <div key={key}
-                         className="px-2 py-1.5 rounded-lg text-xs"
-                         style={{
-                           background: `${color}0c`,
-                           border: `1px solid ${color}20`,
-                           borderLeftWidth: 2,
-                           borderLeftColor: attr.isRevealed ? color : `${color}50`,
-                         }}>
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-bold" style={{ color: `${color}bb`, fontSize: 10 }}>
-                          {ATTR_LABELS[key]}
-                        </span>
-                        {!attr.isRevealed && (
-                          <span style={{ fontSize: 10, color: 'var(--bunker-muted)' }}>🔒</span>
-                        )}
+          {/* Колонка 1: Персонаж + Карти дій + Хід гри */}
+          <div className="flex flex-col overflow-hidden min-h-0"
+               style={{ width: 240, borderRight: '1px solid var(--bunker-border)' }}>
+
+            {/* Мій персонаж */}
+            {me && (
+              <div className="flex-shrink-0 p-2.5 overflow-y-auto"
+                   style={{ borderBottom: '1px solid var(--bunker-border)', maxHeight: '48%' }}>
+                <div className="text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-1.5"
+                     style={{ color: 'var(--bunker-yellow)' }}>
+                  👤 Ваш персонаж
+                </div>
+                <div className="flex flex-col gap-1">
+                  {Object.entries(me.attributes).map(([key, attr]) => {
+                    const color = ATTR_COLORS[key] || '#e09600'
+                    return (
+                      <div key={key}
+                           className="px-2 py-1.5 rounded-lg text-xs"
+                           style={{
+                             background: `${color}0c`,
+                             border: `1px solid ${color}20`,
+                             borderLeftWidth: 2,
+                             borderLeftColor: attr.isRevealed ? color : `${color}50`,
+                           }}>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="font-bold" style={{ color: `${color}bb`, fontSize: 10 }}>
+                            {ATTR_LABELS[key]}
+                          </span>
+                          {!attr.isRevealed && (
+                            <span style={{ fontSize: 10, color: 'var(--bunker-muted)' }}>🔒</span>
+                          )}
+                        </div>
+                        <div className="text-white leading-snug" style={{ fontSize: 11 }}>{attr.value}</div>
                       </div>
-                      <div className="text-white leading-snug" style={{ fontSize: 11 }}>{attr.value}</div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Карти дій + Лог + Чат */}
-          <div className="flex-1 flex flex-col gap-0 overflow-hidden min-h-0">
+            {/* Карти дій */}
             <div className="flex-shrink-0 p-2">
               <ActionCardPanel />
             </div>
-            <div className="flex-shrink-0 px-2">
+
+            {/* Хід гри — займає весь залишок */}
+            <div className="flex-1 min-h-0 overflow-hidden px-2 pb-2">
               <LogPanel />
             </div>
-            <div className="flex-1 px-2 pb-2 min-h-0 flex flex-col">
-              <ChatPanel />
-            </div>
+          </div>
+
+          {/* Колонка 2: Чат */}
+          <div className="flex flex-col min-h-0 overflow-hidden p-2"
+               style={{ width: 240 }}>
+            <ChatPanel />
           </div>
         </div>
       </div>

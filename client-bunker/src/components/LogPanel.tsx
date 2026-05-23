@@ -13,17 +13,16 @@ export function LogPanel() {
   if (!gameState?.log.length) return null
 
   return (
-    <div className="rounded-xl flex flex-col overflow-hidden flex-shrink-0"
+    <div className="rounded-xl flex flex-col overflow-hidden h-full"
          style={{
            background: 'var(--bunker-surface)',
            border: '1px solid var(--bunker-border)',
-           maxHeight: 148,
          }}>
       <div className="px-3 py-1.5 text-xs font-black uppercase tracking-widest flex-shrink-0 flex items-center gap-1.5"
            style={{ color: 'var(--bunker-muted)', borderBottom: '1px solid var(--bunker-border)' }}>
         <span>📋</span> Хід гри
       </div>
-      <div className="overflow-y-auto p-2 flex flex-col-reverse gap-0.5">
+      <div className="flex-1 overflow-y-auto p-2 flex flex-col-reverse gap-0.5 min-h-0">
         <AnimatePresence initial={false}>
           {gameState.log.map((entry, i) => (
             <motion.div
