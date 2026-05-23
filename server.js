@@ -1708,7 +1708,7 @@ function createBunkerState(roomPlayers, settings = {}) {
         };
     });
 
-    const scenarioId   = settings.scenarioId || Math.floor(Math.random() * BUNKER_SCENARIOS.length);
+    const scenarioId   = settings.scenarioId != null ? settings.scenarioId : Math.floor(Math.random() * BUNKER_SCENARIOS.length);
     const scenario     = BUNKER_SCENARIOS[scenarioId] || BUNKER_SCENARIOS[0];
     const timerEnabled = settings.timerEnabled !== false;
 

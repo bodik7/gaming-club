@@ -105,7 +105,7 @@ const S = {
 
 export function WaitingScreen() {
   const { roomCode, roomPlayers, roomBots, isHost, myName, reset, setLeavingToHub, error } = useGameStore()
-  const [selectedScenario, setSelectedScenario] = useState<number>(0)
+  const [selectedScenario, setSelectedScenario] = useState<number | null>(null)
   const [timerEnabled, setTimerEnabled]         = useState(true)
   const [showScenarios, setShowScenarios]       = useState(false)
   const [showHowTo, setShowHowTo]               = useState(false)
@@ -133,12 +133,17 @@ export function WaitingScreen() {
     }).catch(() => {})
   }
 
-  const startGame = () => getSocket().emit('startGame', { settings: { scenarioId: selectedScenario, timerEnabled } })
+  const startGame = () => getSocket().emit('startGame', {
+    settings: {
+      ...(selectedScenario !== null && { scenarioId: selectedScenario }),
+      timerEnabled,
+    },
+  })
   const leaveRoom = () => { setLeavingToHub(); getSocket().emit('leaveRoom'); location.replace('/') }
 
   const minPlayers = 4
   const canStart   = isHost && roomPlayers.length >= minPlayers
-  const chosen     = SCENARIOS[selectedScenario]
+  const chosen     = selectedScenario !== null ? SCENARIOS[selectedScenario] : null
   const humanCount = roomPlayers.filter((_, i) => !roomBots[i]).length
   const needMore   = minPlayers - humanCount
 
@@ -225,15 +230,32 @@ export function WaitingScreen() {
                 background: 'rgba(255,255,255,0.05)', border: '1.5px solid rgba(255,255,255,0.12)',
                 transition: 'all 0.2s',
               }}>
-                <span style={{ fontSize: 24 }}>{chosen.emoji}</span>
+                <span style={{ fontSize: 24 }}>{chosen ? chosen.emoji : '🎲'}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{chosen.title}</div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{chosen.subtitle}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {chosen ? chosen.title : 'Випадковий сценарій'}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                    {chosen ? chosen.subtitle : 'Буде обрано автоматично'}
+                  </div>
                 </div>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', flexShrink: 0 }}>{showScenarios ? '▲' : '▼'}</span>
               </button>
               {showScenarios && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6, maxHeight: 200, overflowY: 'auto' }}>
+                  {/* Випадковий — перший */}
+                  <button onClick={() => { setSelectedScenario(null); setShowScenarios(false) }} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '8px 12px', borderRadius: 10, textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s',
+                    background: selectedScenario === null ? 'rgba(255,215,0,0.08)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${selectedScenario === null ? 'rgba(255,215,0,0.3)' : 'transparent'}`,
+                  }}>
+                    <span style={{ fontSize: 18 }}>🎲</span>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>Випадковий сценарій</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Буде обрано автоматично</div>
+                    </div>
+                  </button>
                   {SCENARIOS.map(sc => (
                     <button key={sc.id} onClick={() => { setSelectedScenario(sc.id); setShowScenarios(false) }} style={{
                       display: 'flex', alignItems: 'center', gap: 10,
