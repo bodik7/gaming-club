@@ -47,7 +47,10 @@ export function useSocket() {
             success?: boolean; error?: string; started?: boolean
             state?: Record<string, unknown>; players?: string[]
           }) => {
-            if (res.error || !res.success) return
+            if (res.error || !res.success) {
+              localStorage.removeItem(SESSION_KEY)
+              return
+            }
             const store = useGameStore.getState()
             store.setMyName(playerName)
             if (res.started && res.state) {

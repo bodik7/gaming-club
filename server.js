@@ -3063,7 +3063,23 @@ io.on('connection', (socket) => {
     // Вийти з кімнати (до початку гри)
     socket.on('leaveRoom', () => {
         const room = rooms[socket.roomCode];
-        if (!room || room.started) return;
+        if (!room) return;
+
+        // Bunker under active game: special logic
+        if (room.started && room.state?.gameType === 'bunker') {
+            const remainingHumans = room.players.filter(p => !p.isBot && p.index !== socket.playerIndex);
+            if (remainingHumans.length === 0) {
+                clearBunkerTimer(room);
+                io.to(socket.roomCode).emit('roomClosed', { reason: 'Усі гравці покинули гру' });
+                delete rooms[socket.roomCode];
+            }
+            socket.leave(socket.roomCode);
+            socket.roomCode = null;
+            socket.playerIndex = null;
+            return;
+        }
+
+        if (room.started) return;
 
         if (socket.playerIndex === 0) {
             // Хост виходить — видаляємо кімнату, виганяємо всіх
@@ -3633,6 +3649,22 @@ io.on('connection', (socket) => {
             });
         }
         io.to(socket.roomCode).emit('playerDisconnected', { playerIndex: socket.playerIndex });
+
+        // Bunker: close room if all humans disconnected (60s grace for reconnect)
+        if (room.started && room.state?.gameType === 'bunker') {
+            const roomCode = socket.roomCode;
+            setTimeout(() => {
+                const r = rooms[roomCode];
+                if (!r) return;
+                const connectedHumans = r.players.filter(
+                    p => !p.isBot && p.socketId && io.sockets.sockets.get(p.socketId)
+                );
+                if (connectedHumans.length === 0) {
+                    clearBunkerTimer(r);
+                    delete rooms[roomCode];
+                }
+            }, 60_000);
+        }
     });
 });
 

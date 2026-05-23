@@ -48,10 +48,17 @@ export function GameScreen() {
   const pm    = PHASE_META[phase] || PHASE_META['game_start']
 
   const leaveGame = () => {
-    if (confirm('Покинути гру? Гра буде скасована для всіх.')) {
-      getSocket().emit('leaveRoom')
-      reset()
+    const otherHumans = players.filter((p, i) => i !== myIndex && !p.isBot)
+    const hasHumans   = otherHumans.length > 0
+    const msg = hasHumans
+      ? 'Покинути гру?\n\nВаш стан збережеться — ви зможете повернутись через це ж посилання.'
+      : 'Покинути гру? Кімната закриється.'
+    if (!confirm(msg)) return
+    if (!hasHumans) {
+      localStorage.removeItem('monopolia_session')
     }
+    getSocket().emit('leaveRoom')
+    reset()
   }
 
   return (
