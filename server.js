@@ -1681,9 +1681,12 @@ function createBunkerState(roomPlayers, settings = {}) {
     let actions = shuffle(BUNKER_ACTION_CARDS);
 
     const players = roomPlayers.map((rp, i) => {
-        const gender = Math.random() > 0.5 ? 'Чоловік' : 'Жінка';
+        const isMale = Math.random() > 0.5;
+        const gender = isMale ? 'Чоловік' : 'Жінка';
         const age    = Math.floor(Math.random() * (77 - 18 + 1)) + 18;
-        const repro  = Math.random() > 0.2 ? 'плідний(а)' : 'безплідний(а)';
+        const repro  = Math.random() > 0.2
+            ? (isMale ? 'плідний' : 'плідна')
+            : (isMale ? 'безплідний' : 'безплідна');
         return {
             id:       i,
             name:     rp.name,

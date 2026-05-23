@@ -112,6 +112,7 @@ export function GameScreen() {
           <AnimatePresence mode="wait">
             <motion.div
               key={phase}
+              className="flex-1 flex flex-col min-h-0"
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}

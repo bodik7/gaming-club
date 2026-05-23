@@ -35,7 +35,7 @@ export function PlayerGrid() {
 
   return (
     <div className="grid gap-2"
-         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', maxWidth: `min(100%, ${Math.max(2, Math.ceil(others.length / 2)) * 220 + (Math.max(2, Math.ceil(others.length / 2)) - 1) * 8}px)` }}>
+         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', maxWidth: (() => { const cols = others.length <= 3 ? others.length : Math.max(2, Math.ceil(others.length / 2)); return `min(100%, ${cols * 220 + (cols - 1) * 8}px)` })() }}>
       {others.map((player, i) => (
         <PlayerCard
           key={player.id}
@@ -186,21 +186,25 @@ function PlayerCard({
         )}
       </div>
 
-      {/* Карти дій */}
+      {/* Карти дій — тільки кількість (назви приховані від інших) */}
       {player.actionCards.length > 0 && (
-        <div className="flex gap-1 flex-wrap relative">
+        <div className="flex items-center gap-1 relative">
           {player.actionCards.map(card => (
             <span key={card.id}
                   className="text-xs px-1.5 py-0.5 rounded-full"
                   style={{
-                    background: card.used ? 'rgba(255,255,255,0.03)' : 'rgba(224,150,0,0.1)',
+                    background: card.used ? 'rgba(255,255,255,0.03)' : 'rgba(224,150,0,0.08)',
                     color: card.used ? 'var(--bunker-muted)' : 'var(--bunker-yellow)',
-                    textDecoration: card.used ? 'line-through' : 'none',
-                    fontSize: 10,
+                    fontSize: 10, opacity: card.used ? 0.4 : 1,
                   }}>
-              {card.name}
+              🃏
             </span>
           ))}
+          <span className="text-xs" style={{ color: 'var(--bunker-muted)', fontSize: 10 }}>
+            {player.actionCards.filter(c => !c.used).length > 0
+              ? `${player.actionCards.filter(c => !c.used).length} карт`
+              : 'всі використані'}
+          </span>
         </div>
       )}
     </motion.div>
