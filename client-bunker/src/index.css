@@ -69,6 +69,18 @@ body {
   50%       { box-shadow: 0 0 18px rgba(204,34,0,0.75); }
 }
 
+@keyframes float-up {
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .animate-pulse-urgent { animation: pulse-urgent 0.65s ease-in-out infinite; }
 .animate-fade-up      { animation: fade-in-up 0.3s ease-out; }
+.animate-float-up     { animation: float-up 0.28s cubic-bezier(.22,.68,0,1.2); }
 .animate-glow-red     { animation: glow-red 1s ease-in-out infinite; }
+
+/* Subtle dot-grid texture for main game area */
+.game-bg-texture {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 24px 24px;
+}

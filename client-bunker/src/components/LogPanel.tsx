@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
 
 export function LogPanel() {
@@ -16,23 +17,30 @@ export function LogPanel() {
          style={{
            background: 'var(--bunker-surface)',
            border: '1px solid var(--bunker-border)',
-           maxHeight: 152,
+           maxHeight: 148,
          }}>
       <div className="px-3 py-1.5 text-xs font-black uppercase tracking-widest flex-shrink-0 flex items-center gap-1.5"
            style={{ color: 'var(--bunker-muted)', borderBottom: '1px solid var(--bunker-border)' }}>
         <span>📋</span> Хід гри
       </div>
       <div className="overflow-y-auto p-2 flex flex-col-reverse gap-0.5">
-        {gameState.log.map((entry, i) => (
-          <div key={i}
-               className="text-xs py-0.5 pl-2.5 leading-snug relative"
-               style={{
-                 color: i === 0 ? 'var(--bunker-text)' : 'var(--bunker-muted)',
-                 borderLeft: `2px solid ${i === 0 ? 'var(--bunker-red)' : 'var(--bunker-border)'}`,
-               }}>
-            {entry}
-          </div>
-        ))}
+        <AnimatePresence initial={false}>
+          {gameState.log.map((entry, i) => (
+            <motion.div
+              key={entry + i}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="text-xs py-0.5 pl-2.5 leading-snug"
+              style={{
+                color: i === 0 ? 'var(--bunker-text)' : 'var(--bunker-muted)',
+                borderLeft: `2px solid ${i === 0 ? 'var(--bunker-red)' : 'var(--bunker-border)'}`,
+              }}
+            >
+              {entry}
+            </motion.div>
+          ))}
+        </AnimatePresence>
         <div ref={endRef} />
       </div>
     </div>

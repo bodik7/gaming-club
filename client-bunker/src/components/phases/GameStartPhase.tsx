@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { getSocket } from '../../hooks/useSocket'
 import { useGameStore } from '../../store/gameStore'
 
@@ -46,10 +47,11 @@ export function GameStartPhase() {
 
       {/* Кнопка */}
       <div className="px-4 py-3" style={{ background: 'var(--bunker-surface)', borderTop: '1px solid var(--bunker-border)' }}>
-        <button
+        <motion.button
+          whileTap={{ scale: 0.96 }}
           onClick={markReady}
           disabled={ready}
-          className="w-full py-2.5 rounded-xl font-black text-sm tracking-wide transition-all active:scale-95 disabled:opacity-50"
+          className="w-full py-2.5 rounded-xl font-black text-sm tracking-wide disabled:opacity-50"
           style={{
             background: ready
               ? 'linear-gradient(135deg, #2a5a3a, #1e4a2a)'
@@ -59,7 +61,7 @@ export function GameStartPhase() {
           }}
         >
           {ready ? '✅ Ви готові — чекаємо інших...' : '✅ Я прочитав — Готовий!'}
-        </button>
+        </motion.button>
       </div>
     </div>
   )

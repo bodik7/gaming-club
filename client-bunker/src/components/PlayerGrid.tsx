@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../store/gameStore'
 import type { BunkerPlayer, Attribute } from '../types/bunker'
 
@@ -17,7 +17,6 @@ const ATTR_COLORS: Record<string, string> = {
   baggage:    '#cc8844',
 }
 
-// Кольори аватарок — по імені (hash)
 const AVATAR_COLORS = [
   '#6088cc', '#5cb87e', '#cc8844', '#aa88cc',
   '#cc5555', '#e09600', '#2a9090', '#cc6699',
@@ -37,10 +36,11 @@ export function PlayerGrid() {
   return (
     <div className="grid gap-2"
          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
-      {others.map(player => (
+      {others.map((player, i) => (
         <PlayerCard
           key={player.id}
           player={player}
+          index={i}
           marker={localMarkers[player.id] || null}
           onMarker={(m) => setLocalMarker(player.id, m)}
         />
@@ -50,9 +50,10 @@ export function PlayerGrid() {
 }
 
 function PlayerCard({
-  player, marker, onMarker,
+  player, index, marker, onMarker,
 }: {
   player: BunkerPlayer
+  index: number
   marker: '🟢' | '🔴' | null
   onMarker: (m: '🟢' | '🔴' | null) => void
 }) {
@@ -68,18 +69,38 @@ function PlayerCard({
     : isBot                          ? 'rgba(80,120,200,0.3)'
     : 'var(--bunker-border)'
 
+  const glowColor = marker === '🟢' ? 'rgba(58,122,90,0.35)'
+    : marker === '🔴'               ? 'rgba(204,34,0,0.35)'
+    : 'transparent'
+
   const aColor = avatarColor(player.name)
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: isDead ? 0.28 : 1, y: 0 }}
-      className="rounded-xl p-2.5 flex flex-col gap-2 relative overflow-hidden"
+      initial={{ opacity: 0, y: 24, scale: 0.92 }}
+      animate={{
+        opacity: isDead ? 0.28 : 1,
+        y: 0,
+        scale: isDead ? 0.98 : 1,
+      }}
+      transition={{
+        delay: index * 0.06,
+        type: 'spring',
+        stiffness: 260,
+        damping: 24,
+      }}
+      whileHover={!isDead ? {
+        y: -4,
+        transition: { duration: 0.15, ease: 'easeOut' },
+      } : {}}
+      className="rounded-xl p-2.5 flex flex-col gap-2 relative overflow-hidden cursor-default"
       style={{
         background: isBot && !isDead ? 'rgba(35,55,100,0.3)' : 'var(--bunker-surface)',
         border: `1px solid ${borderColor}`,
         filter: isDead ? 'grayscale(0.85)' : 'none',
+        boxShadow: isDead ? 'none' : marker ? `0 0 0 1px ${borderColor}30, 0 4px 16px ${glowColor}` : '0 2px 8px rgba(0,0,0,0.3)',
+        transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
       }}
     >
       {/* Overlay для вибулих */}
@@ -90,21 +111,19 @@ function PlayerCard({
              }} />
       )}
 
-      {/* ── Заголовок картки ── */}
+      {/* ── Заголовок ── */}
       <div className="flex items-center gap-2 relative">
-        {/* Аватарка */}
         <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black"
              style={{
-               background: isDead ? 'rgba(100,100,100,0.3)' : `${aColor}28`,
-               border: `1.5px solid ${isDead ? 'rgba(100,100,100,0.3)' : aColor + '70'}`,
-               color: isDead ? '#666' : aColor,
+               background: isDead ? 'rgba(100,100,100,0.2)' : `${aColor}22`,
+               border: `1.5px solid ${isDead ? 'rgba(100,100,100,0.3)' : aColor + '60'}`,
+               color: isDead ? '#555' : aColor,
              }}>
           {isBot ? '🤖' : player.name[0]?.toUpperCase()}
         </div>
 
-        {/* Ім'я */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 mb-px">
             {isDead && (
               <span className="px-1 py-px rounded font-black flex-shrink-0"
                     style={{ background: 'rgba(180,30,0,0.5)', color: '#ff6060', fontSize: 8, letterSpacing: '0.05em' }}>
@@ -112,7 +131,11 @@ function PlayerCard({
               </span>
             )}
             {!isDead && player.hasRevealed && (
-              <span style={{ color: 'var(--bunker-green-bright)', fontSize: 10, flexShrink: 0 }}>✓</span>
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+                style={{ color: 'var(--bunker-green-bright)', fontSize: 10 }}>✓</motion.span>
             )}
           </div>
           <div className="text-sm font-bold truncate"
@@ -126,25 +149,28 @@ function PlayerCard({
           </div>
         </div>
 
-        {/* Маркери (тільки живих) */}
         {!isDead && (
           <div className="flex gap-0.5 flex-shrink-0">
-            <button onClick={() => onMarker(marker === '🟢' ? null : '🟢')}
-                    style={{ opacity: marker === '🟢' ? 1 : 0.18, fontSize: 11 }}>🟢</button>
-            <button onClick={() => onMarker(marker === '🔴' ? null : '🔴')}
-                    style={{ opacity: marker === '🔴' ? 1 : 0.18, fontSize: 11 }}>🔴</button>
+            <motion.button
+              whileTap={{ scale: 1.5 }}
+              onClick={() => onMarker(marker === '🟢' ? null : '🟢')}
+              style={{ opacity: marker === '🟢' ? 1 : 0.18, fontSize: 11 }}>🟢</motion.button>
+            <motion.button
+              whileTap={{ scale: 1.5 }}
+              onClick={() => onMarker(marker === '🔴' ? null : '🔴')}
+              style={{ opacity: marker === '🔴' ? 1 : 0.18, fontSize: 11 }}>🔴</motion.button>
           </div>
         )}
       </div>
 
       {/* ── Атрибути ── */}
       <div className="flex flex-col gap-1 relative">
-        {/* Розкриті атрибути */}
-        {revealedAttrs.map(([key, attr]) => (
-          <AttributeRow key={key} attrKey={key} icon={ATTR_ICONS[key]} attr={attr} />
-        ))}
+        <AnimatePresence>
+          {revealedAttrs.map(([key, attr]) => (
+            <AttributeRow key={key} attrKey={key} icon={ATTR_ICONS[key]} attr={attr} />
+          ))}
+        </AnimatePresence>
 
-        {/* Приховані — одна компактна плашка */}
         {hiddenCount > 0 && (
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs"
                style={{
@@ -153,7 +179,9 @@ function PlayerCard({
                  color: 'var(--bunker-muted)',
                }}>
             <span style={{ opacity: 0.4 }}>🔒</span>
-            <span>{hiddenCount} {hiddenCount === 1 ? 'атрибут прихований' : hiddenCount < 5 ? 'атрибути приховані' : 'атрибутів приховано'}</span>
+            <span>
+              {hiddenCount} {hiddenCount === 1 ? 'атрибут прихований' : hiddenCount < 5 ? 'атрибути приховані' : 'атрибутів приховано'}
+            </span>
           </div>
         )}
       </div>
@@ -185,12 +213,12 @@ function AttributeRow({ attrKey, icon, attr }: {
   attr: Attribute
 }) {
   const prevRef = useRef(attr.isRevealed)
-  const [flip, setFlip] = useState(false)
+  const [isNew, setIsNew] = useState(false)
 
   useEffect(() => {
     if (!prevRef.current && attr.isRevealed) {
-      setFlip(true)
-      const t = setTimeout(() => setFlip(false), 500)
+      setIsNew(true)
+      const t = setTimeout(() => setIsNew(false), 800)
       return () => clearTimeout(t)
     }
     prevRef.current = attr.isRevealed
@@ -200,16 +228,18 @@ function AttributeRow({ attrKey, icon, attr }: {
 
   return (
     <motion.div
-      initial={flip ? { rotateY: 90, opacity: 0 } : false}
-      animate={{ rotateY: 0, opacity: 1 }}
-      transition={{ duration: 0.38, ease: 'easeOut' }}
+      initial={{ opacity: 0, rotateX: -90, scale: 0.85 }}
+      animate={{ opacity: 1, rotateX: 0, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 22 }}
       className="flex items-start gap-1.5 text-xs py-1 px-2 rounded-lg"
       style={{
-        perspective: 600,
-        background: `${color}0e`,
-        border: `1px solid ${color}20`,
+        perspective: 800,
+        background: isNew ? `${color}22` : `${color}0e`,
+        border: `1px solid ${isNew ? color + '55' : color + '20'}`,
         borderLeftWidth: 2,
-        borderLeftColor: `${color}88`,
+        borderLeftColor: `${color}99`,
+        boxShadow: isNew ? `0 0 12px ${color}40` : 'none',
+        transition: 'background 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease',
       }}
     >
       <span className="flex-shrink-0 mt-px" style={{ fontSize: 11 }}>{icon}</span>
