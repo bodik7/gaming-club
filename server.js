@@ -1965,7 +1965,15 @@ function scheduleBotActions(room, phase) {
             });
 
             if (!data?.decisions?.length) {
-                // Fallback — розкрити перший нерозкритий
+                const FALLBACK_BOT_MSGS = [
+                    'Я буду корисним для виживання в бункері!',
+                    'Мої навички незамінні в кризовій ситуації.',
+                    'Без мене команда не виживе.',
+                    'Я готовий до будь-яких умов.',
+                    'Мій досвід стане у нагоді всім.',
+                    'Розраховуйте на мене в найскладніші моменти.',
+                    'Я зроблю все можливе для виживання команди.',
+                ];
                 botsToAct.forEach((bp, i) => {
                     setTimeout(() => {
                         if (room.state?.phase !== 'round_reveal') return;
@@ -1973,7 +1981,17 @@ function scheduleBotActions(room, phase) {
                         if (!p?.isAlive || p.hasRevealed) return;
                         const forced = BUNKER_FORCED_ATTR[room.state.round];
                         const attr = forced || Object.keys(p.attributes).find(k => !p.attributes[k].isRevealed);
-                        if (attr) processBunkerAction(room, 'b_revealAttr', { attr }, bp.index);
+                        if (attr) {
+                            processBunkerAction(room, 'b_revealAttr', { attr }, bp.index);
+                            const msg = FALLBACK_BOT_MSGS[Math.floor(Math.random() * FALLBACK_BOT_MSGS.length)];
+                            io.to(room.code).emit('chatMessage', {
+                                playerIndex: bp.index,
+                                name: p.name,
+                                color: '#88aaff',
+                                icon: '🤖',
+                                text: msg,
+                            });
+                        }
                     }, (i + 1) * 2500);
                 });
                 return;
