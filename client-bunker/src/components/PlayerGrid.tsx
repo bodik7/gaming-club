@@ -8,6 +8,15 @@ const ATTR_ICONS: Record<string, string> = {
   hobby: '🎯', trait: '🧠', baggage: '🎒',
 }
 
+const ATTR_COLORS: Record<string, string> = {
+  profession: '#e09600',
+  biology:    '#5cb87e',
+  health:     '#cc5555',
+  hobby:      '#6088cc',
+  trait:      '#aa88cc',
+  baggage:    '#cc8844',
+}
+
 export function PlayerGrid() {
   const { gameState, myIndex, localMarkers, setLocalMarker } = useGameStore()
   if (!gameState) return null
@@ -16,7 +25,7 @@ export function PlayerGrid() {
 
   return (
     <div className="grid gap-2"
-         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
+         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))' }}>
       {others.map(player => (
         <PlayerCard
           key={player.id}
@@ -36,46 +45,85 @@ function PlayerCard({
   marker: '🟢' | '🔴' | null
   onMarker: (m: '🟢' | '🔴' | null) => void
 }) {
-  const borderColor = marker === '🟢' ? '#2a7a2a'
-    : marker === '🔴' ? 'var(--bunker-red)'
+  const isDead = !player.isAlive
+  const isBot  = player.isBot
+
+  const borderColor = isDead         ? 'var(--bunker-border)'
+    : marker === '🟢'               ? 'var(--bunker-green)'
+    : marker === '🔴'               ? 'var(--bunker-red)'
+    : isBot                          ? 'rgba(80,120,200,0.35)'
     : 'var(--bunker-border)'
 
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: player.isAlive ? 1 : 0.35, y: 0 }}
-      className="rounded-xl p-3 flex flex-col gap-2"
-      style={{ background: 'var(--bunker-surface)', border: `1px solid ${borderColor}` }}
+      animate={{ opacity: isDead ? 0.28 : 1, y: 0 }}
+      className="rounded-xl p-3 flex flex-col gap-2 relative overflow-hidden"
+      style={{
+        background: isBot && !isDead
+          ? 'rgba(40,60,110,0.25)'
+          : 'var(--bunker-surface)',
+        border: `1px solid ${borderColor}`,
+        filter: isDead ? 'grayscale(0.85)' : 'none',
+        boxShadow: isDead ? 'none' : marker ? `0 0 0 1px ${borderColor}30` : 'none',
+      }}
     >
+      {/* Діагональний overlay для вибулих */}
+      {isDead && (
+        <div className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden"
+             style={{
+               background: 'repeating-linear-gradient(-45deg, transparent, transparent 7px, rgba(204,34,0,0.07) 7px, rgba(204,34,0,0.07) 8px)',
+             }} />
+      )}
+
       {/* Ім'я + маркери */}
-      <div className="flex items-center justify-between gap-1">
-        <span className="text-sm font-bold text-white truncate">
-          {!player.isAlive ? '💀 ' : player.hasRevealed ? '✅ ' : ''}{player.isBot ? '🤖 ' : ''}{player.name}
-        </span>
-        <div className="flex gap-0.5 flex-shrink-0">
-          <button onClick={() => onMarker(marker === '🟢' ? null : '🟢')}
-                  style={{ opacity: marker === '🟢' ? 1 : 0.25, fontSize: 13 }}>🟢</button>
-          <button onClick={() => onMarker(marker === '🔴' ? null : '🔴')}
-                  style={{ opacity: marker === '🔴' ? 1 : 0.25, fontSize: 13 }}>🔴</button>
+      <div className="flex items-center justify-between gap-1 relative">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          {isDead && (
+            <span className="px-1.5 py-px rounded text-white font-black flex-shrink-0"
+                  style={{ background: 'rgba(180,30,0,0.5)', fontSize: 9, letterSpacing: '0.05em' }}>
+              ВИБУВ
+            </span>
+          )}
+          {!isDead && player.hasRevealed && (
+            <span style={{ color: 'var(--bunker-green-bright)', fontSize: 11, flexShrink: 0 }}>✓</span>
+          )}
+          <span className="text-sm font-bold text-white truncate"
+                style={{
+                  textDecoration: isDead ? 'line-through' : 'none',
+                  textDecorationColor: 'rgba(255,60,30,0.5)',
+                  color: isBot && !isDead ? '#8ab0ee' : 'white',
+                }}>
+            {isBot ? '🤖 ' : ''}{player.name}
+          </span>
         </div>
+
+        {!isDead && (
+          <div className="flex gap-0.5 flex-shrink-0">
+            <button onClick={() => onMarker(marker === '🟢' ? null : '🟢')}
+                    style={{ opacity: marker === '🟢' ? 1 : 0.2, fontSize: 12, transition: 'opacity 0.15s' }}>🟢</button>
+            <button onClick={() => onMarker(marker === '🔴' ? null : '🔴')}
+                    style={{ opacity: marker === '🔴' ? 1 : 0.2, fontSize: 12, transition: 'opacity 0.15s' }}>🔴</button>
+          </div>
+        )}
       </div>
 
       {/* Атрибути */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1 relative">
         {Object.entries(player.attributes).map(([key, attr]) => (
-          <AttributeRow key={key} icon={ATTR_ICONS[key]} attr={attr} />
+          <AttributeRow key={key} attrKey={key} icon={ATTR_ICONS[key]} attr={attr} />
         ))}
       </div>
 
       {/* Карти дій */}
       {player.actionCards.length > 0 && (
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1 flex-wrap relative">
           {player.actionCards.map(card => (
             <span key={card.id}
                   className="text-xs px-1.5 py-0.5 rounded-full"
                   style={{
-                    background: card.used ? 'rgba(255,255,255,0.04)' : 'rgba(245,196,0,0.1)',
+                    background: card.used ? 'rgba(255,255,255,0.03)' : 'rgba(224,150,0,0.1)',
                     color: card.used ? 'var(--bunker-muted)' : 'var(--bunker-yellow)',
                     textDecoration: card.used ? 'line-through' : 'none',
                   }}>
@@ -88,11 +136,11 @@ function PlayerCard({
   )
 }
 
-function AttributeRow({ icon, attr }: {
+function AttributeRow({ attrKey, icon, attr }: {
+  attrKey: string
   icon: string
   attr: Attribute
 }) {
-  // Відстежуємо зміну isRevealed → анімація
   const prevRef  = useRef(attr.isRevealed)
   const [flip, setFlip] = useState(false)
 
@@ -108,12 +156,17 @@ function AttributeRow({ icon, attr }: {
   if (!attr.isRevealed) {
     return (
       <div className="flex items-center gap-1.5 text-xs py-1 px-2 rounded-lg"
-           style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.08)' }}>
-        <span style={{ opacity: 0.3 }}>{icon}</span>
-        <span className="font-mono tracking-widest" style={{ opacity: 0.2 }}>• • •</span>
+           style={{
+             background: 'rgba(255,255,255,0.02)',
+             border: '1px dashed rgba(255,255,255,0.07)',
+           }}>
+        <span style={{ opacity: 0.2 }}>{icon}</span>
+        <span style={{ opacity: 0.15, letterSpacing: '0.3em', fontFamily: 'monospace' }}>···</span>
       </div>
     )
   }
+
+  const color = ATTR_COLORS[attrKey] || '#e09600'
 
   return (
     <motion.div
@@ -123,8 +176,10 @@ function AttributeRow({ icon, attr }: {
       className="flex items-start gap-1.5 text-xs py-1 px-2 rounded-lg"
       style={{
         perspective: 600,
-        background: 'rgba(245,196,0,0.06)',
-        border: '1px solid rgba(245,196,0,0.15)',
+        background: `${color}10`,
+        border: `1px solid ${color}22`,
+        borderLeftColor: `${color}99`,
+        borderLeftWidth: 2,
       }}
     >
       <span className="flex-shrink-0 mt-px">{icon}</span>

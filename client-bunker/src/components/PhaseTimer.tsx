@@ -13,15 +13,27 @@ export function PhaseTimer({ deadline }: { deadline: number | null }) {
 
   if (sec === null) return null
 
-  const urgent = sec <= 10
+  const urgent  = sec <= 10
+  const minutes = Math.floor(sec / 60)
+  const secs    = sec % 60
+  const display = minutes > 0
+    ? `${minutes}:${String(secs).padStart(2, '0')}`
+    : `${sec}с`
+
   return (
-    <div className="text-sm font-black px-3 py-1 rounded-full transition-all"
-         style={{
-           background: urgent ? 'rgba(204,34,0,0.9)' : 'rgba(0,0,0,0.5)',
-           color: urgent ? '#fff' : 'var(--bunker-muted)',
-           animation: urgent ? 'pulse 0.6s ease-in-out infinite alternate' : 'none',
-         }}>
-      ⏱ {sec}с
+    <div
+      className="text-sm font-black px-3 py-1 rounded-lg flex items-center gap-1.5 flex-shrink-0"
+      style={{
+        background: urgent ? 'rgba(204,34,0,0.85)' : 'rgba(0,0,0,0.4)',
+        color:      urgent ? '#fff' : 'var(--bunker-muted2)',
+        border:     `1px solid ${urgent ? 'rgba(204,34,0,0.6)' : 'var(--bunker-border)'}`,
+        animation:  urgent ? 'pulse-urgent 0.65s ease-in-out infinite' : 'none',
+        minWidth:   52,
+        textAlign:  'center',
+        fontVariantNumeric: 'tabular-nums',
+      }}
+    >
+      {urgent ? '⚠️' : '⏱'} {display}
     </div>
   )
 }

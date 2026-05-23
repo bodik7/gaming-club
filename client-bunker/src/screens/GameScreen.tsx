@@ -20,6 +20,24 @@ const ATTR_LABELS: Record<string, string> = {
   baggage:    '🎒 Багаж',
 }
 
+const ATTR_COLORS: Record<string, string> = {
+  profession: '#e09600',
+  biology:    '#5cb87e',
+  health:     '#cc5555',
+  hobby:      '#6088cc',
+  trait:      '#aa88cc',
+  baggage:    '#cc8844',
+}
+
+const PHASE_META: Record<string, { label: string; color: string; bg: string }> = {
+  game_start:     { label: 'СТАРТ',        color: '#6088cc', bg: 'rgba(60,100,200,0.18)' },
+  round_reveal:   { label: 'РОЗКРИТТЯ',    color: '#e09600', bg: 'rgba(224,150,0,0.15)'  },
+  discussion:     { label: 'ОБГОВОРЕННЯ',  color: '#5cb87e', bg: 'rgba(60,150,100,0.15)' },
+  voting:         { label: 'ГОЛОСУВАННЯ',  color: '#cc2200', bg: 'rgba(204,34,0,0.18)'   },
+  voting_result:  { label: 'РЕЗУЛЬТАТ',    color: '#cc7700', bg: 'rgba(200,100,0,0.15)'  },
+  end_game:       { label: 'ФІНАЛ',        color: '#8a9290', bg: 'rgba(100,120,120,0.15)'},
+}
+
 export function GameScreen() {
   const { gameState, myIndex, reset } = useGameStore()
   if (!gameState) return null
@@ -27,6 +45,7 @@ export function GameScreen() {
   const { phase, scenario, bunkerCapacity, players } = gameState
   const alive = players.filter(p => p.isAlive).length
   const me    = myIndex !== null ? players[myIndex] : null
+  const pm    = PHASE_META[phase] || PHASE_META['game_start']
 
   const leaveGame = () => {
     if (confirm('Покинути гру? Гра буде скасована для всіх.')) {
@@ -36,27 +55,43 @@ export function GameScreen() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: '#111212' }}>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--bunker-bg)' }}>
 
-      {/* Topbar */}
-      <div className="flex items-center gap-3 px-4 py-2 flex-shrink-0"
-           style={{ background: '#0a0a0a', borderBottom: '2px solid var(--bunker-red)' }}>
-        <span className="text-xl">{scenario.emoji}</span>
+      {/* ── Topbar ── */}
+      <div className="flex items-center gap-3 px-4 py-2.5 flex-shrink-0"
+           style={{
+             background: 'linear-gradient(180deg, #0f1311 0%, #0b0d0c 100%)',
+             borderBottom: '1px solid var(--bunker-border)',
+             boxShadow: '0 1px 0 rgba(255,255,255,0.03)',
+           }}>
+
+        {/* Сценарій */}
+        <span className="text-2xl flex-shrink-0">{scenario.emoji}</span>
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-black text-white truncate">{scenario.title}</div>
+          <div className="text-xs font-black text-white truncate tracking-wide">{scenario.title}</div>
           <div className="text-xs" style={{ color: 'var(--bunker-muted)' }}>
             Виживе {bunkerCapacity} з {players.length} · Живих: {alive}
           </div>
         </div>
+
+        {/* Фаза */}
+        <div className="px-2.5 py-1 rounded-md text-xs font-black tracking-widest flex-shrink-0"
+             style={{ background: pm.bg, color: pm.color, border: `1px solid ${pm.color}40` }}>
+          {pm.label}
+        </div>
+
+        {/* Таймер */}
         <PhaseTimer deadline={gameState.timeDeadline} />
+
+        {/* Вихід */}
         <button onClick={leaveGame}
-                className="text-xs px-3 py-1 rounded-lg"
-                style={{ background: 'rgba(204,34,0,0.25)', color: '#ff8080', border: '1px solid rgba(204,34,0,0.4)' }}>
-          Вийти
+                className="text-xs px-2.5 py-1 rounded-lg flex-shrink-0 transition-opacity hover:opacity-70"
+                style={{ background: 'rgba(204,34,0,0.15)', color: '#ff7060', border: '1px solid rgba(204,34,0,0.3)' }}>
+          ✕
         </button>
       </div>
 
-      {/* Тіло */}
+      {/* ── Основне тіло ── */}
       <div className="flex-1 flex gap-2 p-2 min-h-0 overflow-hidden">
 
         {/* Центр: сітка гравців + панель фази */}
@@ -83,28 +118,44 @@ export function GameScreen() {
           {/* Моя картка */}
           {me && (
             <div className="rounded-xl p-3 flex-shrink-0"
-                 style={{ background: 'var(--bunker-surface)', border: '1px solid var(--bunker-border)' }}>
-              <div className="text-xs font-black uppercase tracking-widest mb-2"
+                 style={{
+                   background: 'var(--bunker-surface)',
+                   border: '1px solid var(--bunker-border)',
+                   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)',
+                 }}>
+              <div className="text-xs font-black uppercase tracking-widest mb-2.5 flex items-center gap-1.5"
                    style={{ color: 'var(--bunker-yellow)' }}>
-                👤 Ваш персонаж
+                <span>👤</span> Ваш персонаж
               </div>
               <div className="flex flex-col gap-1.5">
-                {Object.entries(me.attributes).map(([key, attr]) => (
-                  <div key={key} className="text-xs">
-                    <div className="font-bold mb-0.5" style={{ color: 'var(--bunker-muted)' }}>
-                      {ATTR_LABELS[key]}
+                {Object.entries(me.attributes).map(([key, attr]) => {
+                  const color = ATTR_COLORS[key] || 'var(--bunker-yellow)'
+                  return (
+                    <div key={key}
+                         className="px-2 py-1.5 rounded-lg text-xs"
+                         style={{
+                           background: `${color}0d`,
+                           borderLeft: `2px solid ${color}`,
+                           border: `1px solid ${color}25`,
+                           borderLeftWidth: 2,
+                         }}>
+                      <div className="font-bold mb-0.5" style={{ color: `${color}cc` }}>
+                        {ATTR_LABELS[key]}
+                      </div>
+                      <div className="text-white leading-snug">{attr.value}</div>
+                      {!attr.isRevealed && (
+                        <div className="text-xs mt-0.5 font-medium" style={{ color: 'rgba(204,34,0,0.6)' }}>
+                          🔒 приховано
+                        </div>
+                      )}
                     </div>
-                    <div className="text-white leading-snug">{attr.value}</div>
-                    {!attr.isRevealed && (
-                      <div className="text-xs" style={{ color: 'rgba(204,34,0,0.6)' }}>🔒 приховано</div>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
 
-          {/* Карти дій (тільки якщо є доступні) */}
+          {/* Карти дій */}
           <ActionCardPanel />
 
           {/* Лог подій */}

@@ -7,6 +7,7 @@ interface ChatMessage {
   name:  string
   text:  string
   color: string
+  icon?: string
   ts:    number
 }
 

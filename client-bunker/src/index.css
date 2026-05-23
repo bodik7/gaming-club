@@ -1,14 +1,34 @@
 @import "tailwindcss";
 
 :root {
-  --bunker-bg:      #111212;
-  --bunker-surface: #1c1e1e;
-  --bunker-border:  #2e3232;
-  --bunker-red:     #cc2200;
-  --bunker-yellow:  #f5c400;
-  --bunker-green:   #2a7a2a;
-  --bunker-text:    #d4cfc8;
-  --bunker-muted:   #6b7070;
+  /* Backgrounds */
+  --bunker-bg:       #0b0d0c;
+  --bunker-surface:  #131817;
+  --bunker-surface2: #1b2120;
+  --bunker-border:   #252d2b;
+  --bunker-border2:  #333c3b;
+
+  /* Accents */
+  --bunker-red:           #cc2200;
+  --bunker-red-dim:       rgba(204,34,0,0.15);
+  --bunker-yellow:        #e09600;
+  --bunker-yellow-dim:    rgba(224,150,0,0.12);
+  --bunker-green:         #3a7a5a;
+  --bunker-green-bright:  #5cb87e;
+  --bunker-teal:          #2a7070;
+
+  /* Text */
+  --bunker-text:   #c8c3ba;
+  --bunker-muted:  #596060;
+  --bunker-muted2: #8a9290;
+
+  /* Per-attribute palette */
+  --attr-profession: #e09600;
+  --attr-biology:    #5cb87e;
+  --attr-health:     #cc5555;
+  --attr-hobby:      #6088cc;
+  --attr-trait:      #aa88cc;
+  --attr-baggage:    #cc8844;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,3 +46,29 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bunker-border2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--bunker-muted); }
+
+/* ── Animations ── */
+@keyframes pulse-urgent {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glow-red {
+  0%, 100% { box-shadow: 0 0 6px rgba(204,34,0,0.35); }
+  50%       { box-shadow: 0 0 18px rgba(204,34,0,0.75); }
+}
+
+.animate-pulse-urgent { animation: pulse-urgent 0.65s ease-in-out infinite; }
+.animate-fade-up      { animation: fade-in-up 0.3s ease-out; }
+.animate-glow-red     { animation: glow-red 1s ease-in-out infinite; }
