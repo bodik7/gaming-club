@@ -106,6 +106,7 @@ const S = {
 export function WaitingScreen() {
   const { roomCode, roomPlayers, roomBots, isHost, myName, reset, setLeavingToHub, error } = useGameStore()
   const [selectedScenario, setSelectedScenario] = useState<number>(0)
+  const [timerEnabled, setTimerEnabled]         = useState(true)
   const [showScenarios, setShowScenarios]       = useState(false)
   const [showHowTo, setShowHowTo]               = useState(false)
   const [copied, setCopied]                     = useState(false)
@@ -132,7 +133,7 @@ export function WaitingScreen() {
     }).catch(() => {})
   }
 
-  const startGame = () => getSocket().emit('startGame', { settings: { scenarioId: selectedScenario } })
+  const startGame = () => getSocket().emit('startGame', { settings: { scenarioId: selectedScenario, timerEnabled } })
   const leaveRoom = () => { setLeavingToHub(); getSocket().emit('leaveRoom'); location.replace('/') }
 
   const minPlayers = 4
@@ -249,6 +250,40 @@ export function WaitingScreen() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Таймер фаз (тільки хост) */}
+          {isHost && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 14 }}>
+              <div style={{ ...S.label, marginBottom: 10 }}>⏱ Таймер фаз</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setTimerEnabled(true)}
+                  style={{
+                    flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s',
+                    background: timerEnabled ? 'rgba(255,215,0,0.12)' : 'rgba(255,255,255,0.04)',
+                    border: `1.5px solid ${timerEnabled ? 'rgba(255,215,0,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                    color: timerEnabled ? '#ffd700' : 'rgba(255,255,255,0.4)',
+                  }}>
+                  ⏱ З таймером
+                </button>
+                <button
+                  onClick={() => setTimerEnabled(false)}
+                  style={{
+                    flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s',
+                    background: !timerEnabled ? 'rgba(96,165,250,0.12)' : 'rgba(255,255,255,0.04)',
+                    border: `1.5px solid ${!timerEnabled ? 'rgba(96,165,250,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                    color: !timerEnabled ? '#60a5fa' : 'rgba(255,255,255,0.4)',
+                  }}>
+                  ∞ Без таймера
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 6, lineHeight: 1.5 }}>
+                {timerEnabled
+                  ? 'Кожна фаза автоматично завершується по таймеру'
+                  : 'Хост або гравці завершують фазу вручну'}
+              </div>
             </div>
           )}
 

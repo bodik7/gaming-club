@@ -57,6 +57,7 @@ export interface BunkerState {
   round:          number
   bunkerCapacity: number
   scenario:       Scenario
+  timerEnabled:   boolean
   timeDeadline:   number | null
   myId:           number
   players:        BunkerPlayer[]
@@ -71,7 +72,7 @@ export interface ClientEvents {
   authenticate:         (data: { token: string }) => void
   createRoom:           (data: { playerName: string; gameType: 'bunker' }, cb: (res: { code: string; playerIndex: number; error?: string }) => void) => void
   joinRoom:             (data: { code: string; playerName: string }, cb: (res: { code: string; playerIndex: number; error?: string }) => void) => void
-  startGame:            (settings: { scenarioId?: number }) => void
+  startGame:            (settings: { scenarioId?: number; timerEnabled?: boolean }) => void
   action:               (data: { type: BunkerAction; data: Record<string, unknown> }) => void
   chatMessage:          (data: { text: string; name: string; icon: string; color: string }) => void
   leaveRoom:            () => void

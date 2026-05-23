@@ -1708,8 +1708,9 @@ function createBunkerState(roomPlayers, settings = {}) {
         };
     });
 
-    const scenarioId = settings.scenarioId || Math.floor(Math.random() * BUNKER_SCENARIOS.length);
-    const scenario   = BUNKER_SCENARIOS[scenarioId] || BUNKER_SCENARIOS[0];
+    const scenarioId   = settings.scenarioId || Math.floor(Math.random() * BUNKER_SCENARIOS.length);
+    const scenario     = BUNKER_SCENARIOS[scenarioId] || BUNKER_SCENARIOS[0];
+    const timerEnabled = settings.timerEnabled !== false;
 
     return {
         gameType:       'bunker',
@@ -1717,6 +1718,7 @@ function createBunkerState(roomPlayers, settings = {}) {
         round:          0,
         bunkerCapacity,
         scenario,
+        timerEnabled,
         players,
         votes:          {},
         timeDeadline:   null,
@@ -1736,6 +1738,7 @@ function sanitizeBunker(state, forIdx) {
         round:          state.round,
         bunkerCapacity: state.bunkerCapacity,
         scenario:       state.scenario,
+        timerEnabled:   state.timerEnabled,
         timeDeadline:   state.timeDeadline,
         myId:           forIdx,
         players: state.players.map((p, i) => ({
@@ -2062,10 +2065,15 @@ function scheduleBotActions(room, phase) {
 function startBunkerPhase(room, phase) {
     clearBunkerTimer(room);
     const s = room.state;
-    s.phase       = phase;
-    s.timeDeadline = Date.now() + (BUNKER_PHASE_MS[phase] || 30_000);
+    s.phase = phase;
+    if (s.timerEnabled) {
+        const ms = BUNKER_PHASE_MS[phase] || 30_000;
+        s.timeDeadline   = Date.now() + ms;
+        room.bunkerTimer = setTimeout(() => onBunkerTimeout(room, phase), ms);
+    } else {
+        s.timeDeadline = null;
+    }
     emitBunkerUpdate(room);
-    room.bunkerTimer = setTimeout(() => onBunkerTimeout(room, phase), BUNKER_PHASE_MS[phase] || 30_000);
     scheduleBotActions(room, phase);
 }
 
