@@ -2218,7 +2218,7 @@ function processBunkerAction(room, type, data, pidx) {
         case 'b_ready': {
             if (s.phase !== 'game_start') break;
             p.hasRevealed = true;
-            addBunkerLog(s, `✅ ${p.name} готовий(а)`);
+            addBunkerLog(s, `✅ ${p.name} готовий`);
             const allReady = s.players.every(pl => pl.hasRevealed);
             if (allReady) {
                 s.players.forEach(pl => { pl.hasRevealed = false; });

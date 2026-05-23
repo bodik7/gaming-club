@@ -105,11 +105,11 @@ export function GameScreen() {
       {/* ── Основне тіло ── */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
 
-        {/* Центр: верхні 60% — гравці, нижні 40% — фаза */}
+        {/* Центр: картки гравців (природня висота, max 45%) + фаза (залишок) */}
         <div className="flex-1 flex flex-col min-h-0 min-w-0 game-bg-texture">
 
-          {/* Гравці — 60% висоти, окремий скрол */}
-          <div className="overflow-y-auto p-2" style={{ flex: '3 1 0', minHeight: 0 }}>
+          {/* Гравці — природня висота, але не більше 45% екрану */}
+          <div className="flex-shrink-0 overflow-y-auto p-2" style={{ maxHeight: '45%' }}>
             <PlayerGrid />
           </div>
 
@@ -117,8 +117,8 @@ export function GameScreen() {
           <div className="flex-shrink-0 mx-2"
                style={{ height: 1, background: 'var(--bunker-border)' }} />
 
-          {/* Фаза — 40% висоти, окремий скрол */}
-          <div className="overflow-y-auto p-2" style={{ flex: '2 1 0', minHeight: 0 }}>
+          {/* Фаза — весь залишковий простір */}
+          <div className="flex-1 overflow-y-auto p-2 min-h-0">
             <AnimatePresence mode="wait">
               <motion.div
                 key={phase}

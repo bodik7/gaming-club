@@ -210,18 +210,18 @@ function PlayerCard({
 function LockedAttrRow({ attrKey, icon }: { attrKey: string; icon: string }) {
   const color = ATTR_COLORS[attrKey] || '#e09600'
   return (
-    <div className="flex items-center gap-1.5 text-xs py-1 px-2 rounded-lg"
+    <div className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg"
          style={{
            background: `${color}07`,
-           border: `1px solid ${color}10`,
+           border: `1px solid ${color}12`,
            borderLeftWidth: 2,
-           borderLeftColor: `${color}28`,
+           borderLeftColor: `${color}30`,
          }}>
-      <span className="flex-shrink-0" style={{ fontSize: 11, opacity: 0.3 }}>{icon}</span>
-      <span style={{ color: `${color}55`, fontSize: 10, fontWeight: 600, letterSpacing: '0.03em' }}>
+      <span className="flex-shrink-0" style={{ fontSize: 12, opacity: 0.35 }}>{icon}</span>
+      <span style={{ color: `${color}60`, fontSize: 11, fontWeight: 600 }}>
         {ATTR_LABELS[attrKey]}
       </span>
-      <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 10, opacity: 0.25 }}>🔒</span>
+      <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 10, opacity: 0.3 }}>🔒</span>
     </div>
   )
 }
@@ -250,7 +250,7 @@ function AttributeRow({ attrKey, icon, attr }: {
       initial={{ opacity: 0, rotateX: -90, scale: 0.85 }}
       animate={{ opacity: 1, rotateX: 0, scale: 1 }}
       transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-      className="flex items-start gap-1.5 text-xs py-1 px-2 rounded-lg"
+      className="flex items-start gap-2 text-xs py-1.5 px-2.5 rounded-lg"
       style={{
         perspective: 800,
         background: isNew ? `${color}22` : `${color}0e`,
@@ -261,8 +261,8 @@ function AttributeRow({ attrKey, icon, attr }: {
         transition: 'background 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease',
       }}
     >
-      <span className="flex-shrink-0 mt-px" style={{ fontSize: 11 }}>{icon}</span>
-      <span className="text-white leading-snug">{attr.value}</span>
+      <span className="flex-shrink-0 mt-px" style={{ fontSize: 12 }}>{icon}</span>
+      <span className="text-white leading-snug" style={{ fontSize: 12 }}>{attr.value}</span>
     </motion.div>
   )
 }
