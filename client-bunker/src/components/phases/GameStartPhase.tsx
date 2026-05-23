@@ -19,59 +19,47 @@ export function GameStartPhase() {
   }
 
   return (
-    <>
-      <div className="flex flex-col gap-3 animate-fade-up" style={{ paddingBottom: 96 }}>
+    <div style={{
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      zIndex: 40,
+      padding: '0 16px',
+      paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+      background: 'linear-gradient(to top, #0b0d0c 70%, transparent)',
+    }}>
+      <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
 
         {/* Деталі сценарію */}
-        <div className="rounded-xl overflow-hidden"
-             style={{ border: '1px solid rgba(204,34,0,0.25)', background: 'var(--bunker-surface)' }}>
-          <div className="px-4 py-3 flex flex-col gap-2 text-sm leading-relaxed"
-               style={{ color: 'var(--bunker-text)' }}>
-            <p><strong className="text-white">💀 Катастрофа:</strong> {scenario.disaster}</p>
-            <p><strong className="text-white">🏚️ Бункер:</strong> {scenario.bunker}</p>
-            <p><strong className="text-white">🎯 Завдання:</strong> {scenario.goal}</p>
-          </div>
+        <div className="rounded-xl px-4 py-2.5 text-xs leading-relaxed"
+             style={{ background: 'var(--bunker-surface)', border: '1px solid rgba(204,34,0,0.2)', color: 'var(--bunker-text)' }}>
+          <p className="mb-1"><strong className="text-white">💀</strong> {scenario.disaster}</p>
+          <p className="mb-1"><strong className="text-white">🏚️</strong> {scenario.bunker}</p>
+          <p><strong className="text-white">🎯</strong> {scenario.goal}</p>
         </div>
 
         {/* Прогрес готовності */}
-        <div className="rounded-xl px-4 py-3"
-             style={{ background: 'var(--bunker-surface)', border: '1px solid var(--bunker-border)' }}>
-          <div className="flex justify-between items-center text-sm mb-2">
-            <span style={{ color: 'var(--bunker-muted)' }}>Готові до гри</span>
-            <span className="font-black text-base" style={{ color: 'var(--bunker-green-bright)' }}>
-              {readyCount} / {players.length}
-            </span>
-          </div>
-          <div className="rounded-full overflow-hidden" style={{ height: 5, background: 'var(--bunker-border)' }}>
+        <div className="flex items-center gap-3 px-1">
+          <div className="flex-1 rounded-full overflow-hidden" style={{ height: 4, background: 'var(--bunker-border)' }}>
             <div className="h-full rounded-full transition-all duration-500"
                  style={{ width: `${pct}%`, background: 'var(--bunker-green-bright)' }} />
           </div>
+          <span className="text-xs font-black flex-shrink-0" style={{ color: 'var(--bunker-green-bright)' }}>
+            {readyCount} / {players.length} готові
+          </span>
         </div>
-      </div>
 
-      {/* Кнопка готовності — зафіксована внизу екрану */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: '12px 16px',
-        paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
-        background: 'linear-gradient(to top, #0b0d0c 60%, transparent)',
-        zIndex: 40,
-      }}>
+        {/* Кнопка */}
         <motion.button
           whileTap={{ scale: 0.97 }}
           whileHover={!ready ? { scale: 1.01 } : {}}
           onClick={markReady}
           disabled={ready}
-          className="w-full rounded-2xl font-black tracking-wide disabled:opacity-60"
+          className="w-full rounded-xl font-black tracking-wide disabled:opacity-60"
           style={{
-            padding: '20px 24px',
-            fontSize: 20,
-            maxWidth: 600,
-            margin: '0 auto',
-            display: 'block',
+            padding: '13px 20px',
+            fontSize: 15,
             background: ready
               ? 'linear-gradient(135deg, #1e4a2a, #162e1a)'
               : 'linear-gradient(135deg, #cc2200 0%, #8b1500 100%)',
@@ -79,15 +67,13 @@ export function GameStartPhase() {
             border: ready
               ? '1px solid rgba(60,140,80,0.3)'
               : '1px solid rgba(204,34,0,0.5)',
-            boxShadow: ready
-              ? 'none'
-              : '0 4px 24px rgba(204,34,0,0.35), 0 0 0 1px rgba(204,34,0,0.15)',
+            boxShadow: ready ? 'none' : '0 4px 20px rgba(204,34,0,0.3)',
             letterSpacing: '0.04em',
           }}
         >
           {ready ? '✅ Ви готові — чекаємо інших...' : '✅ Я прочитав — Готовий!'}
         </motion.button>
       </div>
-    </>
+    </div>
   )
 }
