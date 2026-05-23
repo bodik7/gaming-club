@@ -45,10 +45,11 @@ export function useSocket() {
           if (!code) return
           s.emit('rejoin', { code, playerIndex, playerName }, (res: {
             success?: boolean; error?: string; started?: boolean
-            state?: Record<string, unknown>; players?: string[]
+            state?: Record<string, unknown>; players?: string[]; bots?: boolean[]
           }) => {
             if (res.error || !res.success) {
               localStorage.removeItem(SESSION_KEY)
+              useGameStore.getState().setScreen('lobby')
               return
             }
             const store = useGameStore.getState()
@@ -57,7 +58,7 @@ export function useSocket() {
               store.setRoom(code, playerIndex, [])
               store.handleGameStarted(res.state as unknown as Parameters<typeof store.handleGameStarted>[0])
             } else if (!res.started && res.players) {
-              store.setRoom(code, playerIndex, res.players)
+              store.setRoom(code, playerIndex, res.players, res.bots)
             }
           })
         } catch {}

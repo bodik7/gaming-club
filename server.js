@@ -3612,8 +3612,8 @@ io.on('connection', (socket) => {
                 : sanitize(room.state);
             cb({ success: true, started: true, state: st, gameType: room.gameType });
         } else {
-            cb({ success: true, started: false, players: room.players.map(p => p.name) });
-            io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name), gameType: room.gameType });
+            cb({ success: true, started: false, players: room.players.map(p => p.name), bots: room.players.map(p => p.isBot || false) });
+            io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name), bots: room.players.map(p => p.isBot || false), gameType: room.gameType });
         }
     });
 

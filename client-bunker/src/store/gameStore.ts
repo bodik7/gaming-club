@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { BunkerState } from '../types/bunker'
 
-export type Screen = 'auth' | 'lobby' | 'waiting' | 'game'
+export type Screen = 'auth' | 'lobby' | 'waiting' | 'game' | 'reconnecting'
 
 interface ChatMessage {
   name:  string
@@ -33,7 +33,7 @@ interface GameStore {
   // Actions
   setScreen:            (s: Screen) => void
   setMyName:            (n: string) => void
-  setRoom:              (code: string, myIndex: number, players: string[]) => void
+  setRoom:              (code: string, myIndex: number, players: string[], bots?: boolean[]) => void
   setRoomPlayers:       (players: string[], bots?: boolean[]) => void
   setConnectionStatus:  (s: 'connected' | 'disconnected' | 'reconnecting') => void
   handleStateUpdate:    (state: BunkerState) => void
@@ -47,7 +47,7 @@ interface GameStore {
 }
 
 export const useGameStore = create<GameStore>((set) => ({
-  screen:           'lobby',
+  screen:           localStorage.getItem('monopolia_session') ? 'reconnecting' : 'lobby',
   myName:           localStorage.getItem('bunker_name') || '',
   myIndex:          null,
   roomCode:         '',
@@ -67,10 +67,11 @@ export const useGameStore = create<GameStore>((set) => ({
     set({ myName })
   },
 
-  setRoom: (roomCode, myIndex, roomPlayers) => set({
+  setRoom: (roomCode, myIndex, roomPlayers, bots) => set({
     roomCode,
     myIndex,
     roomPlayers,
+    roomBots: bots || [],
     isHost: myIndex === 0,
     screen: 'waiting',
   }),
