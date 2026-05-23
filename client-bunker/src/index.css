@@ -84,3 +84,107 @@ body {
   background-image: radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px);
   background-size: 24px 24px;
 }
+
+/* ── Game layout grid (desktop) ── */
+.game-body {
+  display: grid;
+  grid-template-columns: 240px 1fr 260px;
+  grid-template-rows: auto 1fr;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.game-center-top {
+  grid-column: 2;
+  grid-row: 1;
+  overflow-y: auto;
+  padding: 8px;
+  max-height: 45vh;
+}
+
+.game-center-bottom {
+  grid-column: 2;
+  grid-row: 2;
+  overflow-y: auto;
+  padding: 8px;
+  min-height: 0;
+}
+
+.game-left-top {
+  grid-column: 1;
+  grid-row: 1;
+  overflow-y: auto;
+  padding: 10px;
+  border-right: 1px solid var(--bunker-border);
+  border-bottom: 1px solid var(--bunker-border);
+  background: rgba(0,0,0,0.18);
+  max-height: 55vh;
+}
+
+.game-left-bottom {
+  grid-column: 1;
+  grid-row: 2;
+  overflow: hidden;
+  padding: 8px;
+  border-right: 1px solid var(--bunker-border);
+  background: rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.game-right {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 8px;
+  border-left: 1px solid var(--bunker-border);
+  background: rgba(0,0,0,0.18);
+}
+
+/* ── Mobile layout ── */
+@media (max-width: 768px) {
+  .game-body {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .game-center-top {
+    order: 1;
+    max-height: none;
+    border-bottom: 1px solid var(--bunker-border);
+  }
+
+  .game-left-top {
+    order: 2;
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--bunker-border);
+  }
+
+  .game-center-bottom {
+    order: 3;
+    border-bottom: 1px solid var(--bunker-border);
+  }
+
+  .game-right {
+    order: 4;
+    grid-column: unset;
+    grid-row: unset;
+    border-left: none;
+    border-bottom: 1px solid var(--bunker-border);
+    height: 55vh;
+    flex-shrink: 0;
+  }
+
+  .game-left-bottom {
+    order: 5;
+    border-right: none;
+    max-height: 240px;
+  }
+}

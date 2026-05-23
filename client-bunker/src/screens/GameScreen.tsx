@@ -102,22 +102,23 @@ export function GameScreen() {
         </button>
       </div>
 
-      {/* ── Основне тіло: 3 колонки ── */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
+      {/* ── Основне тіло ── */}
+      <div className="game-body">
 
-        {/* ═══ Ліва колонка: Персонаж + Карти дій + Хід гри ═══ */}
-        <div className="flex-shrink-0 flex flex-col min-h-0 overflow-hidden"
-             style={{ width: 240, background: 'rgba(0,0,0,0.18)', borderRight: '1px solid var(--bunker-border)' }}>
+        {/* ═══ Картки інших гравців ═══ */}
+        <div className="game-center-top game-bg-texture">
+          <PlayerGrid />
+        </div>
 
-          {/* Мій персонаж */}
+        {/* ═══ Мій персонаж + Карти дій ═══ */}
+        <div className="game-left-top">
           {me && (
-            <div className="flex-shrink-0 overflow-y-auto p-2.5"
-                 style={{ borderBottom: '1px solid var(--bunker-border)', maxHeight: '48%' }}>
+            <>
               <div className="text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-1.5"
                    style={{ color: 'var(--bunker-yellow)' }}>
                 👤 Ваш персонаж
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1 mb-2">
                 {Object.entries(me.attributes).map(([key, attr]) => {
                   const color = ATTR_COLORS[key] || '#e09600'
                   return (
@@ -142,56 +143,38 @@ export function GameScreen() {
                   )
                 })}
               </div>
-            </div>
+            </>
           )}
-
-          {/* Карти дій */}
-          <div className="flex-shrink-0 p-2">
-            <ActionCardPanel />
-          </div>
-
-          {/* Хід гри — залишок лівої колонки */}
-          <div className="flex-1 min-h-0 overflow-hidden px-2 pb-2">
-            <LogPanel />
-          </div>
+          <ActionCardPanel />
         </div>
 
-        {/* ═══ Центральна колонка: Гравці + Фаза/Сценарій ═══ */}
-        <div className="flex-1 flex flex-col min-h-0 min-w-0 game-bg-texture">
-
-          {/* Гравці — природна висота, max 45% */}
-          <div className="flex-shrink-0 overflow-y-auto p-2" style={{ maxHeight: '45%' }}>
-            <PlayerGrid />
-          </div>
-
-          {/* Горизонтальний розділювач */}
-          <div className="flex-shrink-0 mx-2"
-               style={{ height: 1, background: 'var(--bunker-border)' }} />
-
-          {/* Фаза/Сценарій — залишок центру */}
-          <div className="flex-1 overflow-y-auto p-2 min-h-0">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={phase}
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.22, ease: 'easeOut' }}
-              >
-                {phase === 'game_start'   && <GameStartPhase />}
-                {phase === 'round_reveal' && <RoundRevealPhase />}
-                {phase === 'discussion'   && <DiscussionPhase />}
-                {(phase === 'voting' || phase === 'voting_result') && <VotingPhase />}
-                {phase === 'end_game'     && <EndGamePhase />}
-              </motion.div>
-            </AnimatePresence>
-          </div>
+        {/* ═══ Фаза / Сценарій ═══ */}
+        <div className="game-center-bottom game-bg-texture">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={phase}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              {phase === 'game_start'   && <GameStartPhase />}
+              {phase === 'round_reveal' && <RoundRevealPhase />}
+              {phase === 'discussion'   && <DiscussionPhase />}
+              {(phase === 'voting' || phase === 'voting_result') && <VotingPhase />}
+              {phase === 'end_game'     && <EndGamePhase />}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
-        {/* ═══ Права колонка: Чат ═══ */}
-        <div className="flex-shrink-0 flex flex-col min-h-0 overflow-hidden p-2"
-             style={{ width: 260, background: 'rgba(0,0,0,0.18)', borderLeft: '1px solid var(--bunker-border)' }}>
+        {/* ═══ Чат ═══ */}
+        <div className="game-right">
           <ChatPanel />
+        </div>
+
+        {/* ═══ Хід гри ═══ */}
+        <div className="game-left-bottom">
+          <LogPanel />
         </div>
 
       </div>
