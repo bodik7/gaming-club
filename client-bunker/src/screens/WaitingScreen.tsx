@@ -133,7 +133,7 @@ export function WaitingScreen() {
   }
 
   const startGame = () => getSocket().emit('startGame', { settings: { scenarioId: selectedScenario } })
-  const leaveRoom = () => { getSocket().emit('leaveRoom'); reset() }
+  const leaveRoom = () => { getSocket().emit('leaveRoom'); location.replace('/') }
 
   const minPlayers = 4
   const canStart   = isHost && roomPlayers.length >= minPlayers

@@ -40,7 +40,7 @@ const PHASE_META: Record<string, { label: string; color: string; bg: string }> =
 }
 
 export function GameScreen() {
-  const { gameState, myIndex, reset } = useGameStore()
+  const { gameState, myIndex } = useGameStore()
   if (!gameState) return null
 
   const { phase, scenario, bunkerCapacity, players } = gameState
@@ -57,7 +57,7 @@ export function GameScreen() {
     if (!confirm(msg)) return
     if (!hasHumans) localStorage.removeItem('monopolia_session')
     getSocket().emit('leaveRoom')
-    reset()
+    location.replace('/')
   }
 
   return (

@@ -125,9 +125,11 @@ export function LobbyScreen() {
           )}
         </div>
 
-        <p className="text-center text-xs" style={{ color: 'var(--bunker-muted)' }}>
-          Частина проекту <a href="/" className="underline opacity-60 hover:opacity-100">Ігровий Клуб</a>
-        </p>
+        <a href="/"
+           className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-opacity hover:opacity-80"
+           style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--bunker-border)', color: 'var(--bunker-muted2)', textDecoration: 'none' }}>
+          ← Повернутись в Ігровий Клуб
+        </a>
       </div>
     </div>
   )
