@@ -105,26 +105,36 @@ export function GameScreen() {
       {/* ── Основне тіло ── */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
 
-        {/* Центр — природній потік, скрол всього вмісту */}
-        <div className="flex-1 flex flex-col gap-2 p-2 min-w-0 overflow-y-auto game-bg-texture">
-          <PlayerGrid />
+        {/* Центр: верхні 60% — гравці, нижні 40% — фаза */}
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 game-bg-texture">
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={phase}
-              className="flex-1 flex flex-col min-h-0"
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-            >
-              {phase === 'game_start'   && <GameStartPhase />}
-              {phase === 'round_reveal' && <RoundRevealPhase />}
-              {phase === 'discussion'   && <DiscussionPhase />}
-              {(phase === 'voting' || phase === 'voting_result') && <VotingPhase />}
-              {phase === 'end_game'     && <EndGamePhase />}
-            </motion.div>
-          </AnimatePresence>
+          {/* Гравці — 60% висоти, окремий скрол */}
+          <div className="overflow-y-auto p-2" style={{ flex: '3 1 0', minHeight: 0 }}>
+            <PlayerGrid />
+          </div>
+
+          {/* Горизонтальний розділювач */}
+          <div className="flex-shrink-0 mx-2"
+               style={{ height: 1, background: 'var(--bunker-border)' }} />
+
+          {/* Фаза — 40% висоти, окремий скрол */}
+          <div className="overflow-y-auto p-2" style={{ flex: '2 1 0', minHeight: 0 }}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={phase}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+              >
+                {phase === 'game_start'   && <GameStartPhase />}
+                {phase === 'round_reveal' && <RoundRevealPhase />}
+                {phase === 'discussion'   && <DiscussionPhase />}
+                {(phase === 'voting' || phase === 'voting_result') && <VotingPhase />}
+                {phase === 'end_game'     && <EndGamePhase />}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Вертикальний сепаратор */}
@@ -132,13 +142,13 @@ export function GameScreen() {
              style={{ background: 'var(--bunker-border)' }} />
 
         {/* Права колонка */}
-        <div className="w-56 flex-shrink-0 flex flex-col overflow-hidden"
+        <div className="w-72 flex-shrink-0 flex flex-col overflow-hidden"
              style={{ background: 'rgba(0,0,0,0.15)' }}>
 
           {/* Мій персонаж */}
           {me && (
             <div className="flex-shrink-0 p-2.5 overflow-y-auto"
-                 style={{ borderBottom: '1px solid var(--bunker-border)', maxHeight: '55%' }}>
+                 style={{ borderBottom: '1px solid var(--bunker-border)', maxHeight: '50%' }}>
               <div className="text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-1.5"
                    style={{ color: 'var(--bunker-yellow)' }}>
                 👤 Ваш персонаж

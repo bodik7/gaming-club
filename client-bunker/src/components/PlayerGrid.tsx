@@ -8,6 +8,11 @@ const ATTR_ICONS: Record<string, string> = {
   hobby: '🎯', trait: '🧠', baggage: '🎒',
 }
 
+const ATTR_LABELS: Record<string, string> = {
+  profession: 'Професія', biology: 'Біологія', health: "Здоров'я",
+  hobby: 'Хобі', trait: 'Риса', baggage: 'Багаж',
+}
+
 const ATTR_COLORS: Record<string, string> = {
   profession: '#e09600',
   biology:    '#5cb87e',
@@ -16,6 +21,8 @@ const ATTR_COLORS: Record<string, string> = {
   trait:      '#aa88cc',
   baggage:    '#cc8844',
 }
+
+const ATTR_ORDER = ['profession', 'biology', 'health', 'hobby', 'trait', 'baggage']
 
 const AVATAR_COLORS = [
   '#6088cc', '#5cb87e', '#cc8844', '#aa88cc',
@@ -35,7 +42,7 @@ export function PlayerGrid() {
 
   return (
     <div className="grid gap-2"
-         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', maxWidth: (() => { const cols = others.length <= 3 ? others.length : Math.max(2, Math.ceil(others.length / 2)); return `min(100%, ${cols * 220 + (cols - 1) * 8}px)` })() }}>
+         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
       {others.map((player, i) => (
         <PlayerCard
           key={player.id}
@@ -60,8 +67,8 @@ function PlayerCard({
   const isDead = !player.isAlive
   const isBot  = player.isBot
 
-  const hiddenCount   = Object.values(player.attributes).filter(a => !a.isRevealed).length
   const revealedAttrs = Object.entries(player.attributes).filter(([, a]) => a.isRevealed)
+  const hiddenKeys    = ATTR_ORDER.filter(k => !player.attributes[k as keyof typeof player.attributes]?.isRevealed)
 
   const borderColor = isDead         ? 'var(--bunker-border)'
     : marker === '🟢'               ? '#3a7a5a'
@@ -163,27 +170,16 @@ function PlayerCard({
         )}
       </div>
 
-      {/* ── Атрибути ── */}
+      {/* ── Атрибути: всі 6 слотів (відкриті + приховані) ── */}
       <div className="flex flex-col gap-1 relative">
         <AnimatePresence>
           {revealedAttrs.map(([key, attr]) => (
             <AttributeRow key={key} attrKey={key} icon={ATTR_ICONS[key]} attr={attr} />
           ))}
         </AnimatePresence>
-
-        {hiddenCount > 0 && (
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs"
-               style={{
-                 background: 'rgba(255,255,255,0.02)',
-                 border: '1px dashed rgba(255,255,255,0.07)',
-                 color: 'var(--bunker-muted)',
-               }}>
-            <span style={{ opacity: 0.4 }}>🔒</span>
-            <span>
-              {hiddenCount} {hiddenCount === 1 ? 'атрибут прихований' : hiddenCount < 5 ? 'атрибути приховані' : 'атрибутів приховано'}
-            </span>
-          </div>
-        )}
+        {hiddenKeys.map(key => (
+          <LockedAttrRow key={key} attrKey={key} icon={ATTR_ICONS[key]} />
+        ))}
       </div>
 
       {/* Карти дій — тільки кількість (назви приховані від інших) */}
@@ -208,6 +204,25 @@ function PlayerCard({
         </div>
       )}
     </motion.div>
+  )
+}
+
+function LockedAttrRow({ attrKey, icon }: { attrKey: string; icon: string }) {
+  const color = ATTR_COLORS[attrKey] || '#e09600'
+  return (
+    <div className="flex items-center gap-1.5 text-xs py-1 px-2 rounded-lg"
+         style={{
+           background: `${color}07`,
+           border: `1px solid ${color}10`,
+           borderLeftWidth: 2,
+           borderLeftColor: `${color}28`,
+         }}>
+      <span className="flex-shrink-0" style={{ fontSize: 11, opacity: 0.3 }}>{icon}</span>
+      <span style={{ color: `${color}55`, fontSize: 10, fontWeight: 600, letterSpacing: '0.03em' }}>
+        {ATTR_LABELS[attrKey]}
+      </span>
+      <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 10, opacity: 0.25 }}>🔒</span>
+    </div>
   )
 }
 
