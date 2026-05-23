@@ -17,6 +17,17 @@ const ATTR_COLORS: Record<string, string> = {
   baggage:    '#cc8844',
 }
 
+// Кольори аватарок — по імені (hash)
+const AVATAR_COLORS = [
+  '#6088cc', '#5cb87e', '#cc8844', '#aa88cc',
+  '#cc5555', '#e09600', '#2a9090', '#cc6699',
+]
+function avatarColor(name: string) {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff
+  return AVATAR_COLORS[h % AVATAR_COLORS.length]
+}
+
 export function PlayerGrid() {
   const { gameState, myIndex, localMarkers, setLocalMarker } = useGameStore()
   if (!gameState) return null
@@ -25,7 +36,7 @@ export function PlayerGrid() {
 
   return (
     <div className="grid gap-2"
-         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))' }}>
+         style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
       {others.map(player => (
         <PlayerCard
           key={player.id}
@@ -48,72 +59,103 @@ function PlayerCard({
   const isDead = !player.isAlive
   const isBot  = player.isBot
 
+  const hiddenCount   = Object.values(player.attributes).filter(a => !a.isRevealed).length
+  const revealedAttrs = Object.entries(player.attributes).filter(([, a]) => a.isRevealed)
+
   const borderColor = isDead         ? 'var(--bunker-border)'
-    : marker === '🟢'               ? 'var(--bunker-green)'
+    : marker === '🟢'               ? '#3a7a5a'
     : marker === '🔴'               ? 'var(--bunker-red)'
-    : isBot                          ? 'rgba(80,120,200,0.35)'
+    : isBot                          ? 'rgba(80,120,200,0.3)'
     : 'var(--bunker-border)'
+
+  const aColor = avatarColor(player.name)
 
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: isDead ? 0.28 : 1, y: 0 }}
-      className="rounded-xl p-3 flex flex-col gap-2 relative overflow-hidden"
+      className="rounded-xl p-2.5 flex flex-col gap-2 relative overflow-hidden"
       style={{
-        background: isBot && !isDead
-          ? 'rgba(40,60,110,0.25)'
-          : 'var(--bunker-surface)',
+        background: isBot && !isDead ? 'rgba(35,55,100,0.3)' : 'var(--bunker-surface)',
         border: `1px solid ${borderColor}`,
         filter: isDead ? 'grayscale(0.85)' : 'none',
-        boxShadow: isDead ? 'none' : marker ? `0 0 0 1px ${borderColor}30` : 'none',
       }}
     >
-      {/* Діагональний overlay для вибулих */}
+      {/* Overlay для вибулих */}
       {isDead && (
         <div className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden"
              style={{
-               background: 'repeating-linear-gradient(-45deg, transparent, transparent 7px, rgba(204,34,0,0.07) 7px, rgba(204,34,0,0.07) 8px)',
+               background: 'repeating-linear-gradient(-45deg, transparent, transparent 7px, rgba(204,34,0,0.06) 7px, rgba(204,34,0,0.06) 8px)',
              }} />
       )}
 
-      {/* Ім'я + маркери */}
-      <div className="flex items-center justify-between gap-1 relative">
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          {isDead && (
-            <span className="px-1.5 py-px rounded text-white font-black flex-shrink-0"
-                  style={{ background: 'rgba(180,30,0,0.5)', fontSize: 9, letterSpacing: '0.05em' }}>
-              ВИБУВ
-            </span>
-          )}
-          {!isDead && player.hasRevealed && (
-            <span style={{ color: 'var(--bunker-green-bright)', fontSize: 11, flexShrink: 0 }}>✓</span>
-          )}
-          <span className="text-sm font-bold text-white truncate"
-                style={{
-                  textDecoration: isDead ? 'line-through' : 'none',
-                  textDecorationColor: 'rgba(255,60,30,0.5)',
-                  color: isBot && !isDead ? '#8ab0ee' : 'white',
-                }}>
-            {isBot ? '🤖 ' : ''}{player.name}
-          </span>
+      {/* ── Заголовок картки ── */}
+      <div className="flex items-center gap-2 relative">
+        {/* Аватарка */}
+        <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black"
+             style={{
+               background: isDead ? 'rgba(100,100,100,0.3)' : `${aColor}28`,
+               border: `1.5px solid ${isDead ? 'rgba(100,100,100,0.3)' : aColor + '70'}`,
+               color: isDead ? '#666' : aColor,
+             }}>
+          {isBot ? '🤖' : player.name[0]?.toUpperCase()}
         </div>
 
+        {/* Ім'я */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1">
+            {isDead && (
+              <span className="px-1 py-px rounded font-black flex-shrink-0"
+                    style={{ background: 'rgba(180,30,0,0.5)', color: '#ff6060', fontSize: 8, letterSpacing: '0.05em' }}>
+                ВИБУВ
+              </span>
+            )}
+            {!isDead && player.hasRevealed && (
+              <span style={{ color: 'var(--bunker-green-bright)', fontSize: 10, flexShrink: 0 }}>✓</span>
+            )}
+          </div>
+          <div className="text-sm font-bold truncate"
+               style={{
+                 color: isBot && !isDead ? '#8ab0ee' : isDead ? '#555' : 'white',
+                 textDecoration: isDead ? 'line-through' : 'none',
+                 textDecorationColor: 'rgba(255,60,30,0.4)',
+                 lineHeight: 1.2,
+               }}>
+            {player.name}
+          </div>
+        </div>
+
+        {/* Маркери (тільки живих) */}
         {!isDead && (
           <div className="flex gap-0.5 flex-shrink-0">
             <button onClick={() => onMarker(marker === '🟢' ? null : '🟢')}
-                    style={{ opacity: marker === '🟢' ? 1 : 0.2, fontSize: 12, transition: 'opacity 0.15s' }}>🟢</button>
+                    style={{ opacity: marker === '🟢' ? 1 : 0.18, fontSize: 11 }}>🟢</button>
             <button onClick={() => onMarker(marker === '🔴' ? null : '🔴')}
-                    style={{ opacity: marker === '🔴' ? 1 : 0.2, fontSize: 12, transition: 'opacity 0.15s' }}>🔴</button>
+                    style={{ opacity: marker === '🔴' ? 1 : 0.18, fontSize: 11 }}>🔴</button>
           </div>
         )}
       </div>
 
-      {/* Атрибути */}
+      {/* ── Атрибути ── */}
       <div className="flex flex-col gap-1 relative">
-        {Object.entries(player.attributes).map(([key, attr]) => (
+        {/* Розкриті атрибути */}
+        {revealedAttrs.map(([key, attr]) => (
           <AttributeRow key={key} attrKey={key} icon={ATTR_ICONS[key]} attr={attr} />
         ))}
+
+        {/* Приховані — одна компактна плашка */}
+        {hiddenCount > 0 && (
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs"
+               style={{
+                 background: 'rgba(255,255,255,0.02)',
+                 border: '1px dashed rgba(255,255,255,0.07)',
+                 color: 'var(--bunker-muted)',
+               }}>
+            <span style={{ opacity: 0.4 }}>🔒</span>
+            <span>{hiddenCount} {hiddenCount === 1 ? 'атрибут прихований' : hiddenCount < 5 ? 'атрибути приховані' : 'атрибутів приховано'}</span>
+          </div>
+        )}
       </div>
 
       {/* Карти дій */}
@@ -126,6 +168,7 @@ function PlayerCard({
                     background: card.used ? 'rgba(255,255,255,0.03)' : 'rgba(224,150,0,0.1)',
                     color: card.used ? 'var(--bunker-muted)' : 'var(--bunker-yellow)',
                     textDecoration: card.used ? 'line-through' : 'none',
+                    fontSize: 10,
                   }}>
               {card.name}
             </span>
@@ -141,7 +184,7 @@ function AttributeRow({ attrKey, icon, attr }: {
   icon: string
   attr: Attribute
 }) {
-  const prevRef  = useRef(attr.isRevealed)
+  const prevRef = useRef(attr.isRevealed)
   const [flip, setFlip] = useState(false)
 
   useEffect(() => {
@@ -153,19 +196,6 @@ function AttributeRow({ attrKey, icon, attr }: {
     prevRef.current = attr.isRevealed
   }, [attr.isRevealed])
 
-  if (!attr.isRevealed) {
-    return (
-      <div className="flex items-center gap-1.5 text-xs py-1 px-2 rounded-lg"
-           style={{
-             background: 'rgba(255,255,255,0.02)',
-             border: '1px dashed rgba(255,255,255,0.07)',
-           }}>
-        <span style={{ opacity: 0.2 }}>{icon}</span>
-        <span style={{ opacity: 0.15, letterSpacing: '0.3em', fontFamily: 'monospace' }}>···</span>
-      </div>
-    )
-  }
-
   const color = ATTR_COLORS[attrKey] || '#e09600'
 
   return (
@@ -176,13 +206,13 @@ function AttributeRow({ attrKey, icon, attr }: {
       className="flex items-start gap-1.5 text-xs py-1 px-2 rounded-lg"
       style={{
         perspective: 600,
-        background: `${color}10`,
-        border: `1px solid ${color}22`,
-        borderLeftColor: `${color}99`,
+        background: `${color}0e`,
+        border: `1px solid ${color}20`,
         borderLeftWidth: 2,
+        borderLeftColor: `${color}88`,
       }}
     >
-      <span className="flex-shrink-0 mt-px">{icon}</span>
+      <span className="flex-shrink-0 mt-px" style={{ fontSize: 11 }}>{icon}</span>
       <span className="text-white leading-snug">{attr.value}</span>
     </motion.div>
   )

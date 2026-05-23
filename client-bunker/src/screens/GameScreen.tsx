@@ -54,9 +54,7 @@ export function GameScreen() {
       ? 'Покинути гру?\n\nВаш стан збережеться — ви зможете повернутись через це ж посилання.'
       : 'Покинути гру? Кімната закриється.'
     if (!confirm(msg)) return
-    if (!hasHumans) {
-      localStorage.removeItem('monopolia_session')
-    }
+    if (!hasHumans) localStorage.removeItem('monopolia_session')
     getSocket().emit('leaveRoom')
     reset()
   }
@@ -65,20 +63,26 @@ export function GameScreen() {
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--bunker-bg)' }}>
 
       {/* ── Topbar ── */}
-      <div className="flex items-center gap-3 px-4 py-2.5 flex-shrink-0"
+      <div className="flex items-center gap-3 px-4 py-2 flex-shrink-0"
            style={{
              background: 'linear-gradient(180deg, #0f1311 0%, #0b0d0c 100%)',
              borderBottom: '1px solid var(--bunker-border)',
-             boxShadow: '0 1px 0 rgba(255,255,255,0.03)',
            }}>
 
-        {/* Сценарій */}
-        <span className="text-2xl flex-shrink-0">{scenario.emoji}</span>
+        <span className="text-xl flex-shrink-0">{scenario.emoji}</span>
+
         <div className="flex-1 min-w-0">
           <div className="text-xs font-black text-white truncate tracking-wide">{scenario.title}</div>
-          <div className="text-xs" style={{ color: 'var(--bunker-muted)' }}>
-            Виживе {bunkerCapacity} з {players.length} · Живих: {alive}
-          </div>
+        </div>
+
+        {/* Живих / місць — ключова метрика */}
+        <div className="flex items-center gap-1.5 flex-shrink-0 px-2.5 py-1 rounded-lg"
+             style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--bunker-border)' }}>
+          <span className="text-xs font-black text-white">{alive}</span>
+          <span className="text-xs" style={{ color: 'var(--bunker-muted)' }}>живих</span>
+          <span style={{ color: 'var(--bunker-border2)', fontSize: 10 }}>·</span>
+          <span className="text-xs font-black" style={{ color: 'var(--bunker-green-bright)' }}>{bunkerCapacity}</span>
+          <span className="text-xs" style={{ color: 'var(--bunker-muted)' }}>місць</span>
         </div>
 
         {/* Фаза */}
@@ -87,10 +91,8 @@ export function GameScreen() {
           {pm.label}
         </div>
 
-        {/* Таймер */}
         <PhaseTimer deadline={gameState.timeDeadline} />
 
-        {/* Вихід */}
         <button onClick={leaveGame}
                 className="text-xs px-2.5 py-1 rounded-lg flex-shrink-0 transition-opacity hover:opacity-70"
                 style={{ background: 'rgba(204,34,0,0.15)', color: '#ff7060', border: '1px solid rgba(204,34,0,0.3)' }}>
@@ -99,17 +101,13 @@ export function GameScreen() {
       </div>
 
       {/* ── Основне тіло ── */}
-      <div className="flex-1 flex gap-2 p-2 min-h-0 overflow-hidden">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
 
-        {/* Центр: сітка гравців + панель фази */}
-        <div className="flex-1 flex flex-col gap-2 min-w-0 overflow-hidden">
-
-          {/* Сітка суперників */}
+        {/* Центр */}
+        <div className="flex-1 flex flex-col gap-2 p-2 min-w-0 overflow-hidden">
           <div className="flex-1 overflow-y-auto min-h-0">
             <PlayerGrid />
           </div>
-
-          {/* Панель поточної фази */}
           <div className="flex-shrink-0">
             {phase === 'game_start'   && <GameStartPhase />}
             {phase === 'round_reveal' && <RoundRevealPhase />}
@@ -119,42 +117,43 @@ export function GameScreen() {
           </div>
         </div>
 
-        {/* Права колонка */}
-        <div className="w-60 flex-shrink-0 flex flex-col gap-2 overflow-y-auto">
+        {/* Вертикальний сепаратор */}
+        <div className="flex-shrink-0 w-px self-stretch my-2"
+             style={{ background: 'var(--bunker-border)' }} />
 
-          {/* Моя картка */}
+        {/* Права колонка */}
+        <div className="w-56 flex-shrink-0 flex flex-col overflow-hidden"
+             style={{ background: 'rgba(0,0,0,0.15)' }}>
+
+          {/* Мій персонаж */}
           {me && (
-            <div className="rounded-xl p-3 flex-shrink-0"
-                 style={{
-                   background: 'var(--bunker-surface)',
-                   border: '1px solid var(--bunker-border)',
-                   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)',
-                 }}>
-              <div className="text-xs font-black uppercase tracking-widest mb-2.5 flex items-center gap-1.5"
+            <div className="flex-shrink-0 p-2.5 overflow-y-auto"
+                 style={{ borderBottom: '1px solid var(--bunker-border)', maxHeight: '55%' }}>
+              <div className="text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-1.5"
                    style={{ color: 'var(--bunker-yellow)' }}>
-                <span>👤</span> Ваш персонаж
+                👤 Ваш персонаж
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1">
                 {Object.entries(me.attributes).map(([key, attr]) => {
-                  const color = ATTR_COLORS[key] || 'var(--bunker-yellow)'
+                  const color = ATTR_COLORS[key] || '#e09600'
                   return (
                     <div key={key}
                          className="px-2 py-1.5 rounded-lg text-xs"
                          style={{
-                           background: `${color}0d`,
-                           borderLeft: `2px solid ${color}`,
-                           border: `1px solid ${color}25`,
+                           background: `${color}0c`,
+                           border: `1px solid ${color}20`,
                            borderLeftWidth: 2,
+                           borderLeftColor: attr.isRevealed ? color : `${color}50`,
                          }}>
-                      <div className="font-bold mb-0.5" style={{ color: `${color}cc` }}>
-                        {ATTR_LABELS[key]}
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-bold" style={{ color: `${color}bb`, fontSize: 10 }}>
+                          {ATTR_LABELS[key]}
+                        </span>
+                        {!attr.isRevealed && (
+                          <span style={{ fontSize: 10, color: 'var(--bunker-muted)' }}>🔒</span>
+                        )}
                       </div>
-                      <div className="text-white leading-snug">{attr.value}</div>
-                      {!attr.isRevealed && (
-                        <div className="text-xs mt-0.5 font-medium" style={{ color: 'rgba(204,34,0,0.6)' }}>
-                          🔒 приховано
-                        </div>
-                      )}
+                      <div className="text-white leading-snug" style={{ fontSize: 11 }}>{attr.value}</div>
                     </div>
                   )
                 })}
@@ -162,14 +161,18 @@ export function GameScreen() {
             </div>
           )}
 
-          {/* Карти дій */}
-          <ActionCardPanel />
-
-          {/* Лог подій */}
-          <LogPanel />
-
-          {/* Чат */}
-          <ChatPanel />
+          {/* Карти дій + Лог + Чат */}
+          <div className="flex-1 flex flex-col gap-0 overflow-hidden min-h-0">
+            <div className="flex-shrink-0 p-2">
+              <ActionCardPanel />
+            </div>
+            <div className="flex-shrink-0 px-2">
+              <LogPanel />
+            </div>
+            <div className="flex-1 px-2 pb-2 min-h-0 flex flex-col">
+              <ChatPanel />
+            </div>
+          </div>
         </div>
       </div>
     </div>
