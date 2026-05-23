@@ -28,6 +28,7 @@ interface GameStore {
   chat:             ChatMessage[]
   localMarkers:     LocalMarkers
   error:            string | null
+  leavingToHub:     boolean
 
   // Actions
   setScreen:            (s: Screen) => void
@@ -42,6 +43,7 @@ interface GameStore {
   setLocalMarker:       (playerIdx: number, marker: '🟢' | '🔴' | null) => void
   setError:             (msg: string | null) => void
   reset:                () => void
+  setLeavingToHub:      () => void
 }
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -57,6 +59,7 @@ export const useGameStore = create<GameStore>((set) => ({
   chat:             [],
   localMarkers:     {},
   error:            null,
+  leavingToHub:     false,
 
   setScreen:  (screen) => set({ screen }),
   setMyName:  (myName) => {
@@ -102,6 +105,8 @@ export const useGameStore = create<GameStore>((set) => ({
     set({ error })
     if (error) setTimeout(() => useGameStore.getState().setError(null), 4000)
   },
+
+  setLeavingToHub: () => set({ leavingToHub: true }),
 
   reset: () => set({
     screen:      'lobby',

@@ -104,7 +104,7 @@ const S = {
 }
 
 export function WaitingScreen() {
-  const { roomCode, roomPlayers, roomBots, isHost, myName, reset, error } = useGameStore()
+  const { roomCode, roomPlayers, roomBots, isHost, myName, reset, setLeavingToHub, error } = useGameStore()
   const [selectedScenario, setSelectedScenario] = useState<number>(0)
   const [showScenarios, setShowScenarios]       = useState(false)
   const [showHowTo, setShowHowTo]               = useState(false)
@@ -133,7 +133,7 @@ export function WaitingScreen() {
   }
 
   const startGame = () => getSocket().emit('startGame', { settings: { scenarioId: selectedScenario } })
-  const leaveRoom = () => { getSocket().emit('leaveRoom'); location.replace('/') }
+  const leaveRoom = () => { setLeavingToHub(); getSocket().emit('leaveRoom'); location.replace('/') }
 
   const minPlayers = 4
   const canStart   = isHost && roomPlayers.length >= minPlayers

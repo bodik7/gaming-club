@@ -40,7 +40,7 @@ const PHASE_META: Record<string, { label: string; color: string; bg: string }> =
 }
 
 export function GameScreen() {
-  const { gameState, myIndex } = useGameStore()
+  const { gameState, myIndex, setLeavingToHub } = useGameStore()
   if (!gameState) return null
 
   const { phase, scenario, bunkerCapacity, players } = gameState
@@ -56,6 +56,7 @@ export function GameScreen() {
       : 'Покинути гру? Кімната закриється.'
     if (!confirm(msg)) return
     if (!hasHumans) localStorage.removeItem('monopolia_session')
+    setLeavingToHub()
     getSocket().emit('leaveRoom')
     location.replace('/')
   }

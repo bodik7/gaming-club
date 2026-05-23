@@ -84,7 +84,7 @@ export function useSocket() {
     })
 
     s.on('gameOver',    ({ state }) => handleGameOver(state))
-    s.on('roomClosed',  () => useGameStore.getState().reset())
+    s.on('roomClosed',  () => { if (!useGameStore.getState().leavingToHub) useGameStore.getState().reset() })
     s.on('kicked',      () => useGameStore.getState().reset())
 
     s.on('error', (msg: string) => {
