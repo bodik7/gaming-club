@@ -561,7 +561,7 @@ function createRoom() {
         if (error) return _lobbyError(error);
         myPlayerIndex = playerIndex;
         saveSession(code, playerIndex, name);
-        if (gameType === 'bunker') { location.href = '/bunker'; return; }
+        if (gameType === 'bunker') { location.replace('/bunker'); return; }
         showLobbyWaiting(code);
     });
 }
@@ -576,7 +576,7 @@ function joinRoom() {
         if (error) return _lobbyError(error);
         myPlayerIndex = playerIndex;
         saveSession(c, playerIndex, name);
-        if (gameType === 'bunker') { location.href = '/bunker'; return; }
+        if (gameType === 'bunker') { location.replace('/bunker'); return; }
         showLobbyWaiting(c);
     });
 }
@@ -1076,7 +1076,7 @@ function quickJoin(code) {
         closeModal();
         myPlayerIndex = playerIndex;
         saveSession(c, playerIndex, name);
-        if (gameType === 'bunker') { location.href = '/bunker'; return; }
+        if (gameType === 'bunker') { location.replace('/bunker'); return; }
         showLobbyWaiting(c);
     });
 }
@@ -1172,7 +1172,7 @@ socket.on('gameStarted', ({ state, gameType, myPlayerIndex: mpi }) => {
     if (mpi !== undefined) myPlayerIndex = mpi;
     // Бункер — React SPA на /bunker; редіректимо туди зі збереженою сесією
     if (gameType === 'bunker' || state?.gameType === 'bunker') {
-        location.href = '/bunker';
+        location.replace('/bunker');
         return;
     }
     document.getElementById('waiting-screen').classList.add('hidden');
