@@ -235,7 +235,7 @@ export function GameScreen() {
 
           {/* Вкладка: Гравці */}
           {mobileTab === 'players' && (
-            <div ref={playersScrollRef} className="flex-1 overflow-y-auto" style={{ paddingBottom: 16 }}>
+            <div ref={playersScrollRef} className="flex-1 overflow-y-auto min-h-0" style={{ paddingBottom: 16 }}>
               <div className="p-2 game-bg-texture">
                 <PlayerGrid />
               </div>
@@ -255,7 +255,7 @@ export function GameScreen() {
 
           {/* Вкладка: Я */}
           {mobileTab === 'me' && (
-            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+            <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
               {characterCard}
               <ActionCardPanel />
               <div style={{ height: 260 }}>
@@ -266,7 +266,7 @@ export function GameScreen() {
 
           {/* Вкладка: Сценарій */}
           {mobileTab === 'scenario' && (
-            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3" style={{ paddingBottom: 16 }}>
+            <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3" style={{ paddingBottom: 16 }}>
               <div className="rounded-xl px-4 py-3 text-xs leading-relaxed"
                    style={{ background: 'var(--bunker-surface)', border: '1px solid rgba(204,34,0,0.2)', color: 'var(--bunker-text)' }}>
                 <p className="text-white font-black text-sm mb-2">{scenario.emoji} {scenario.title}</p>
