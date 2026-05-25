@@ -6,13 +6,58 @@ let socket: Socket | null = null
 
 export function getSocket(): Socket {
   if (!socket) {
-    socket = io({ transports: ['websocket'] })
+    socket = io({
+      // polling як fallback — критично для мобільних після сну
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 4000,
+    })
   }
   return socket
 }
 
-// Ключ сесії — той самий що використовує client.js у головному лобі
 const SESSION_KEY = 'monopolia_session'
+
+function doRejoin(s: Socket) {
+  const sessionRaw = localStorage.getItem(SESSION_KEY)
+  if (!sessionRaw) {
+    // Сесії немає — якщо висимо на reconnecting, переходимо в лобі
+    const store = useGameStore.getState()
+    if (store.screen === 'reconnecting') store.setScreen('lobby')
+    return
+  }
+  try {
+    const { code, playerIndex, playerName } = JSON.parse(sessionRaw)
+    if (!code) {
+      localStorage.removeItem(SESSION_KEY)
+      useGameStore.getState().setScreen('lobby')
+      return
+    }
+    s.emit('rejoin', { code, playerIndex, playerName }, (res: {
+      success?: boolean; error?: string; started?: boolean
+      state?: Record<string, unknown>; players?: string[]; bots?: boolean[]
+    }) => {
+      if (res.error || !res.success) {
+        localStorage.removeItem(SESSION_KEY)
+        useGameStore.getState().setScreen('lobby')
+        return
+      }
+      const store = useGameStore.getState()
+      store.setMyName(playerName)
+      if (res.started && res.state) {
+        store.setRoom(code, playerIndex, [])
+        store.handleGameStarted(res.state as unknown as Parameters<typeof store.handleGameStarted>[0])
+      } else if (!res.started && res.players) {
+        store.setRoom(code, playerIndex, res.players, res.bots)
+      }
+    })
+  } catch {
+    localStorage.removeItem(SESSION_KEY)
+    useGameStore.getState().setScreen('lobby')
+  }
+}
 
 export function useSocket() {
   const initialized = useRef(false)
@@ -36,33 +81,7 @@ export function useSocket() {
         } catch {}
       }
 
-      // Підхоплюємо сесію якщо нас редіректнули з головного лобі
-      // або якщо повернулись після перезавантаження сторінки
-      const sessionRaw = localStorage.getItem(SESSION_KEY)
-      if (sessionRaw) {
-        try {
-          const { code, playerIndex, playerName } = JSON.parse(sessionRaw)
-          if (!code) return
-          s.emit('rejoin', { code, playerIndex, playerName }, (res: {
-            success?: boolean; error?: string; started?: boolean
-            state?: Record<string, unknown>; players?: string[]; bots?: boolean[]
-          }) => {
-            if (res.error || !res.success) {
-              localStorage.removeItem(SESSION_KEY)
-              useGameStore.getState().setScreen('lobby')
-              return
-            }
-            const store = useGameStore.getState()
-            store.setMyName(playerName)
-            if (res.started && res.state) {
-              store.setRoom(code, playerIndex, [])
-              store.handleGameStarted(res.state as unknown as Parameters<typeof store.handleGameStarted>[0])
-            } else if (!res.started && res.players) {
-              store.setRoom(code, playerIndex, res.players, res.bots)
-            }
-          })
-        } catch {}
-      }
+      doRejoin(s)
     })
 
     s.on('disconnect', () => setConnectionStatus('disconnected'))
@@ -84,9 +103,9 @@ export function useSocket() {
       handleGameStarted(state)
     })
 
-    s.on('gameOver',    ({ state }) => handleGameOver(state))
-    s.on('roomClosed',  () => { if (!useGameStore.getState().leavingToHub) useGameStore.getState().reset() })
-    s.on('kicked',      () => useGameStore.getState().reset())
+    s.on('gameOver',   ({ state }) => handleGameOver(state))
+    s.on('roomClosed', () => { if (!useGameStore.getState().leavingToHub) useGameStore.getState().reset() })
+    s.on('kicked',     () => useGameStore.getState().reset())
 
     s.on('error', (msg: string) => {
       useGameStore.getState().setError(typeof msg === 'string' ? msg : 'Помилка сервера')
@@ -95,6 +114,19 @@ export function useSocket() {
     s.on('chatMessage', ({ name, text, color }: { name: string; text: string; color: string }) => {
       useGameStore.getState().addChatMessage({ name, text, color })
     })
+
+    // Коли телефон розблоковується або вкладка стає активною —
+    // примусово реконектимось якщо зв'язок впав
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && !s.connected) {
+        s.connect()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+    }
 
   }, [setConnectionStatus, handleStateUpdate, handleGameStarted, handleGameOver])
 
