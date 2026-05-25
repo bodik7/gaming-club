@@ -8,6 +8,7 @@ let mDeadChatLog      = [];
 let _mFlavorTimeouts  = [];
 let _mLastNightDL     = 0;
 let mGameoverProcessed = false;
+let _mNightSelections = {}; // { actionType: targetId }
 
 function initMafia(state, myIdx) {
     mState             = state;
@@ -17,6 +18,7 @@ function initMafia(state, myIdx) {
     _mFlavorTimeouts   = [];
     _mLastNightDL      = 0;
     mGameoverProcessed = false;
+    _mNightSelections  = {};
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('mafia-screen').classList.remove('hidden');
     document.getElementById('mafia-screen').classList.add('visible');
@@ -27,7 +29,7 @@ function initMafia(state, myIdx) {
 
 function updateMafia(state, sideEffect) {
     const prevPhase = mState?.phase;
-    if (state.phase === 'night' && prevPhase !== 'night') mSideEffect = null;
+    if (state.phase === 'night' && prevPhase !== 'night') { mSideEffect = null; _mNightSelections = {}; }
     mState = state;
     if (sideEffect) mSideEffect = sideEffect;
 
@@ -452,16 +454,26 @@ function mNightActions(s, me) {
             🌙 Ранок через <b id="m-night-act-timer">${mDeadlineTimer(s.nightDeadline)}</b>
         </div>`;
 
-    const targetSelect = (actionType, label) => `
+    const targetSelect = (actionType, label) => {
+        const selId = _mNightSelections[actionType];
+        const selName = selId !== undefined ? alive.find(p => p.id === selId)?.name : null;
+        return `
         <div class="m-night-action">
             <div class="m-night-label">${label}</div>
             <div class="m-target-list">
-                ${alive.map(p => `
-                    <button class="m-target-btn" onclick="mNightAction('${actionType}', ${p.id})">
-                        ${p.name}
-                    </button>`).join('')}
+                ${alive.map(p => {
+                    const isSel = selId === p.id;
+                    const isOther = selId !== undefined && !isSel;
+                    return `<button class="m-target-btn${isSel ? ' selected' : ''}"
+                        style="${isOther ? 'opacity:0.35;pointer-events:none' : ''}"
+                        onclick="mNightAction('${actionType}', ${p.id})">
+                        ${isSel ? '☑ ' : ''}${p.name}
+                    </button>`;
+                }).join('')}
             </div>
+            ${selName ? `<div class="m-night-confirmed">✅ Обрано: <b>${selName}</b> — натисніть ще раз щоб скасувати</div>` : ''}
         </div>`;
+    };
 
     switch (me.role) {
         case 'mafia':
@@ -476,16 +488,25 @@ function mNightActions(s, me) {
         case 'deputy':
             return nightTimerHtml + targetSelect('sheriffCheck', '🔍 Перевірити гравця');
 
-        case 'doctor':
+        case 'doctor': {
+            const docSelId = _mNightSelections['doctorHeal'];
+            const docSelName = docSelId !== undefined ? s.players.find(p => p.id === docSelId)?.name : null;
             return nightTimerHtml + `<div class="m-night-action">
                 <div class="m-night-label">💊 Врятувати гравця</div>
                 <div class="m-target-list">
-                    ${s.players.filter(p => p.isAlive).map(p => `
-                        <button class="m-target-btn" onclick="mNightAction('doctorHeal', ${p.id})">
-                            ${p.name}${p.id === mMyIdx ? ' (я)' : ''}
-                        </button>`).join('')}
+                    ${s.players.filter(p => p.isAlive).map(p => {
+                        const isSel = docSelId === p.id;
+                        const isOther = docSelId !== undefined && !isSel;
+                        return `<button class="m-target-btn${isSel ? ' selected' : ''}"
+                            style="${isOther ? 'opacity:0.35;pointer-events:none' : ''}"
+                            onclick="mNightAction('doctorHeal', ${p.id})">
+                            ${isSel ? '☑ ' : ''}${p.name}${p.id === mMyIdx ? ' (я)' : ''}
+                        </button>`;
+                    }).join('')}
                 </div>
+                ${docSelName ? `<div class="m-night-confirmed">✅ Обрано: <b>${docSelName}</b> — натисніть ще раз щоб скасувати</div>` : ''}
             </div>`;
+        }
 
         case 'roleblocker':
             return nightTimerHtml + targetSelect('roleblockerBlock', '🚫 Заблокувати гравця');
@@ -694,12 +715,15 @@ function mStartTimer(elId, deadline) {
 }
 
 function mNightAction(type, targetId) {
-    socket.emit('action', { type, data: { targetId } });
-    // Візуальний feedback — підсвітити обрану кнопку
-    document.querySelectorAll('.m-target-btn').forEach(btn => {
-        btn.classList.remove('selected');
-    });
-    event?.target?.classList?.add('selected');
+    // Toggle: tap selected again to cancel
+    if (_mNightSelections[type] === targetId) {
+        delete _mNightSelections[type];
+        socket.emit('action', { type: 'cancelNightAction', data: { actionType: type } });
+    } else {
+        _mNightSelections[type] = targetId;
+        socket.emit('action', { type, data: { targetId } });
+    }
+    renderMafia();
 }
 
 // ── Хелпери ──────────────────────────────────
