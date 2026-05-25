@@ -12,18 +12,20 @@ function init(io, db, rooms, onGameOver) {
     _onGameOver = onGameOver || (() => {});
 }
 
+// Баланс скоригований: комісар+помічник бачать одне одного і діляться
+// результатами перевірок — тому для малих ігор мафії додано +1
 const MAFIA_BALANCE = {
-    5:  { citizen:2, sheriff:1, deputy:1, doctor:0, roleblocker:0, mafia:0, don:1, maniac:0 },
-    6:  { citizen:3, sheriff:1, deputy:1, doctor:0, roleblocker:0, mafia:0, don:1, maniac:0 },
-    7:  { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:0, mafia:1, don:1, maniac:0 },
-    8:  { citizen:3, sheriff:1, deputy:1, doctor:1, roleblocker:0, mafia:1, don:1, maniac:0 },
-    9:  { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1, maniac:0 },
-    10: { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1, maniac:1 },
-    11: { citizen:3, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1, maniac:1 },
-    12: { citizen:3, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:3, don:1, maniac:1 },
-    13: { citizen:4, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:3, don:1, maniac:1 },
-    14: { citizen:4, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:4, don:1, maniac:1 },
-    15: { citizen:5, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:4, don:1, maniac:1 },
+    5:  { citizen:1, sheriff:1, deputy:1, doctor:0, roleblocker:0, mafia:1, don:1, maniac:0 }, // 3v2
+    6:  { citizen:2, sheriff:1, deputy:1, doctor:0, roleblocker:0, mafia:1, don:1, maniac:0 }, // 4v2
+    7:  { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:0, mafia:1, don:1, maniac:0 }, // 5v2
+    8:  { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:0, mafia:2, don:1, maniac:0 }, // 5v3
+    9:  { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1, maniac:0 }, // 6v3
+    10: { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1, maniac:1 }, // 6v3+maniac
+    11: { citizen:3, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1, maniac:1 }, // 7v3+maniac
+    12: { citizen:3, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:3, don:1, maniac:1 }, // 7v4+maniac
+    13: { citizen:4, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:3, don:1, maniac:1 }, // 8v4+maniac
+    14: { citizen:4, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:4, don:1, maniac:1 }, // 8v5+maniac
+    15: { citizen:5, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:4, don:1, maniac:1 }, // 9v5+maniac
 };
 
 const MAFIA_ROLE_LABELS = {
