@@ -7,9 +7,14 @@ export function VotingPhase() {
   const [voted, setVoted] = useState(false)
   if (!gameState || myIndex === null) return null
 
-  const { players, votes, phase } = gameState
-  const alive   = players.filter(p => p.isAlive && p.id !== myIndex)
-  const myVote  = votes[myIndex]
+  const { players, votes, phase, tiebreaker } = gameState
+  const myVote   = votes[myIndex]
+  const isTie    = !!tiebreaker
+
+  // Кандидати: при перепроголосуванні — тільки учасники нічиї
+  const alive = players.filter(p =>
+    p.isAlive && p.id !== myIndex && (!isTie || tiebreaker!.includes(p.id))
+  )
 
   const vote = (targetIdx: number) => {
     if (voted || myVote !== undefined) return
@@ -23,15 +28,30 @@ export function VotingPhase() {
   const totalVotes = Object.values(voteCounts).reduce((a, b) => a + b, 0)
   const maxVotes   = Math.max(0, ...Object.values(voteCounts))
 
+  // Заголовок
+  const headerBg    = isTie ? 'rgba(200,100,0,0.18)' : 'rgba(204,34,0,0.15)'
+  const headerColor = isTie ? '#e09600' : 'var(--bunker-red)'
+  const borderColor = isTie ? 'rgba(200,100,0,0.5)' : 'rgba(204,34,0,0.35)'
+  const headerText  = isTie
+    ? '⚖️ Повторне голосування — нічия!'
+    : '🗳️ Голосування — хто залишає бункер?'
+
   return (
     <div className="rounded-xl overflow-hidden animate-fade-up"
-         style={{ border: '1px solid rgba(204,34,0,0.35)', boxShadow: '0 0 16px rgba(204,34,0,0.06)' }}>
+         style={{ border: `1px solid ${borderColor}`, boxShadow: '0 0 16px rgba(204,34,0,0.06)' }}>
 
-      {/* Заголовок */}
       <div className="px-4 py-2 text-xs font-black uppercase tracking-widest"
-           style={{ background: 'rgba(204,34,0,0.15)', color: 'var(--bunker-red)' }}>
-        🗳️ Голосування — хто залишає бункер?
+           style={{ background: headerBg, color: headerColor }}>
+        {headerText}
       </div>
+
+      {isTie && (
+        <div className="px-4 py-2 text-xs"
+             style={{ background: 'rgba(200,100,0,0.08)', color: '#c8a060', borderBottom: '1px solid rgba(200,100,0,0.2)' }}>
+          Голосуйте між гравцями що набрали однакову кількість голосів.
+          При повторній нічиї — виганяються обидва.
+        </div>
+      )}
 
       <div className="p-3 flex flex-col gap-2" style={{ background: 'var(--bunker-surface)' }}>
 
@@ -87,7 +107,7 @@ export function VotingPhase() {
           /* Голосуємо */
           <div className="flex flex-col gap-1.5">
             <div className="text-xs mb-1" style={{ color: 'var(--bunker-muted)' }}>
-              Оберіть гравця для виключення:
+              {isTie ? 'Оберіть кого вигнати з тих що набрали однаково:' : 'Оберіть гравця для виключення:'}
             </div>
             {alive.map(p => {
               const cnt = voteCounts[p.id] || 0
@@ -95,12 +115,12 @@ export function VotingPhase() {
                 <button key={p.id} onClick={() => vote(p.id)}
                         className="flex items-center justify-between py-2.5 px-3 rounded-xl text-sm font-bold transition-all active:scale-95"
                         style={{
-                          background: 'rgba(204,34,0,0.12)',
-                          border: '1px solid rgba(204,34,0,0.3)',
+                          background: isTie ? 'rgba(200,100,0,0.12)' : 'rgba(204,34,0,0.12)',
+                          border: `1px solid ${isTie ? 'rgba(200,100,0,0.35)' : 'rgba(204,34,0,0.3)'}`,
                           color: 'white',
                         }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(204,34,0,0.22)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(204,34,0,0.12)')}>
+                        onMouseEnter={e => (e.currentTarget.style.background = isTie ? 'rgba(200,100,0,0.22)' : 'rgba(204,34,0,0.22)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = isTie ? 'rgba(200,100,0,0.12)' : 'rgba(204,34,0,0.12)')}>
                   <span>🚫 {p.name}</span>
                   {cnt > 0 && (
                     <span className="text-xs font-normal px-1.5 py-0.5 rounded-full"

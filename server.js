@@ -1728,6 +1728,7 @@ function createBunkerState(roomPlayers, settings = {}) {
         isSecretVoting: false,
         kumData:        null,
         quarantined:    [],
+        tiebreaker:     null,   // [id, id, ...] — гравці в повторному голосуванні
     };
 }
 
@@ -1769,6 +1770,7 @@ function sanitizeBunker(state, forIdx) {
             ? state.votes   // після підрахунку результати все одно показуємо
             : {},
         isSecretVoting: state.isSecretVoting || false,
+        tiebreaker:     state.tiebreaker || null,
         log:      state.log.slice(0, 40),
         winner:   state.winner,
         epilogue: state.epilogue || null,
@@ -2035,8 +2037,11 @@ function scheduleBotActions(room, phase) {
                 botsToVote.forEach((bp, i) => {
                     setTimeout(() => {
                         if (room.state?.phase !== 'voting') return;
-                        const alive = room.state.players.filter(p => p.isAlive && p.id !== bp.index);
-                        const target = alive[Math.floor(Math.random() * alive.length)]?.id;
+                        const tb = room.state.tiebreaker;
+                        const candidates = room.state.players.filter(p =>
+                            p.isAlive && p.id !== bp.index && (!tb || tb.includes(p.id))
+                        );
+                        const target = candidates[Math.floor(Math.random() * candidates.length)]?.id;
                         if (target !== undefined) processBunkerAction(room, 'b_vote', { target }, bp.index);
                     }, (i + 1) * 2000);
                 });
@@ -2108,12 +2113,50 @@ function startBunkerRound(room) {
     s.isSecretVoting = false;
     s.kumData        = null;
     s.quarantined    = [];
+    s.tiebreaker     = null;
     s.players.forEach(p => {
         p.hasRevealed = false;
         if (p.isSilenced) p.isSilenced = false;
     });
     addBunkerLog(s, `📋 Раунд ${s.round} — розкриття карток`);
     startBunkerPhase(room, 'round_reveal');
+}
+
+// ── Вигнання одного або кількох гравців ──────
+function eliminatePlayers(room, toEliminate) {
+    const s = room.state;
+    toEliminate.forEach(p => {
+        p.isAlive = false;
+        Object.keys(p.attributes).forEach(k => { p.attributes[k].isRevealed = true; });
+    });
+    if (toEliminate.length === 1) {
+        addBunkerLog(s, `🚫 ${toEliminate[0].name} покидає бункер`);
+    } else {
+        addBunkerLog(s, `🚫 Вигнані обидва: ${toEliminate.map(p => p.name).join(', ')}`);
+    }
+
+    const remaining = s.players.filter(p => p.isAlive);
+    if (remaining.length <= s.bunkerCapacity) {
+        s.phase        = 'end_game';
+        s.winner       = remaining.map(p => p.id);
+        s.timeDeadline = null;
+        s.tiebreaker   = null;
+        remaining.forEach(p => {
+            Object.keys(p.attributes).forEach(k => { p.attributes[k].isRevealed = true; });
+        });
+        addBunkerLog(s, `🏆 Бункер зачиняється! Виживають: ${remaining.map(p => p.name).join(', ')}`);
+        saveGameStats(room, rp => s.winner.includes(rp.index));
+        db.deleteRoom(room.code);
+        emitBunkerUpdate(room);
+        generateBunkerEpilogue(s).then(text => {
+            if (!text || !room.state) return;
+            room.state.epilogue = text;
+            emitBunkerUpdate(room);
+        }).catch(() => {});
+    } else {
+        s.tiebreaker = null;
+        startBunkerRound(room);
+    }
 }
 
 // ── Підрахунок голосів і вигнання ────────────
@@ -2126,11 +2169,12 @@ function resolveBunkerVoting(room) {
     // Рахуємо голоси
     const counts = {};
     Object.values(s.votes).forEach(t => { counts[t] = (counts[t] || 0) + 1; });
+
     // Кумівство: голос від voter проти against рахується втричі
     if (s.kumData) {
         const { voter, against } = s.kumData;
         if (s.votes[voter] === against) {
-            counts[against] = (counts[against] || 0) + 2; // +2 до вже наявного 1
+            counts[against] = (counts[against] || 0) + 2;
             addBunkerLog(s, `🤝 Кумівство спрацювало: +2 голоси проти ${s.players[against]?.name}`);
         }
         s.kumData = null;
@@ -2143,67 +2187,45 @@ function resolveBunkerVoting(room) {
     addBunkerLog(s, `🗳️ Голосування завершено`);
     emitBunkerUpdate(room);
 
-    // Затримка щоб гравці побачили результат (4с)
     setTimeout(() => {
         if (!room.state || room.state.phase !== 'voting_result') return;
 
-        let toEliminate = null;
         if (tied.length === 0) {
-            // Ніхто не проголосував — пропускаємо раунд
             addBunkerLog(s, '🤷 Ніхто не проголосував — раунд пропущено');
+            s.tiebreaker = null;
             startBunkerRound(room);
             return;
-        } else if (tied.length === 1) {
-            toEliminate = tied[0];
-        } else {
-            // Нічия → жереб
-            toEliminate = tied[Math.floor(Math.random() * tied.length)];
-            addBunkerLog(s, `🎲 Нічия між ${tied.map(p=>p.name).join(', ')} — жереб: ${toEliminate.name}`);
         }
 
-        // Перевірка імунітету
-        if (toEliminate.immunityRounds > 0) {
-            toEliminate.immunityRounds--;
-            addBunkerLog(s, `🛡️ ${toEliminate.name} має імунітет — захищений!`);
-            // Вигнати наступного по кількості голосів
-            const next = alive
-                .filter(p => p.id !== toEliminate.id)
-                .sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0))[0];
-            if (next) {
-                toEliminate = next;
-                addBunkerLog(s, `👉 Замість нього вигнано ${toEliminate.name}`);
+        if (tied.length === 1) {
+            let toEliminate = tied[0];
+            // Перевірка імунітету
+            if (toEliminate.immunityRounds > 0) {
+                toEliminate.immunityRounds--;
+                addBunkerLog(s, `🛡️ ${toEliminate.name} має імунітет — захищений!`);
+                const next = alive
+                    .filter(p => p.id !== toEliminate.id)
+                    .sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0))[0];
+                if (next) {
+                    toEliminate = next;
+                    addBunkerLog(s, `👉 Замість нього вигнано ${toEliminate.name}`);
+                }
             }
+            eliminatePlayers(room, [toEliminate]);
+            return;
         }
 
-        // Вигнання: розкриваємо всі атрибути і позначаємо як неживого
-        toEliminate.isAlive = false;
-        Object.keys(toEliminate.attributes).forEach(k => {
-            toEliminate.attributes[k].isRevealed = true;
-        });
-        addBunkerLog(s, `🚫 ${toEliminate.name} покидає бункер`);
-
-        // Перевірка умови перемоги
-        const remaining = s.players.filter(p => p.isAlive);
-        if (remaining.length <= s.bunkerCapacity) {
-            // Гравці що вижили потрапляють до бункера
-            s.phase   = 'end_game';
-            s.winner  = remaining.map(p => p.id);
-            s.timeDeadline = null;
-            remaining.forEach(p => {
-                Object.keys(p.attributes).forEach(k => { p.attributes[k].isRevealed = true; });
-            });
-            addBunkerLog(s, `🏆 Бункер зачиняється! Виживають: ${remaining.map(p=>p.name).join(', ')}`);
-            saveGameStats(room, rp => s.winner.includes(rp.index));
-            db.deleteRoom(room.code);
-            emitBunkerUpdate(room);
-            // Генеруємо AI-епілог асинхронно (не блокує гру)
-            generateBunkerEpilogue(s).then(text => {
-                if (!text || !room.state) return;
-                room.state.epilogue = text;
-                emitBunkerUpdate(room);
-            }).catch(() => {});
+        // Нічия між кількома гравцями
+        if (s.tiebreaker) {
+            // Це вже повторне голосування — виганяємо всіх
+            addBunkerLog(s, `⚖️ Повторна нічия — виганяються всі: ${tied.map(p => p.name).join(', ')}`);
+            eliminatePlayers(room, tied);
         } else {
-            startBunkerRound(room);
+            // Перша нічия — запускаємо повторне голосування між рівними
+            addBunkerLog(s, `⚖️ Нічия між ${tied.map(p => p.name).join(', ')} — повторне голосування!`);
+            s.tiebreaker = tied.map(p => p.id);
+            s.votes      = {};
+            startBunkerPhase(room, 'voting');
         }
     }, 4000);
 }
@@ -2270,6 +2292,8 @@ function processBunkerAction(room, type, data, pidx) {
             if (typeof target !== 'number') break;
             const targetP = s.players[target];
             if (!targetP?.isAlive || target === pidx) break;
+            // При перепроголосуванні — голосувати можна тільки проти учасників нічиї
+            if (s.tiebreaker && !s.tiebreaker.includes(target)) break;
 
             s.votes[pidx] = target;
             addBunkerLog(s, `🗳️ ${p.name} проголосував(ла)`);
