@@ -288,6 +288,9 @@ function mRenderPlayers() {
         const deadCls    = !p.isAlive ? 'dead' : '';
         const meCls      = isMe ? 'me' : '';
 
+        // Sheriff finding for this player (visible to sheriff+deputy only)
+        const finding = s.sheriffFindings?.find(f => f.id === p.id);
+
         // State badge
         let stateBadge = '';
         if (!p.isAlive) {
@@ -353,6 +356,9 @@ function mRenderPlayers() {
                 <span class="m-player-card-role${(showRole || isMe || !p.isAlive) && rl ? ' revealed' : ''}"
                     style="color:${roleColor}">${roleText}</span>
             </div>
+            ${finding ? `<div class="m-sheriff-finding ${finding.isBad ? 'bad' : 'good'}">
+                🔍 ${finding.isBad ? '🔴 МАФІЯ' : '🟢 Мирний'}
+            </div>` : ''}
         </div>`;
     }).join('');
 }

@@ -66,9 +66,10 @@ function createMafiaState(roomPlayers, settings = {}) {
         round:      1,
         players,
         mafiaIds,
-        nightActions: {},
-        votes:      {},
-        lastDeaths: [],
+        nightActions:    {},
+        votes:           {},
+        lastDeaths:      [],
+        sheriffFindings: [],   // { id, isBad } — видно тільки комісару+помічнику
         winner:     null,
         log:        [],
         nightDuration:  settings.nightDuration  || 90,
@@ -103,7 +104,8 @@ function sanitizeMafia(state, forIdx) {
         myRole,
         myFaction,
         myRoleLabel: MAFIA_ROLE_LABELS[myRole] || null,
-        mafiaIds:    myFaction === 'mafia' ? state.mafiaIds : null,
+        mafiaIds:        myFaction === 'mafia' ? state.mafiaIds : null,
+        sheriffFindings: (myRole === 'sheriff' || myRole === 'deputy') ? state.sheriffFindings : null,
         myVote:    state.votes?.[forIdx] ?? null,
         allVotes:  state.phase === 'day_voting' ? { ...state.votes } : {},
         voteCount: state.phase === 'day_voting'
@@ -201,6 +203,8 @@ function resolveNight(room) {
             targetName: t.name,
             isBad: MAFIA_ROLE_LABELS[t.role]?.faction === 'mafia',
         };
+        const alreadyChecked = state.sheriffFindings.some(f => f.id === sheriffResult.targetId);
+        if (!alreadyChecked) state.sheriffFindings.push({ id: sheriffResult.targetId, isBad: sheriffResult.isBad });
     }
 
     let mafiaTarget = null;
