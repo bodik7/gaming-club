@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { AnimatePresence, motion } from 'framer-motion'
 import { GameStartPhase }    from '../components/phases/GameStartPhase'
@@ -47,6 +47,7 @@ export function GameScreen() {
   const chatCount = useGameStore(s => s.chat.length)
   const [mobileTab, setMobileTab]       = useState<MobileTab>('players')
   const [lastSeenChat, setLastSeenChat] = useState(0)
+  const [confirmAttr, setConfirmAttr]   = useState<string | null>(null)
   const playersScrollRef = useRef<HTMLDivElement>(null)
 
   if (!gameState) return null
@@ -58,17 +59,18 @@ export function GameScreen() {
 
   const unreadChat = mobileTab !== 'chat' ? Math.max(0, chatCount - lastSeenChat) : 0
 
+  const revealAttr = useCallback((attr: string) => {
+    getSocket().emit('action', { type: 'b_revealAttr', data: { attr } })
+    setConfirmAttr(null)
+  }, [])
+
   // Авто-переключення вкладок при зміні фази
   useEffect(() => {
+    setConfirmAttr(null)
     if (phase === 'game_start') {
-      setMobileTab('scenario') // Читаємо сценарій перед стартом
+      setMobileTab('scenario')
     } else if (phase === 'round_reveal') {
-      setMobileTab('players')
-      // Скролимо вниз — кнопка розкриття внизу списку гравців
-      setTimeout(() => {
-        const el = playersScrollRef.current
-        if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
-      }, 80)
+      setMobileTab('me')
     } else if (phase === 'voting' || phase === 'end_game') {
       setMobileTab('players')
       setTimeout(() => playersScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 60)
@@ -112,36 +114,99 @@ export function GameScreen() {
     </AnimatePresence>
   )
 
+  const canReveal = phase === 'round_reveal' && me && !me.hasRevealed
+
   // Картка персонажа — використовується в обох лейаутах
   const characterCard = me && (
     <div className="flex flex-col gap-1">
       <div className="text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-1.5"
            style={{ color: 'var(--bunker-yellow)' }}>
         👤 Ваш персонаж
+        {canReveal && (
+          <span className="text-xs font-normal animate-pulse-urgent" style={{ color: 'var(--bunker-yellow)', fontSize: 9 }}>
+            · натисни на 🔒 щоб розкрити
+          </span>
+        )}
       </div>
       {Object.entries(me.attributes).map(([key, attr]) => {
         const color = ATTR_COLORS[key] || '#e09600'
+        const isClickable = canReveal && !attr.isRevealed
         return (
           <div key={key}
-               className="px-2 py-1.5 rounded-lg text-xs"
+               onClick={isClickable ? () => setConfirmAttr(key) : undefined}
+               className={`px-2 py-1.5 rounded-lg text-xs${isClickable ? ' transition-all active:scale-95' : ''}`}
                style={{
-                 background: `${color}0c`,
-                 border: `1px solid ${color}20`,
+                 background: isClickable ? `${color}14` : `${color}0c`,
+                 border: `1px solid ${isClickable ? color + '50' : color + '20'}`,
                  borderLeftWidth: 2,
-                 borderLeftColor: attr.isRevealed ? color : `${color}50`,
+                 borderLeftColor: attr.isRevealed ? color : isClickable ? color : `${color}50`,
+                 cursor: isClickable ? 'pointer' : 'default',
                }}>
             <div className="flex items-center justify-between mb-0.5">
               <span className="font-bold" style={{ color: `${color}bb`, fontSize: 10 }}>
                 {ATTR_LABELS[key]}
               </span>
               {!attr.isRevealed && (
-                <span style={{ fontSize: 10, color: 'var(--bunker-muted)' }}>🔒</span>
+                <span style={{ fontSize: 10, color: isClickable ? color : 'var(--bunker-muted)' }}>
+                  {isClickable ? '👆' : '🔒'}
+                </span>
               )}
             </div>
             <div className="text-white leading-snug" style={{ fontSize: 11 }}>{attr.value}</div>
           </div>
         )
       })}
+    </div>
+  )
+
+  // Попап підтвердження розкриття атрибута
+  const confirmPopup = confirmAttr && me && (
+    <div className="fixed inset-0 z-50 flex items-end justify-center pb-8 px-4"
+         style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+         onClick={() => setConfirmAttr(null)}>
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+        onClick={e => e.stopPropagation()}
+        className="w-full rounded-2xl p-4 flex flex-col gap-3"
+        style={{ maxWidth: 420, background: 'var(--bunker-surface2)', border: `1px solid ${(ATTR_COLORS[confirmAttr] || '#e09600')}40` }}>
+        <div className="text-xs font-black uppercase tracking-widest" style={{ color: ATTR_COLORS[confirmAttr] || '#e09600' }}>
+          🔓 Розкрити атрибут?
+        </div>
+        <div className="px-3 py-2.5 rounded-xl" style={{
+          background: `${ATTR_COLORS[confirmAttr] || '#e09600'}0e`,
+          border: `1px solid ${ATTR_COLORS[confirmAttr] || '#e09600'}30`,
+          borderLeftWidth: 3,
+          borderLeftColor: ATTR_COLORS[confirmAttr] || '#e09600',
+        }}>
+          <div className="text-xs font-bold mb-1" style={{ color: `${ATTR_COLORS[confirmAttr] || '#e09600'}cc` }}>
+            {ATTR_LABELS[confirmAttr]}
+          </div>
+          <div className="text-sm text-white font-medium">
+            {me.attributes[confirmAttr as keyof typeof me.attributes]?.value}
+          </div>
+        </div>
+        <p className="text-xs text-center" style={{ color: 'var(--bunker-muted)' }}>
+          Цей атрибут побачать усі гравці. Впевнений?
+        </p>
+        <div className="flex gap-2">
+          <button onClick={() => setConfirmAttr(null)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95"
+                  style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--bunker-muted2)', border: '1px solid var(--bunker-border2)' }}>
+            Скасувати
+          </button>
+          <button onClick={() => revealAttr(confirmAttr)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-black transition-all active:scale-95"
+                  style={{
+                    background: `linear-gradient(135deg, ${ATTR_COLORS[confirmAttr] || '#e09600'}cc, ${ATTR_COLORS[confirmAttr] || '#e09600'}88)`,
+                    color: '#0b0d0c',
+                    boxShadow: `0 2px 12px ${ATTR_COLORS[confirmAttr] || '#e09600'}40`,
+                  }}>
+            🔓 Розкрити
+          </button>
+        </div>
+      </motion.div>
     </div>
   )
 
@@ -344,6 +409,9 @@ export function GameScreen() {
           })}
         </nav>
       </div>
+
+      {/* Попап підтвердження розкриття */}
+      <AnimatePresence>{confirmPopup}</AnimatePresence>
 
     </div>
   )

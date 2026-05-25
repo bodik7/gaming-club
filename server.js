@@ -1836,8 +1836,6 @@ const BUNKER_PHASE_MS = {
     discussion:  120_000,
     voting:       60_000,
 };
-// Обов'язкові атрибути для розкриття по раундах
-const BUNKER_FORCED_ATTR = { 1: 'profession', 2: 'biology' };
 
 function addBunkerLog(state, text) {
     state.log.unshift(text);
@@ -1871,7 +1869,6 @@ async function getBotDecisions(room, phase) {
     let prompt = '';
 
     if (phase === 'round_reveal') {
-        const forced = BUNKER_FORCED_ATTR[s.round];
         const botsNeedingReveal = bots.filter(p => !p.hasRevealed);
         if (!botsNeedingReveal.length) return null;
         const botsDesc = botsNeedingReveal.map(p => {
@@ -1890,10 +1887,9 @@ ${playersDesc}
 
 Боти що ходять зараз:
 ${botsDesc}
-${forced ? `\nОБОВ'ЯЗКОВО: у раунді ${s.round} всі розкривають "${forced}". Використай саме цей атрибут.` : ''}
 
 Для кожного бота вкажи:
-- attr: що розкрити (${forced ? `обов'язково "${forced}"` : 'один з нерозкритих'})
+- attr: що розкрити (один з нерозкритих — обери той що найкраще підкреслює корисність бота)
 - message: 1-2 речення від першої особи — чому ти потрібен у бункері
 
 Відповідь ТІЛЬКИ JSON (без markdown, без пояснень):
@@ -1985,8 +1981,7 @@ function scheduleBotActions(room, phase) {
                         if (room.state?.phase !== 'round_reveal') return;
                         const p = room.state.players[bp.index];
                         if (!p?.isAlive || p.hasRevealed) return;
-                        const forced = BUNKER_FORCED_ATTR[room.state.round];
-                        const attr = forced || Object.keys(p.attributes).find(k => !p.attributes[k].isRevealed);
+                        const attr = Object.keys(p.attributes).find(k => !p.attributes[k].isRevealed);
                         if (attr) {
                             processBunkerAction(room, 'b_revealAttr', { attr }, bp.index);
                             const msg = FALLBACK_BOT_MSGS[Math.floor(Math.random() * FALLBACK_BOT_MSGS.length)];
@@ -2008,8 +2003,7 @@ function scheduleBotActions(room, phase) {
                     if (room.state?.phase !== 'round_reveal') return;
                     const p = room.state.players[d.index];
                     if (!p?.isAlive || p.hasRevealed) return;
-                    const forced = BUNKER_FORCED_ATTR[room.state.round];
-                    const attr = forced || (p.attributes[d.attr] && !p.attributes[d.attr].isRevealed ? d.attr
+                    const attr = (p.attributes[d.attr] && !p.attributes[d.attr].isRevealed ? d.attr
                         : Object.keys(p.attributes).find(k => !p.attributes[k].isRevealed));
                     if (!attr) return;
                     processBunkerAction(room, 'b_revealAttr', { attr }, d.index);
@@ -2086,9 +2080,8 @@ function onBunkerTimeout(room, phase) {
             break;
         case 'round_reveal': {
             // Авто-розкриття для тих хто не встиг
-            const forced = BUNKER_FORCED_ATTR[s.round];
             s.players.filter(p => p.isAlive && !p.hasRevealed).forEach(p => {
-                const attr = forced || Object.keys(p.attributes).find(k => !p.attributes[k].isRevealed);
+                const attr = Object.keys(p.attributes).find(k => !p.attributes[k].isRevealed);
                 if (attr && p.attributes[attr]) {
                     p.attributes[attr].isRevealed = true;
                     p.hasRevealed = true;
@@ -2244,13 +2237,6 @@ function processBunkerAction(room, type, data, pidx) {
             if (p.hasRevealed) break;
             const { attr } = data;
             if (!attr || !p.attributes[attr]) break;
-            // Перевіряємо обов'язковий атрибут
-            const forced = BUNKER_FORCED_ATTR[s.round];
-            if (forced && attr !== forced) {
-                room.players[pidx] && io.to(room.players[pidx].socketId).emit('error',
-                    `У раунді ${s.round} потрібно розкрити ${BUNKER_ATTR_LABELS[forced]}`);
-                break;
-            }
             if (p.attributes[attr].isRevealed) break;
 
             p.attributes[attr].isRevealed = true;
