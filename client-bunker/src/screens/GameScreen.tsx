@@ -71,11 +71,20 @@ export function GameScreen() {
       setMobileTab('scenario')
     } else if (phase === 'round_reveal') {
       setMobileTab('me')
+    } else if (phase === 'discussion') {
+      setMobileTab('players')
     } else if (phase === 'voting' || phase === 'end_game') {
       setMobileTab('players')
       setTimeout(() => playersScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 60)
     }
   }, [phase])
+
+  // Після того як гравець розкрив атрибут — переключити на «Гравці»
+  useEffect(() => {
+    if (me?.hasRevealed && phase === 'round_reveal') {
+      setTimeout(() => setMobileTab('players'), 600)
+    }
+  }, [me?.hasRevealed])
 
   const switchTab = (tab: MobileTab) => {
     setMobileTab(tab)
