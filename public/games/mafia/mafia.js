@@ -206,12 +206,7 @@ function mRenderActions() {
                 🔍 <b>${r.targetName}</b> — ${r.isBad ? '🔴 Мафія!' : '🟢 Мирний'}
             </div>`;
         }
-        if (mSideEffect?.event === 'donResult') {
-            const r = mSideEffect;
-            html += `<div class="m-check-result ${r.isSheriff ? 'bad' : 'good'}">
-                👑 <b>${r.targetName}</b> — ${r.isSheriff ? '🔍 Комісар!' : '✅ Не Комісар'}
-            </div>`;
-        }
+
         if (me.isAlive) html += `<div class="m-wait" style="margin-top:10px">⏳ Переходимо до дня...</div>`;
         else html += mDeadUI();
         html += `</div>`;
@@ -481,8 +476,7 @@ function mNightActions(s, me) {
 
         case 'don':
             return nightTimerHtml +
-                   targetSelect('mafiaVote', '🔫 Оберіть жертву') +
-                   targetSelect('donCheck', '👁️ Перевірити (Комісар?)') + mMafiaChat();
+                   targetSelect('mafiaVote', '🔫 Оберіть жертву') + mMafiaChat();
 
         case 'sheriff':
         case 'deputy':
