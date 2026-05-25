@@ -1615,15 +1615,15 @@ body {
         .lobby-split {
             flex-direction: column;
             height: auto;
-            min-height: 100vh;
+            min-height: unset;
             overflow-y: auto;
         }
         .lobby-left {
+            flex: none;
             border-right: none;
             border-bottom: 1px solid rgba(255,255,255,0.07);
             padding: 20px 16px 16px;
             overflow-y: visible;
-            align-self: flex-start;
             width: 100%;
         }
         /* Ховаємо grid на мобільному — замість нього dropdown */
