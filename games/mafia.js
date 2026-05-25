@@ -15,9 +15,9 @@ function init(io, db, rooms, onGameOver) {
 // Баланс скоригований: комісар+помічник бачать одне одного і діляться
 // результатами перевірок — тому для малих ігор мафії додано +1
 const MAFIA_BALANCE = {
-    5:  { citizen:1, sheriff:1, deputy:1, doctor:0, roleblocker:0, mafia:1, don:1, maniac:0 }, // 3v2
-    6:  { citizen:2, sheriff:1, deputy:1, doctor:0, roleblocker:0, mafia:1, don:1, maniac:0 }, // 4v2
-    7:  { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:0, mafia:1, don:1, maniac:0 }, // 5v2
+    5:  { citizen:2, sheriff:1, deputy:0, doctor:0, roleblocker:0, mafia:1, don:1, maniac:0 }, // 3v2, без помічника
+    6:  { citizen:3, sheriff:1, deputy:0, doctor:0, roleblocker:0, mafia:1, don:1, maniac:0 }, // 4v2, без помічника
+    7:  { citizen:3, sheriff:1, deputy:0, doctor:1, roleblocker:0, mafia:1, don:1, maniac:0 }, // 5v2, без помічника
     8:  { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:0, mafia:2, don:1, maniac:0 }, // 5v3
     9:  { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1, maniac:0 }, // 6v3
     10: { citizen:2, sheriff:1, deputy:1, doctor:1, roleblocker:1, mafia:2, don:1, maniac:1 }, // 6v3+maniac
