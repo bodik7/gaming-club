@@ -3794,6 +3794,23 @@ io.on('connection', (socket) => {
         }
         io.to(socket.roomCode).emit('playerDisconnected', { playerIndex: socket.playerIndex });
 
+        // Автоматичне видалення порожніх кімнат
+        const _emptyCheckCode = socket.roomCode;
+        const _emptyDelay = room.started ? 60_000 : 0;
+        setTimeout(() => {
+            const r = rooms[_emptyCheckCode];
+            if (!r) return;
+            if (r.started && r.state?.gameType === 'bunker') return; // бункер має власну логіку
+            const connectedHumans = r.players.filter(
+                p => !p.isBot && p.socketId && io.sockets.sockets.get(p.socketId)
+            );
+            if (connectedHumans.length === 0) {
+                if (r.started) { clearTurnTimer(r); clearTradeTimer(r); db.deleteRoom(r.code); }
+                delete rooms[_emptyCheckCode];
+                console.log(`🗑️  Кімната ${_emptyCheckCode} видалена (порожня)`);
+            }
+        }, _emptyDelay);
+
         // Bunker: reconnect grace + AFK auto-action
         if (room.started && room.state?.gameType === 'bunker' && !rp?.isBot) {
             const pidx     = socket.playerIndex;
