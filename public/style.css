@@ -1567,7 +1567,7 @@ body {
 
     /* Права колонка: форма — тягнеться до висоти лівої */
     .lobby-right {
-        width: 280px;
+        width: 320px;
         flex-shrink: 0;
         display: flex;
         flex-direction: column;
@@ -1578,9 +1578,9 @@ body {
         justify-content: flex-start;
     }
 
-    /* Dropdown вибору гри */
+    /* Dropdown вибору гри — тільки мобільний */
     .game-select-mobile {
-        display: block;
+        display: none;
         width: 100%;
         padding: 11px 40px 11px 14px;
         background: rgba(255,255,255,0.06);
@@ -1629,6 +1629,9 @@ body {
         /* Ховаємо grid на мобільному — замість нього dropdown */
         .lobby-left .game-grid {
             display: none;
+        }
+        .game-select-mobile {
+            display: block;
         }
         .lobby-right {
             width: auto;
