@@ -58,9 +58,11 @@ export function GameScreen() {
 
   const unreadChat = mobileTab !== 'chat' ? Math.max(0, chatCount - lastSeenChat) : 0
 
-  // Автоматично перемикаємо на вкладку гравців при активних фазах та скролимо нагору
+  // Авто-переключення вкладок при зміні фази
   useEffect(() => {
-    if (phase === 'round_reveal' || phase === 'voting' || phase === 'game_start' || phase === 'end_game') {
+    if (phase === 'game_start') {
+      setMobileTab('scenario') // Читаємо сценарій перед стартом
+    } else if (phase === 'round_reveal' || phase === 'voting' || phase === 'end_game') {
       setMobileTab('players')
       setTimeout(() => playersScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 60)
     }
@@ -258,7 +260,8 @@ export function GameScreen() {
 
           {/* Вкладка: Сценарій */}
           {mobileTab === 'scenario' && (
-            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3"
+                 style={{ paddingBottom: phase === 'game_start' ? 200 : 16 }}>
               <div className="rounded-xl px-4 py-3 text-xs leading-relaxed"
                    style={{ background: 'var(--bunker-surface)', border: '1px solid rgba(204,34,0,0.2)', color: 'var(--bunker-text)' }}>
                 <p className="text-white font-black text-sm mb-2">{scenario.emoji} {scenario.title}</p>
@@ -289,6 +292,9 @@ export function GameScreen() {
                   </div>
                 </div>
               )}
+
+              {/* На старті — кнопка "Готовий" прямо на цій вкладці (fixed внизу) */}
+              {phase === 'game_start' && <GameStartPhase />}
             </div>
           )}
         </div>
