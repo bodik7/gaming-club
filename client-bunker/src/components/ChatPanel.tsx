@@ -98,7 +98,10 @@ export function ChatPanel() {
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}
-          onFocus={e => (e.target.style.borderColor = 'var(--bunker-border2)')}
+          onFocus={e => {
+            e.target.style.borderColor = 'var(--bunker-border2)'
+            setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)
+          }}
           onBlur={e => (e.target.style.borderColor = 'var(--bunker-border)')}
         />
         <motion.button

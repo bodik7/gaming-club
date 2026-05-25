@@ -62,38 +62,48 @@ export function GameScreen() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--bunker-bg)' }}>
+    <div className="flex flex-col overflow-hidden" style={{ background: 'var(--bunker-bg)', height: '100dvh' }}>
 
       {/* ── Topbar ── */}
-      <div className="flex items-center gap-3 px-4 py-2 flex-shrink-0"
+      <div className="flex items-center gap-2 px-3 py-2 flex-shrink-0"
            style={{
              background: 'linear-gradient(180deg, #0f1311 0%, #0b0d0c 100%)',
              borderBottom: '1px solid var(--bunker-border)',
+             paddingTop: 'calc(env(safe-area-inset-top) + 8px)',
            }}>
 
-        <span className="text-xl flex-shrink-0">{scenario.emoji}</span>
+        <span className="text-lg flex-shrink-0">{scenario.emoji}</span>
 
         <div className="flex-1 min-w-0">
           <div className="text-xs font-black text-white truncate tracking-wide">{scenario.title}</div>
         </div>
 
-        {/* Живих / місць — ключова метрика */}
-        <div className="flex items-center gap-1.5 flex-shrink-0 px-2.5 py-1 rounded-lg"
+        {/* Живих / місць */}
+        <div className="flex items-center gap-1 flex-shrink-0 px-2 py-1 rounded-lg"
              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--bunker-border)' }}>
           <span className="text-xs font-black text-white">{alive}</span>
-          <span className="text-xs" style={{ color: 'var(--bunker-muted)' }}>живих</span>
-          <span style={{ color: 'var(--bunker-border2)', fontSize: 10 }}>·</span>
-          <span className="text-xs font-black" style={{ color: 'var(--bunker-green-bright)' }}>{bunkerCapacity}</span>
-          <span className="text-xs" style={{ color: 'var(--bunker-muted)' }}>місць</span>
+          <span className="text-xs" style={{ color: 'var(--bunker-muted)' }}>/ {bunkerCapacity}</span>
         </div>
 
-        {/* Фаза */}
-        <div className="px-2.5 py-1 rounded-md text-xs font-black tracking-widest flex-shrink-0"
+        {/* Фаза — ховається на мобільному */}
+        <div className="topbar-phase px-2.5 py-1 rounded-md text-xs font-black tracking-widest flex-shrink-0"
              style={{ background: pm.bg, color: pm.color, border: `1px solid ${pm.color}40` }}>
           {pm.label}
         </div>
 
-        <PhaseTimer deadline={gameState.timeDeadline} />
+        {/* Таймер — ховається на мобільному */}
+        <div className="topbar-timer">
+          <PhaseTimer deadline={gameState.timeDeadline} />
+        </div>
+
+        {/* На мобільному — компактний статус фази + таймер в одному рядку */}
+        <div className="topbar-phase-mobile flex items-center gap-1.5 flex-shrink-0">
+          <span className="text-xs font-black px-2 py-0.5 rounded"
+                style={{ background: pm.bg, color: pm.color }}>
+            {pm.label}
+          </span>
+          <PhaseTimer deadline={gameState.timeDeadline} />
+        </div>
 
         <button onClick={leaveGame}
                 className="text-xs px-2.5 py-1 rounded-lg flex-shrink-0 transition-opacity hover:opacity-70"

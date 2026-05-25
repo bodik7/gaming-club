@@ -145,8 +145,17 @@ body {
   background: rgba(0,0,0,0.18);
 }
 
+/* Топбар: десктоп показує окремо фазу+таймер, мобільний — компактний блок */
+.topbar-phase-mobile { display: none; }
+
 /* ── Mobile layout ── */
 @media (max-width: 768px) {
+  /* Топбар */
+  .topbar-phase { display: none; }
+  .topbar-timer { display: none; }
+  .topbar-phase-mobile { display: flex; }
+
+  /* Тіло гри */
   .game-body {
     display: flex;
     flex-direction: column;
@@ -154,37 +163,47 @@ body {
     overflow-x: hidden;
   }
 
+  /* 1. Картки інших гравців */
   .game-center-top {
     order: 1;
     max-height: none;
     border-bottom: 1px solid var(--bunker-border);
   }
 
+  /* 2. Ваш персонаж — обмежена висота щоб не виштовхувати решту */
   .game-left-top {
     order: 2;
-    max-height: none;
+    max-height: 42vh;
+    overflow-y: auto;
     border-right: none;
     border-bottom: 1px solid var(--bunker-border);
   }
 
+  /* 3. Фаза / сценарій */
   .game-center-bottom {
     order: 3;
     border-bottom: 1px solid var(--bunker-border);
+    /* місце для fixed-кнопки "Готовий" */
+    padding-bottom: 120px;
   }
 
+  /* 4. Чат — менший ніж на десктопі */
   .game-right {
     order: 4;
     grid-column: unset;
     grid-row: unset;
     border-left: none;
     border-bottom: 1px solid var(--bunker-border);
-    height: 55vh;
+    height: 42vh;
     flex-shrink: 0;
   }
 
+  /* 5. Хід гри */
   .game-left-bottom {
     order: 5;
     border-right: none;
-    max-height: 240px;
+    max-height: 200px;
+    /* відступ від низу для home-indicator */
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
