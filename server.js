@@ -2284,6 +2284,14 @@ function processBunkerAction(room, type, data, pidx) {
             return;
         }
 
+        case 'b_endVoting': {
+            if (s.phase !== 'voting') break;
+            if (pidx !== 0) break; // тільки хост
+            addBunkerLog(s, `⚡ ${p.name} завершив голосування`);
+            resolveBunkerVoting(room);
+            return;
+        }
+
         case 'b_vote': {
             if (s.phase !== 'voting') break;
             if (s.votes[pidx] !== undefined) break;

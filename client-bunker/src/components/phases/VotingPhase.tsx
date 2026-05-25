@@ -3,11 +3,11 @@ import { getSocket } from '../../hooks/useSocket'
 import { useGameStore } from '../../store/gameStore'
 
 export function VotingPhase() {
-  const { gameState, myIndex } = useGameStore()
+  const { gameState, myIndex, isHost } = useGameStore()
   const [voted, setVoted] = useState(false)
   if (!gameState || myIndex === null) return null
 
-  const { players, votes, phase, tiebreaker } = gameState
+  const { players, votes, phase, tiebreaker, timerEnabled } = gameState
   const myVote   = votes[myIndex]
   const isTie    = !!tiebreaker
 
@@ -20,6 +20,10 @@ export function VotingPhase() {
     if (voted || myVote !== undefined) return
     getSocket().emit('action', { type: 'b_vote', data: { target: targetIdx } })
     setVoted(true)
+  }
+
+  const endVoting = () => {
+    getSocket().emit('action', { type: 'b_endVoting', data: {} })
   }
 
   const voteCounts: Record<number, number> = {}
@@ -134,6 +138,23 @@ export function VotingPhase() {
           </div>
         )}
       </div>
+
+      {/* Кнопка хоста — підрахувати голоси (тільки без таймера) */}
+      {isHost && !timerEnabled && phase === 'voting' && (
+        <div className="px-3 pb-3" style={{ background: 'var(--bunker-surface)' }}>
+          <button
+            onClick={endVoting}
+            className="w-full py-2.5 rounded-xl font-black text-sm transition-all active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, #cc2200, #992000)',
+              color: 'white',
+              boxShadow: '0 2px 12px rgba(204,34,0,0.3)',
+            }}
+          >
+            ⚡ Підрахувати голоси
+          </button>
+        </div>
+      )}
     </div>
   )
 }
