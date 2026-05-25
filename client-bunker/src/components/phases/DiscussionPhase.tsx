@@ -1,7 +1,14 @@
 import { useGameStore } from '../../store/gameStore'
+import { getSocket } from '../../hooks/useSocket'
 
 export function DiscussionPhase() {
   const scenario = useGameStore(s => s.gameState?.scenario)
+  const isHost   = useGameStore(s => s.isHost)
+  const timerEnabled = useGameStore(s => s.gameState?.timerEnabled)
+
+  const endDiscussion = () => {
+    getSocket().emit('action', { type: 'b_endDiscussion', data: {} })
+  }
 
   return (
     <div className="phase-fixed-panel">
@@ -38,6 +45,21 @@ export function DiscussionPhase() {
             ))}
           </div>
         </div>
+
+        {/* Кнопка хоста — завершити обговорення (тільки без таймера) */}
+        {isHost && !timerEnabled && (
+          <button
+            onClick={endDiscussion}
+            className="w-full py-3 rounded-xl font-black text-sm transition-all active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, #cc2200, #992000)',
+              color: 'white',
+              boxShadow: '0 2px 12px rgba(204,34,0,0.3)',
+            }}
+          >
+            🗳️ Розпочати голосування
+          </button>
+        )}
       </div>
     </div>
   )
