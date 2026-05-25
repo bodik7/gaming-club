@@ -74,10 +74,13 @@ export function GameScreen() {
   // Авто-переключення вкладок при зміні фази
   useEffect(() => {
     setConfirmAttr(null)
+    const alive = me?.isAlive !== false
     if (phase === 'game_start') {
       setMobileTab('scenario')
     } else if (phase === 'round_reveal') {
-      setMobileTab('me')
+      // Мертвий хост залишається на 'players' щоб бачити статус раунду
+      if (alive) setMobileTab('me')
+      else setMobileTab('players')
     } else if (phase === 'discussion') {
       setMobileTab('players')
     } else if (phase === 'voting' || phase === 'end_game') {

@@ -2263,7 +2263,10 @@ function resolveBunkerVoting(room) {
 function processBunkerAction(room, type, data, pidx) {
     const s   = room.state;
     const p   = s.players[pidx];
-    if (!p?.isAlive) return;
+    if (!p) return;
+    // b_endDiscussion і b_endVoting доступні хосту незалежно від того чи він живий
+    const requiresAlive = !['b_endDiscussion', 'b_endVoting'].includes(type);
+    if (requiresAlive && !p.isAlive) return;
 
     switch (type) {
         // Гравець підтвердив ознайомлення зі сценарієм
