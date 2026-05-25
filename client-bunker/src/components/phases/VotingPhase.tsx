@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { getSocket } from '../../hooks/useSocket'
 import { useGameStore } from '../../store/gameStore'
+import { haptic } from '../../utils/haptic'
+import { sounds } from '../../utils/sounds'
 
 export function VotingPhase() {
   const { gameState, myIndex, isHost } = useGameStore()
@@ -20,6 +22,8 @@ export function VotingPhase() {
     if (voted || myVote !== undefined) return
     getSocket().emit('action', { type: 'b_vote', data: { target: targetIdx } })
     setVoted(true)
+    haptic('heavy')
+    sounds.vote()
   }
 
   const endVoting = () => {

@@ -28,6 +28,31 @@ const io     = new Server(server);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'igclub-dev-secret-change-in-prod';
 
+// ── Rate limiting ─────────────────────────────
+const _rl = new Map(); // key → { count, resetAt }
+function rateLimit(key, max, windowMs) {
+    const now = Date.now();
+    const entry = _rl.get(key) || { count: 0, resetAt: now + windowMs };
+    if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + windowMs; }
+    entry.count++;
+    _rl.set(key, entry);
+    return entry.count <= max;
+}
+// Чистимо старі записи раз на 5 хвилин
+setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of _rl) if (now > v.resetAt) _rl.delete(k);
+}, 5 * 60_000);
+
+function apiLimiter(max, windowMs) {
+    return (req, res, next) => {
+        const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
+        if (!rateLimit(`api:${ip}`, max, windowMs))
+            return res.status(429).json({ error: 'Занадто багато запитів. Спробуйте пізніше.' });
+        next();
+    };
+}
+
 app.use(express.json());
 // TODO: перед деплоєм на постійний сервер — прибрати no-store і повернути etag/lastModified
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -50,7 +75,7 @@ if (fs.existsSync(bunkerBuild)) {
 }
 
 // ── REST Auth API ─────────────────────────────
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', apiLimiter(5, 10 * 60_000), async (req, res) => {
     const { username, password } = req.body || {};
     if (!username || !password)
         return res.status(400).json({ error: 'Заповніть усі поля' });
@@ -73,7 +98,7 @@ app.post('/api/register', async (req, res) => {
     res.json({ token, username });
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', apiLimiter(10, 10 * 60_000), async (req, res) => {
     const { username, password } = req.body || {};
     if (!username || !password)
         return res.status(400).json({ error: 'Заповніть усі поля' });
@@ -3662,6 +3687,7 @@ io.on('connection', (socket) => {
     // Чат
     socket.on('chatMessage', ({ text, icon, name, color }) => {
         if (!socket.roomCode) return;
+        if (!rateLimit(`chat:${socket.id}`, 5, 8_000)) return; // max 5 повідомлень за 8с
         const esc = s => String(s).replace(/[&<>"']/g, c =>
             ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
         io.to(socket.roomCode).emit('chatMessage', {

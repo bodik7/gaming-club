@@ -12,6 +12,9 @@ import { ChatPanel }         from '../components/ChatPanel'
 import { LogPanel }          from '../components/LogPanel'
 import { ActionCardPanel }   from '../components/ActionCardPanel'
 import { getSocket }         from '../hooks/useSocket'
+import { haptic }            from '../utils/haptic'
+import { sounds }            from '../utils/sounds'
+import { requestNotificationPermission, notify } from '../utils/notifications'
 
 const ATTR_LABELS: Record<string, string> = {
   profession: '💼 Професія',
@@ -64,6 +67,8 @@ export function GameScreen() {
   const revealAttr = useCallback((attr: string) => {
     getSocket().emit('action', { type: 'b_revealAttr', data: { attr } })
     setConfirmAttr(null)
+    haptic('success')
+    sounds.reveal()
   }, [])
 
   // Авто-переключення вкладок при зміні фази
@@ -87,6 +92,36 @@ export function GameScreen() {
       setTimeout(() => setMobileTab('players'), 600)
     }
   }, [me?.hasRevealed])
+
+  // Запитати дозвіл на сповіщення при першому рендері
+  useEffect(() => { requestNotificationPermission() }, [])
+
+  // Звук, хаптик і сповіщення при зміні фази
+  const prevPhaseRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (prevPhaseRef.current === null) { prevPhaseRef.current = phase; return }
+    if (prevPhaseRef.current === phase) return
+    prevPhaseRef.current = phase
+    sounds.phaseStart()
+    haptic('medium')
+    const labels: Record<string, string> = {
+      round_reveal: '🔓 Розкриття атрибутів',
+      discussion:   '💬 Обговорення',
+      voting:       '🗳️ Голосування',
+      end_game:     '🏆 Гра завершена',
+    }
+    if (labels[phase]) notify('Бункер — ' + labels[phase])
+    if (phase === 'end_game') { haptic('success'); sounds.win() }
+  }, [phase])
+
+  // Звук нового повідомлення в чаті
+  const prevChatRef = useRef(chatCount)
+  useEffect(() => {
+    if (chatCount > prevChatRef.current) {
+      if (mobileTab !== 'chat') sounds.chat()
+    }
+    prevChatRef.current = chatCount
+  }, [chatCount])
 
   const switchTab = (tab: MobileTab) => {
     setMobileTab(tab)
@@ -144,7 +179,7 @@ export function GameScreen() {
         const isClickable = canReveal && !attr.isRevealed
         return (
           <div key={key}
-               onClick={isClickable ? () => setConfirmAttr(key) : undefined}
+               onClick={isClickable ? () => { setConfirmAttr(key); haptic('light') } : undefined}
                className={`px-2 py-1.5 rounded-lg text-xs${isClickable ? ' transition-all active:scale-95' : ''}`}
                style={{
                  background: isClickable ? `${color}14` : `${color}0c`,
