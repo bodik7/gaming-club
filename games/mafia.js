@@ -204,7 +204,7 @@ function resolveNight(room) {
             isBad: MAFIA_ROLE_LABELS[t.role]?.faction === 'mafia',
         };
         const alreadyChecked = state.sheriffFindings.some(f => f.id === sheriffResult.targetId);
-        if (!alreadyChecked) state.sheriffFindings.push({ id: sheriffResult.targetId, isBad: sheriffResult.isBad });
+        if (!alreadyChecked) state.sheriffFindings.push({ id: sheriffResult.targetId, role: t.role });
     }
 
     let mafiaTarget = null;

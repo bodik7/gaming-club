@@ -356,9 +356,13 @@ function mRenderPlayers() {
                 <span class="m-player-card-role${(showRole || isMe || !p.isAlive) && rl ? ' revealed' : ''}"
                     style="color:${roleColor}">${roleText}</span>
             </div>
-            ${finding ? `<div class="m-sheriff-finding ${finding.isBad ? 'bad' : 'good'}">
-                🔍 ${finding.isBad ? '🔴 МАФІЯ' : '🟢 Мирний'}
-            </div>` : ''}
+            ${finding ? (() => {
+                const frl = M_ROLE_LABELS[finding.role] || { ua: finding.role, icon: '?', faction: 'town', color: '#888' };
+                const isBad = frl.faction === 'mafia';
+                return `<div class="m-sheriff-finding ${isBad ? 'bad' : 'good'}">
+                    🔍 ${frl.icon} ${frl.ua}
+                </div>`;
+            })() : ''}
         </div>`;
     }).join('');
 }
