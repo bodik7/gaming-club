@@ -3186,6 +3186,7 @@ io.on('connection', (socket) => {
         socket.playerIndex = 0;
         console.log(`Кімната ${code} створена`);
         cb({ code, playerIndex: 0, gameType: rooms[code].gameType });
+        io.to(code).emit('lobbyUpdate', { players: rooms[code].players.map(p => p.name), bots: rooms[code].players.map(p => !!p.isBot), gameType: rooms[code].gameType });
     });
 
     // Перегляд кімнати без входу
