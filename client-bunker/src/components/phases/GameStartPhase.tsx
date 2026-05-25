@@ -23,11 +23,14 @@ export function GameStartPhase() {
       <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
 
         {/* Деталі сценарію */}
-        <div className="phase-scenario-block rounded-xl px-4 py-2.5 text-xs leading-relaxed"
+        <div className="phase-scenario-block rounded-xl overflow-hidden text-xs leading-relaxed"
              style={{ background: 'var(--bunker-surface)', border: '1px solid rgba(204,34,0,0.2)', color: 'var(--bunker-text)' }}>
-          <p className="mb-1"><strong className="text-white">💀</strong> {scenario.disaster}</p>
-          <p className="mb-1"><strong className="text-white">🏚️</strong> {scenario.bunker}</p>
-          <p><strong className="text-white">🎯</strong> {scenario.goal}</p>
+          <div className="hazard-stripe" />
+          <div className="px-4 py-2.5">
+            <p className="mb-1"><strong className="text-white">💀</strong> {scenario.disaster}</p>
+            <p className="mb-1"><strong className="text-white">🏚️</strong> {scenario.bunker}</p>
+            <p><strong className="text-white">🎯</strong> {scenario.goal}</p>
+          </div>
         </div>
 
         {/* Прогрес готовності */}

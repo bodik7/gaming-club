@@ -7,6 +7,7 @@ import { sounds } from '../../utils/sounds'
 export function VotingPhase() {
   const { gameState, myIndex, isHost } = useGameStore()
   const [voted, setVoted] = useState(false)
+  const [pendingVote, setPendingVote] = useState<number | null>(null)
   if (!gameState || myIndex === null) return null
 
   const { players, votes, phase, tiebreaker, timerEnabled } = gameState
@@ -20,10 +21,17 @@ export function VotingPhase() {
 
   const vote = (targetIdx: number) => {
     if (voted || myVote !== undefined) return
-    getSocket().emit('action', { type: 'b_vote', data: { target: targetIdx } })
-    setVoted(true)
-    haptic('heavy')
-    sounds.vote()
+    // Перший тап — виділяємо кандидата; другий тап — підтверджуємо
+    if (pendingVote === targetIdx) {
+      getSocket().emit('action', { type: 'b_vote', data: { target: targetIdx } })
+      setVoted(true)
+      setPendingVote(null)
+      haptic('heavy')
+      sounds.vote()
+    } else {
+      setPendingVote(targetIdx)
+      haptic('light')
+    }
   }
 
   const endVoting = () => {
@@ -117,25 +125,42 @@ export function VotingPhase() {
             <div className="text-xs mb-1" style={{ color: 'var(--bunker-muted)' }}>
               {isTie ? 'Оберіть кого вигнати з тих що набрали однаково:' : 'Оберіть гравця для виключення:'}
             </div>
+            {pendingVote !== null && (
+              <div className="text-xs text-center py-1.5 px-3 rounded-lg animate-pulse-urgent"
+                   style={{ background: 'rgba(204,34,0,0.1)', color: 'var(--bunker-red)', border: '1px solid rgba(204,34,0,0.25)' }}>
+                ☝️ Натисніть ще раз щоб підтвердити
+              </div>
+            )}
             {alive.map(p => {
-              const cnt = voteCounts[p.id] || 0
+              const cnt       = voteCounts[p.id] || 0
+              const isPending = pendingVote === p.id
+              const baseRed   = isTie ? 'rgba(200,100,0' : 'rgba(204,34,0'
               return (
                 <button key={p.id} onClick={() => vote(p.id)}
                         className="flex items-center justify-between py-2.5 px-3 rounded-xl text-sm font-bold transition-all active:scale-95"
                         style={{
-                          background: isTie ? 'rgba(200,100,0,0.12)' : 'rgba(204,34,0,0.12)',
-                          border: `1px solid ${isTie ? 'rgba(200,100,0,0.35)' : 'rgba(204,34,0,0.3)'}`,
+                          background: isPending ? `${baseRed},0.28)` : `${baseRed},0.12)`,
+                          border: `1px solid ${isPending ? `${baseRed},0.7)` : `${baseRed},0.3)`}`,
                           color: 'white',
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.background = isTie ? 'rgba(200,100,0,0.22)' : 'rgba(204,34,0,0.22)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = isTie ? 'rgba(200,100,0,0.12)' : 'rgba(204,34,0,0.12)')}>
-                  <span>🚫 {p.name}</span>
-                  {cnt > 0 && (
-                    <span className="text-xs font-normal px-1.5 py-0.5 rounded-full"
-                          style={{ background: 'rgba(204,34,0,0.25)', color: '#ff8080' }}>
-                      {cnt}
-                    </span>
-                  )}
+                          boxShadow: isPending ? `0 0 12px ${baseRed},0.3)` : 'none',
+                          transform: isPending ? 'scale(1.02)' : 'scale(1)',
+                          transition: 'all 0.15s ease',
+                        }}>
+                  <span>{isPending ? '☠️' : '🚫'} {p.name}</span>
+                  <div className="flex items-center gap-2">
+                    {cnt > 0 && (
+                      <span className="text-xs font-normal px-1.5 py-0.5 rounded-full"
+                            style={{ background: 'rgba(204,34,0,0.25)', color: '#ff8080' }}>
+                        {cnt}
+                      </span>
+                    )}
+                    {isPending && (
+                      <span className="text-xs font-black px-2 py-0.5 rounded-full animate-pulse-urgent"
+                            style={{ background: 'rgba(204,34,0,0.4)', color: '#ff6060' }}>
+                        ПІДТВЕРДИТИ
+                      </span>
+                    )}
+                  </div>
                 </button>
               )
             })}

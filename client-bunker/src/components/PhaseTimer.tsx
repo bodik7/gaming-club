@@ -28,9 +28,11 @@ export function PhaseTimer({ deadline }: { deadline: number | null }) {
         color:      urgent ? '#fff' : 'var(--bunker-muted2)',
         border:     `1px solid ${urgent ? 'rgba(204,34,0,0.6)' : 'var(--bunker-border)'}`,
         animation:  urgent ? 'pulse-urgent 0.65s ease-in-out infinite' : 'none',
+        filter:     urgent ? 'drop-shadow(0 0 8px rgba(204,34,0,0.7))' : 'none',
         minWidth:   52,
         textAlign:  'center',
         fontVariantNumeric: 'tabular-nums',
+        transition: 'filter 0.4s ease',
       }}
     >
       {urgent ? '⚠️' : '⏱'} {display}

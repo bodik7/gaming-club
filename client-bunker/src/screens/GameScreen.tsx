@@ -53,6 +53,8 @@ export function GameScreen() {
   const [mobileTab, setMobileTab]       = useState<MobileTab>('players')
   const [lastSeenChat, setLastSeenChat] = useState(0)
   const [confirmAttr, setConfirmAttr]   = useState<string | null>(null)
+  const [showSplash, setShowSplash]     = useState(false)
+  const splashShownRef                  = useRef(false)
   const playersScrollRef = useRef<HTMLDivElement>(null)
 
   if (!gameState) return null
@@ -98,6 +100,16 @@ export function GameScreen() {
 
   // Запитати дозвіл на сповіщення при першому рендері
   useEffect(() => { requestNotificationPermission() }, [])
+
+  // Сплеш-екран при першому старті гри
+  useEffect(() => {
+    if (phase === 'game_start' && !splashShownRef.current) {
+      splashShownRef.current = true
+      setShowSplash(true)
+      const t = setTimeout(() => setShowSplash(false), 3000)
+      return () => clearTimeout(t)
+    }
+  }, [phase])
 
   // Звук, хаптик і сповіщення при зміні фази
   const prevPhaseRef = useRef<string | null>(null)
@@ -218,8 +230,10 @@ export function GameScreen() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.18, ease: 'easeOut' }}
         onClick={e => e.stopPropagation()}
-        className="w-full rounded-2xl p-4 flex flex-col gap-3"
+        className="w-full rounded-2xl overflow-hidden flex flex-col gap-3"
         style={{ maxWidth: 420, background: 'var(--bunker-surface2)', border: `1px solid ${(ATTR_COLORS[confirmAttr] || '#e09600')}40` }}>
+        <div className="hazard-stripe" style={{ opacity: 0.45 }} />
+        <div className="p-4 flex flex-col gap-3">
         <div className="text-xs font-black uppercase tracking-widest" style={{ color: ATTR_COLORS[confirmAttr] || '#e09600' }}>
           🔓 Розкрити атрибут?
         </div>
@@ -255,6 +269,7 @@ export function GameScreen() {
             🔓 Розкрити
           </button>
         </div>
+        </div>{/* /p-4 */}
       </motion.div>
     </div>
   )
@@ -461,6 +476,51 @@ export function GameScreen() {
 
       {/* Попап підтвердження розкриття */}
       <AnimatePresence>{confirmPopup}</AnimatePresence>
+
+      {/* Сплеш-екран початку гри */}
+      <AnimatePresence>
+        {showSplash && (
+          <motion.div
+            key="scenario-splash"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 1.04 }}
+            transition={{ duration: 0.35 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 text-center"
+            style={{ background: 'rgba(9,9,11,0.96)', backdropFilter: 'blur(8px)' }}
+            onClick={() => setShowSplash(false)}
+          >
+            <div className="hazard-stripe absolute top-0 left-0 right-0" />
+            <motion.div
+              initial={{ scale: 0.82, opacity: 0, y: 24 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, type: 'spring', stiffness: 260, damping: 22 }}
+              className="flex flex-col items-center gap-4 max-w-xs"
+            >
+              <div className="animate-emergency-glow text-5xl leading-none select-none">
+                {scenario.emoji}
+              </div>
+              <div className="text-xs font-black uppercase tracking-[0.2em]"
+                   style={{ color: 'var(--bunker-red)' }}>
+                ☢ КАТАСТРОФА ОГОЛОШЕНА
+              </div>
+              <h2 className="text-lg font-black text-white leading-snug">
+                {scenario.title}
+              </h2>
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--bunker-muted2)' }}>
+                {scenario.disaster.length > 120
+                  ? scenario.disaster.slice(0, 120) + '…'
+                  : scenario.disaster}
+              </p>
+              <div className="text-xs mt-1 px-3 py-1.5 rounded-lg"
+                   style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--bunker-muted)', border: '1px solid var(--bunker-border)' }}>
+                Торкніться щоб продовжити
+              </div>
+            </motion.div>
+            <div className="hazard-stripe absolute bottom-0 left-0 right-0" />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   )

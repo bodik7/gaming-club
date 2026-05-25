@@ -220,16 +220,28 @@ function LockedAttrRow({ attrKey, icon }: { attrKey: string; icon: string }) {
   return (
     <div className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg"
          style={{
-           background: `${color}07`,
-           border: `1px solid ${color}12`,
+           background: `${color}06`,
+           border: `1px solid ${color}10`,
            borderLeftWidth: 2,
-           borderLeftColor: `${color}30`,
+           borderLeftColor: `${color}25`,
          }}>
-      <span className="flex-shrink-0" style={{ fontSize: 12, opacity: 0.35 }}>{icon}</span>
-      <span style={{ color: `${color}60`, fontSize: 11, fontWeight: 600 }}>
+      <span className="flex-shrink-0" style={{ fontSize: 11, opacity: 0.3 }}>{icon}</span>
+      <span style={{ color: `${color}55`, fontSize: 10, fontWeight: 700, letterSpacing: '0.02em' }}>
         {ATTR_LABELS[attrKey]}
       </span>
-      <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 10, opacity: 0.3 }}>🔒</span>
+      <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+        <span style={{
+          fontSize: 9, fontWeight: 800, letterSpacing: '0.08em',
+          color: `${color}40`,
+          background: `${color}0c`,
+          border: `1px solid ${color}18`,
+          borderRadius: 4,
+          padding: '1px 5px',
+          fontFamily: 'monospace',
+        }}>
+          🔒 ПРИХОВ.
+        </span>
+      </div>
     </div>
   )
 }
