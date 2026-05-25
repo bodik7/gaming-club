@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { AnimatePresence, motion } from 'framer-motion'
 import { GameStartPhase }    from '../components/phases/GameStartPhase'
@@ -39,14 +40,34 @@ const PHASE_META: Record<string, { label: string; color: string; bg: string }> =
   end_game:       { label: 'ФІНАЛ',        color: '#8a9290', bg: 'rgba(100,120,120,0.15)'},
 }
 
+type MobileTab = 'players' | 'chat' | 'me'
+
 export function GameScreen() {
   const { gameState, myIndex, setLeavingToHub } = useGameStore()
+  const chatCount = useGameStore(s => s.chat.length)
+  const [mobileTab, setMobileTab]       = useState<MobileTab>('players')
+  const [lastSeenChat, setLastSeenChat] = useState(0)
+
   if (!gameState) return null
 
   const { phase, scenario, bunkerCapacity, players } = gameState
   const alive = players.filter(p => p.isAlive).length
   const me    = myIndex !== null ? players[myIndex] : null
   const pm    = PHASE_META[phase] || PHASE_META['game_start']
+
+  const unreadChat = mobileTab !== 'chat' ? Math.max(0, chatCount - lastSeenChat) : 0
+
+  // Автоматично перемикаємо на вкладку гравців при активних фазах
+  useEffect(() => {
+    if (phase === 'round_reveal' || phase === 'voting' || phase === 'game_start') {
+      setMobileTab('players')
+    }
+  }, [phase])
+
+  const switchTab = (tab: MobileTab) => {
+    setMobileTab(tab)
+    if (tab === 'chat') setLastSeenChat(chatCount)
+  }
 
   const leaveGame = () => {
     const otherHumans = players.filter((p, i) => i !== myIndex && !p.isBot)
@@ -61,10 +82,62 @@ export function GameScreen() {
     location.replace('/')
   }
 
+  // Вміст поточної фази — використовується в обох лейаутах
+  const phaseContent = (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={phase}
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.22, ease: 'easeOut' }}
+      >
+        {phase === 'game_start'   && <GameStartPhase />}
+        {phase === 'round_reveal' && <RoundRevealPhase />}
+        {phase === 'discussion'   && <DiscussionPhase />}
+        {(phase === 'voting' || phase === 'voting_result') && <VotingPhase />}
+        {phase === 'end_game'     && <EndGamePhase />}
+      </motion.div>
+    </AnimatePresence>
+  )
+
+  // Картка персонажа — використовується в обох лейаутах
+  const characterCard = me && (
+    <div className="flex flex-col gap-1">
+      <div className="text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-1.5"
+           style={{ color: 'var(--bunker-yellow)' }}>
+        👤 Ваш персонаж
+      </div>
+      {Object.entries(me.attributes).map(([key, attr]) => {
+        const color = ATTR_COLORS[key] || '#e09600'
+        return (
+          <div key={key}
+               className="px-2 py-1.5 rounded-lg text-xs"
+               style={{
+                 background: `${color}0c`,
+                 border: `1px solid ${color}20`,
+                 borderLeftWidth: 2,
+                 borderLeftColor: attr.isRevealed ? color : `${color}50`,
+               }}>
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="font-bold" style={{ color: `${color}bb`, fontSize: 10 }}>
+                {ATTR_LABELS[key]}
+              </span>
+              {!attr.isRevealed && (
+                <span style={{ fontSize: 10, color: 'var(--bunker-muted)' }}>🔒</span>
+              )}
+            </div>
+            <div className="text-white leading-snug" style={{ fontSize: 11 }}>{attr.value}</div>
+          </div>
+        )
+      })}
+    </div>
+  )
+
   return (
     <div className="flex flex-col overflow-hidden" style={{ background: 'var(--bunker-bg)', height: '100dvh' }}>
 
-      {/* ── Topbar ── */}
+      {/* ── Топбар (спільний) ── */}
       <div className="flex items-center gap-2 px-3 py-2 flex-shrink-0"
            style={{
              background: 'linear-gradient(180deg, #0f1311 0%, #0b0d0c 100%)',
@@ -85,18 +158,16 @@ export function GameScreen() {
           <span className="text-xs" style={{ color: 'var(--bunker-muted)' }}>/ {bunkerCapacity}</span>
         </div>
 
-        {/* Фаза — ховається на мобільному */}
+        {/* Десктоп: окремо фаза і таймер */}
         <div className="topbar-phase px-2.5 py-1 rounded-md text-xs font-black tracking-widest flex-shrink-0"
              style={{ background: pm.bg, color: pm.color, border: `1px solid ${pm.color}40` }}>
           {pm.label}
         </div>
-
-        {/* Таймер — ховається на мобільному */}
         <div className="topbar-timer">
           <PhaseTimer deadline={gameState.timeDeadline} />
         </div>
 
-        {/* На мобільному — компактний статус фази + таймер в одному рядку */}
+        {/* Мобільний: компактний фаза + таймер */}
         <div className="topbar-phase-mobile flex items-center gap-1.5 flex-shrink-0">
           <span className="text-xs font-black px-2 py-0.5 rounded"
                 style={{ background: pm.bg, color: pm.color }}>
@@ -112,82 +183,117 @@ export function GameScreen() {
         </button>
       </div>
 
-      {/* ── Основне тіло ── */}
+      {/* ══════════════════════════════════════
+          ДЕСКТОП: 3-колонковий грід
+         ══════════════════════════════════════ */}
       <div className="game-body">
 
-        {/* ═══ Картки інших гравців ═══ */}
         <div className="game-center-top game-bg-texture">
           <PlayerGrid />
         </div>
 
-        {/* ═══ Мій персонаж + Карти дій ═══ */}
         <div className="game-left-top">
           {me && (
             <>
-              <div className="text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-1.5"
-                   style={{ color: 'var(--bunker-yellow)' }}>
-                👤 Ваш персонаж
-              </div>
-              <div className="flex flex-col gap-1 mb-2">
-                {Object.entries(me.attributes).map(([key, attr]) => {
-                  const color = ATTR_COLORS[key] || '#e09600'
-                  return (
-                    <div key={key}
-                         className="px-2 py-1.5 rounded-lg text-xs"
-                         style={{
-                           background: `${color}0c`,
-                           border: `1px solid ${color}20`,
-                           borderLeftWidth: 2,
-                           borderLeftColor: attr.isRevealed ? color : `${color}50`,
-                         }}>
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="font-bold" style={{ color: `${color}bb`, fontSize: 10 }}>
-                          {ATTR_LABELS[key]}
-                        </span>
-                        {!attr.isRevealed && (
-                          <span style={{ fontSize: 10, color: 'var(--bunker-muted)' }}>🔒</span>
-                        )}
-                      </div>
-                      <div className="text-white leading-snug" style={{ fontSize: 11 }}>{attr.value}</div>
-                    </div>
-                  )
-                })}
-              </div>
+              {characterCard}
+              <div className="mt-2"><ActionCardPanel /></div>
             </>
           )}
-          <ActionCardPanel />
         </div>
 
-        {/* ═══ Фаза / Сценарій ═══ */}
         <div className="game-center-bottom game-bg-texture">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={phase}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-            >
-              {phase === 'game_start'   && <GameStartPhase />}
-              {phase === 'round_reveal' && <RoundRevealPhase />}
-              {phase === 'discussion'   && <DiscussionPhase />}
-              {(phase === 'voting' || phase === 'voting_result') && <VotingPhase />}
-              {phase === 'end_game'     && <EndGamePhase />}
-            </motion.div>
-          </AnimatePresence>
+          {phaseContent}
         </div>
 
-        {/* ═══ Чат ═══ */}
         <div className="game-right">
           <ChatPanel />
         </div>
 
-        {/* ═══ Хід гри ═══ */}
         <div className="game-left-bottom">
           <LogPanel />
         </div>
-
       </div>
+
+      {/* ══════════════════════════════════════
+          МОБІЛЬНИЙ: таб-навігація
+         ══════════════════════════════════════ */}
+      <div className="mobile-game-body">
+
+        {/* Вміст активної вкладки */}
+        <div className="mobile-tab-content">
+
+          {/* Вкладка: Гравці */}
+          {mobileTab === 'players' && (
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-2 game-bg-texture">
+                <PlayerGrid />
+              </div>
+              <div style={{ height: 1, background: 'var(--bunker-border)', margin: '0 8px' }} />
+              <div className="p-2">
+                {phaseContent}
+              </div>
+            </div>
+          )}
+
+          {/* Вкладка: Чат */}
+          {mobileTab === 'chat' && (
+            <div className="flex-1 flex flex-col min-h-0 p-2">
+              <ChatPanel />
+            </div>
+          )}
+
+          {/* Вкладка: Я */}
+          {mobileTab === 'me' && (
+            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+              {characterCard}
+              <ActionCardPanel />
+              <div style={{ height: 200 }}>
+                <LogPanel />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Нижня навігація */}
+        <nav className="mobile-bottom-nav">
+          {([
+            { id: 'players' as MobileTab, icon: '👥', label: 'Гравці' },
+            { id: 'chat'    as MobileTab, icon: '💬', label: 'Чат',   badge: unreadChat },
+            { id: 'me'      as MobileTab, icon: '👤', label: 'Я' },
+          ]).map(tab => {
+            const active = mobileTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => switchTab(tab.id)}
+                className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 relative transition-opacity"
+                style={{ color: active ? 'var(--bunker-yellow)' : 'var(--bunker-muted)', border: 'none', background: 'none' }}
+              >
+                {active && (
+                  <div style={{
+                    position: 'absolute', top: 0, left: '20%', right: '20%',
+                    height: 2, background: 'var(--bunker-yellow)', borderRadius: '0 0 2px 2px',
+                  }} />
+                )}
+                <span style={{ fontSize: 22 }}>{tab.icon}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.03em' }}>{tab.label}</span>
+                {'badge' in tab && tab.badge! > 0 && (
+                  <span style={{
+                    position: 'absolute', top: 4, right: 'calc(50% - 18px)',
+                    background: 'var(--bunker-red)', color: '#fff',
+                    fontSize: 9, fontWeight: 900, borderRadius: 999,
+                    padding: '1px 5px', minWidth: 16, textAlign: 'center',
+                    lineHeight: '14px',
+                  }}>
+                    {tab.badge! > 99 ? '99+' : tab.badge}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </nav>
+      </div>
+
     </div>
   )
 }

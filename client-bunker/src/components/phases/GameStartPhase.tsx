@@ -19,7 +19,7 @@ export function GameStartPhase() {
   }
 
   return (
-    <div style={{
+    <div className="game-start-fixed-btn" style={{
       position: 'fixed',
       bottom: 0,
       left: 0,

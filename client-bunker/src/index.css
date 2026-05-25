@@ -148,62 +148,47 @@ body {
 /* Топбар: десктоп показує окремо фазу+таймер, мобільний — компактний блок */
 .topbar-phase-mobile { display: none; }
 
-/* ── Mobile layout ── */
+/* ── Мобільний лейаут (tabs) ── */
+.mobile-game-body { display: none; }
+
 @media (max-width: 768px) {
+  /* Ховаємо десктоп-грід */
+  .game-body { display: none; }
+
   /* Топбар */
   .topbar-phase { display: none; }
   .topbar-timer { display: none; }
   .topbar-phase-mobile { display: flex; }
 
-  /* Тіло гри */
-  .game-body {
+  /* Мобільне тіло */
+  .mobile-game-body {
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
-    overflow-x: hidden;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
 
-  /* 1. Картки інших гравців */
-  .game-center-top {
-    order: 1;
-    max-height: none;
-    border-bottom: 1px solid var(--bunker-border);
+  /* Контент вкладки */
+  .mobile-tab-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
   }
 
-  /* 2. Ваш персонаж — обмежена висота щоб не виштовхувати решту */
-  .game-left-top {
-    order: 2;
-    max-height: 42vh;
-    overflow-y: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--bunker-border);
-  }
-
-  /* 3. Фаза / сценарій */
-  .game-center-bottom {
-    order: 3;
-    border-bottom: 1px solid var(--bunker-border);
-    /* місце для fixed-кнопки "Готовий" */
-    padding-bottom: 120px;
-  }
-
-  /* 4. Чат — менший ніж на десктопі */
-  .game-right {
-    order: 4;
-    grid-column: unset;
-    grid-row: unset;
-    border-left: none;
-    border-bottom: 1px solid var(--bunker-border);
-    height: 42vh;
+  /* Нижня навігація */
+  .mobile-bottom-nav {
+    display: flex;
     flex-shrink: 0;
+    background: #0b0d0c;
+    border-top: 1px solid var(--bunker-border);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* 5. Хід гри */
-  .game-left-bottom {
-    order: 5;
-    border-right: none;
-    max-height: 200px;
-    /* відступ від низу для home-indicator */
-    padding-bottom: env(safe-area-inset-bottom);
+  /* Фіксована кнопка "Готовий" — піднімається над нав-баром */
+  .game-start-fixed-btn {
+    bottom: calc(56px + env(safe-area-inset-bottom)) !important;
   }
 }
