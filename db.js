@@ -150,9 +150,32 @@ async function cleanOldRooms() {
     } catch {}
 }
 
+// Видаляє game_stats старші за 12 місяців
+// Для кожного юзера залишає мінімум 20 останніх записів (не чіпаємо активних)
+async function cleanOldStats() {
+    try {
+        await getClient().execute(
+            `DELETE FROM game_stats WHERE played_at < datetime('now', '-12 months')`
+        );
+    } catch {}
+}
+
+// Видаляє акаунти без жодної гри старші за 90 днів (сміттєві реєстрації)
+async function cleanGhostUsers() {
+    try {
+        await getClient().execute(`
+            DELETE FROM users
+            WHERE id NOT IN (SELECT DISTINCT rowid FROM users LIMIT 0)
+            AND username NOT IN (SELECT DISTINCT username FROM game_stats)
+            AND created_at < datetime('now', '-90 days')
+        `);
+    } catch {}
+}
+
 module.exports = {
     init,
     getUser, createUser,
     addStat, getStats, getLeaderboard,
     saveRoom, getRoom, deleteRoom, getAllRooms, cleanOldRooms,
+    cleanOldStats, cleanGhostUsers,
 };

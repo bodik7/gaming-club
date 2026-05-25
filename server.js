@@ -3857,6 +3857,13 @@ server.listen(PORT, async () => {
     await db.init();
     await restoreRoomsFromDB();
     setInterval(autoSaveRooms, 30_000);
+    // Щоденне очищення сміттєвих даних
+    const dailyClean = async () => {
+        await db.cleanOldStats();
+        await db.cleanGhostUsers();
+    };
+    dailyClean();
+    setInterval(dailyClean, 24 * 60 * 60_000);
     // Self-ping щоб Render не засипав (тільки на продакшені)
     if (process.env.RENDER_EXTERNAL_URL) {
         setInterval(() => {
