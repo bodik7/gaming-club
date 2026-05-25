@@ -120,9 +120,7 @@ async function checkAuth() {
         } catch {}
         clearAuth();
     }
-    // AUTH вимкнено — вмикається коли потрібно (замінити рядок нижче)
-    // document.getElementById('auth-screen').classList.remove('hidden');
-    playAsGuest();
+    document.getElementById('auth-screen').classList.remove('hidden');
     if (joinCode) _pendingJoinCode = joinCode.toUpperCase();
     // Якщо є збережена сесія — приховуємо лобі поки tryRejoin не завершиться
     if (localStorage.getItem(SESSION_KEY)) {
@@ -146,8 +144,10 @@ function _enterLobby(username, joinCode) {
         // Показуємо рядок акаунту
         const bar = document.getElementById('account-bar');
         const nameEl = document.getElementById('account-name');
+        const avatarEl = document.getElementById('account-avatar');
         if (bar) bar.classList.remove('hidden');
         if (nameEl) nameEl.textContent = username;
+        if (avatarEl) avatarEl.textContent = username[0].toUpperCase();
     } else {
         // Гість — поле вільне
         if (nameInput) {
@@ -198,8 +198,10 @@ function switchAuthTab(tab) {
     document.getElementById('tab-register').classList.toggle('active', tab === 'register');
     const btn = document.getElementById('auth-submit-btn');
     if (btn) btn.textContent = tab === 'login' ? 'Увійти' : 'Зареєструватись';
+    const confirmWrap = document.getElementById('auth-confirm-wrap');
+    if (confirmWrap) confirmWrap.style.display = tab === 'register' ? 'block' : 'none';
     const err = document.getElementById('auth-error');
-    if (err) err.style.display = 'none';
+    if (err) err.textContent = '';
 }
 
 async function doAuth() {
@@ -209,10 +211,21 @@ async function doAuth() {
     const errEl    = document.getElementById('auth-error');
     const btn      = document.getElementById('auth-submit-btn');
 
-    if (errEl) errEl.style.display = 'none';
+    if (errEl) errEl.textContent = '';
     if (!username || !password) {
-        if (errEl) { errEl.textContent = 'Заповніть усі поля'; errEl.style.display = 'block'; }
+        if (errEl) errEl.textContent = 'Заповніть усі поля';
         return;
+    }
+    if (!isLogin) {
+        const confirm = document.getElementById('auth-confirm')?.value || '';
+        if (!confirm) {
+            if (errEl) errEl.textContent = 'Підтвердіть пароль';
+            return;
+        }
+        if (confirm !== password) {
+            if (errEl) errEl.textContent = 'Паролі не збігаються';
+            return;
+        }
     }
     if (btn) { btn.disabled = true; btn.textContent = '…'; }
 
@@ -248,15 +261,79 @@ function logOut() {
     clearAuth();
     _isGuest = false;
     _authUsername = '';
-    // Ховаємо лобі, показуємо auth
+    closeCabinet();
     document.getElementById('lobby-screen').classList.add('hidden');
     document.getElementById('account-bar')?.classList.add('hidden');
     document.getElementById('auth-screen').classList.remove('hidden');
-    // Очищаємо поля auth
     const u = document.getElementById('auth-username');
     const p = document.getElementById('auth-password');
     if (u) u.value = '';
     if (p) p.value = '';
+}
+
+const GAME_LABELS = {
+    monopoly: '🏦 Монополія',
+    tysyacha: '🃏 Тисяча',
+    mafia:    '🔫 Мафія',
+    durak:    '🂡 Дурак',
+    bunker:   '🏚️ Бункер',
+};
+
+async function openCabinet() {
+    const modal = document.getElementById('cabinet-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+
+    const letter  = (_authUsername || '?')[0].toUpperCase();
+    const avatarEl = document.getElementById('cabinet-avatar-letter');
+    const nameEl  = document.getElementById('cabinet-username-display');
+    const listEl  = document.getElementById('cabinet-stats-list');
+    const totalEl = document.getElementById('cabinet-total');
+
+    if (avatarEl) avatarEl.textContent = letter;
+    if (nameEl)   nameEl.textContent   = _authUsername;
+    if (listEl)   listEl.innerHTML     = '<div class="cabinet-loading">Завантаження…</div>';
+    if (totalEl)  totalEl.textContent  = '';
+
+    try {
+        const auth = loadAuth();
+        const res  = await fetch('/api/me', {
+            headers: auth?.token ? { Authorization: `Bearer ${auth.token}` } : {}
+        });
+        if (!res.ok) throw new Error('not ok');
+        const data = await res.json();
+        const stats = data.stats || {};
+
+        let totalGames = 0, totalWins = 0;
+        const rows = Object.entries(GAME_LABELS).map(([key, label]) => {
+            const s = stats[key] || { g: 0, w: 0 };
+            totalGames += s.g;
+            totalWins  += s.w;
+            const pct = s.g > 0 ? Math.round(s.w / s.g * 100) : 0;
+            return `<div class="cabinet-stat-row">
+                <span class="cabinet-stat-label">${label}</span>
+                <div class="cabinet-stat-bar-wrap">
+                    <div class="cabinet-stat-bar" style="width:${pct}%"></div>
+                </div>
+                <span class="cabinet-stat-nums">${s.w}/${s.g} (${pct}%)</span>
+            </div>`;
+        });
+
+        if (listEl) listEl.innerHTML = rows.join('');
+        if (totalEl) {
+            const tpct = totalGames > 0 ? Math.round(totalWins / totalGames * 100) : 0;
+            totalEl.textContent = totalGames > 0
+                ? `Загалом: ${totalWins} перемог з ${totalGames} ігор (${tpct}%)`
+                : 'Ще не зіграно жодної гри';
+        }
+    } catch {
+        if (listEl) listEl.innerHTML = '<div class="cabinet-loading">Не вдалося завантажити статистику</div>';
+    }
+}
+
+function closeCabinet() {
+    const modal = document.getElementById('cabinet-modal');
+    if (modal) modal.style.display = 'none';
 }
 
 // ── Лічильник кімнат ─────────────────────────
