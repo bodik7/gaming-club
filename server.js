@@ -932,6 +932,22 @@ io.on('connection', (socket) => {
         });
     });
 
+    // Чат у залі очікування
+    socket.on('lobbyMsg', ({ text }) => {
+        if (!socket.roomCode) return;
+        if (!rateLimit(`lobbyChat:${socket.id}`, 5, 8_000)) return;
+        const room = roomStore.get(socket.roomCode);
+        if (!room || room.gameStarted) return;
+        const esc = s => String(s).replace(/[&<>"']/g, c =>
+            ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+        const player = room.players.find(p => p.socketId === socket.id);
+        const name = esc(String(player?.name || socket.playerName || 'Гравець').slice(0, 30));
+        io.to(socket.roomCode).emit('lobbyMsg', {
+            name,
+            text: esc(String(text || '').slice(0, 200)),
+        });
+    });
+
     // Відключення
     socket.on('disconnect', () => {
         console.log('- відключення:', socket.id);

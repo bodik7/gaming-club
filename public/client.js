@@ -740,6 +740,8 @@ function showLobbyWaiting(code) {
     fetchRoomCounts();
     const shareBtn = document.getElementById('copy-link-btn');
     if (shareBtn && navigator.share) shareBtn.textContent = '📤 Поділитись запрошенням';
+    const chatBox = document.getElementById('lobby-chat-messages');
+    if (chatBox) chatBox.innerHTML = '';
 }
 
 function copyRoomCode() {
@@ -1199,6 +1201,25 @@ function updateGameSettings(gameType) {
 function startGame() {
     socket.emit('startGame', { settings: _gameSettings });
 }
+
+function sendLobbyMsg() {
+    const input = document.getElementById('lobby-chat-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    socket.emit('lobbyMsg', { text });
+    input.value = '';
+}
+
+socket.on('lobbyMsg', ({ name, text }) => {
+    const box = document.getElementById('lobby-chat-messages');
+    if (!box) return;
+    const div = document.createElement('div');
+    div.className = 'lobby-chat-msg';
+    div.innerHTML = `<span class="lobby-chat-msg-name">${name}:</span>${text}`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+});
 
 // ── Отримання оновлень від сервера ───────────
 socket.on('lobbyUpdate', ({ players, bots, gameType }) => {

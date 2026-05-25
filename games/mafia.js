@@ -71,7 +71,8 @@ function createMafiaState(roomPlayers, settings = {}) {
         nightActions:    {},
         votes:           {},
         lastDeaths:      [],
-        sheriffFindings: [],   // { id, isBad } — видно тільки комісару+помічнику
+        sheriffFindings: [],   // { id, role } — видно тільки комісару+помічнику
+        donFindings:     [],   // { id, isSheriff } — видно тільки дону
         winner:     null,
         log:        [],
         nightDuration:  settings.nightDuration  || 90,
@@ -110,6 +111,7 @@ function sanitizeMafia(state, forIdx) {
         myRoleLabel: MAFIA_ROLE_LABELS[myRole] || null,
         mafiaIds:        myFaction === 'mafia' ? state.mafiaIds : null,
         sheriffFindings: (myRole === 'sheriff' || myRole === 'deputy') ? state.sheriffFindings : null,
+        donFindings:     myRole === 'don' ? state.donFindings : null,
         myVote:    state.votes?.[forIdx] ?? null,
         allVotes:  state.phase === 'day_voting' ? { ...state.votes } : {},
         voteCount: state.phase === 'day_voting'
@@ -166,6 +168,7 @@ function startNightPhase(room) {
     state.nightActions = {
         mafiaVotes:       {},
         sheriffCheck:     null,
+        donCheck:         null,
         doctorHeal:       null,
         roleblockerBlock: null,
         maniacKill:       null,
@@ -211,6 +214,18 @@ function resolveNight(room) {
         if (!alreadyChecked) state.sheriffFindings.push({ id: sheriffResult.targetId, role: t.role });
     }
 
+    let donResult = null;
+    if (acts.donCheck && !nightBlocked.has(acts.donCheck.actorId)) {
+        const t = ps[acts.donCheck.targetId];
+        donResult = {
+            targetId:   acts.donCheck.targetId,
+            targetName: t.name,
+            isSheriff:  t.role === 'sheriff' || t.role === 'deputy',
+        };
+        const alreadyChecked = state.donFindings.some(f => f.id === donResult.targetId);
+        if (!alreadyChecked) state.donFindings.push({ id: donResult.targetId, isSheriff: donResult.isSheriff });
+    }
+
     let mafiaTarget = null;
     const don = ps.find(p => p.role === 'don' && p.isAlive);
     if (don && acts.mafiaVotes[don.id] !== undefined && !nightBlocked.has(don.id)) {
@@ -250,10 +265,10 @@ function resolveNight(room) {
         }
     }
 
-    startMorningPhase(room, sheriffResult, newSheriffIdx);
+    startMorningPhase(room, sheriffResult, newSheriffIdx, donResult);
 }
 
-function startMorningPhase(room, sheriffResult, newSheriffIdx = null) {
+function startMorningPhase(room, sheriffResult, newSheriffIdx = null, donResult = null) {
     const state = room.state;
     state.phase = 'morning';
 
@@ -279,6 +294,8 @@ function startMorningPhase(room, sheriffResult, newSheriffIdx = null) {
         let sideEffect = null;
         if (sheriffResult && (p.role === 'sheriff' || p.role === 'deputy'))
             sideEffect = { event: 'sheriffResult', ...sheriffResult };
+        if (donResult && p.role === 'don')
+            sideEffect = { event: 'donResult', ...donResult };
         if (newSheriffIdx !== null && rp.index === newSheriffIdx)
             sideEffect = { ...(sideEffect || {}), event: sideEffect?.event || 'newSheriff', newSheriff: true };
         _io.to(rp.socketId).emit('stateUpdate', {
@@ -389,6 +406,14 @@ function processMafiaAction(state, type, data, pidx) {
             break;
         }
 
+        case 'donCheck': {
+            if (state.phase !== 'night' || player.role !== 'don') break;
+            const { targetId: dct } = data;
+            if (!state.players[dct]?.isAlive || dct === pidx) break;
+            state.nightActions.donCheck = { actorId: pidx, targetId: dct };
+            break;
+        }
+
         case 'doctorHeal': {
             if (state.phase !== 'night' || player.role !== 'doctor') break;
             const { targetId: dht } = data;
@@ -459,7 +484,13 @@ function getMafiaBotDecisions(room) {
             }
 
             if (st.phase === 'night') {
-                if (p.role === 'mafia' || p.role === 'don') {
+                if (p.role === 'don') {
+                    const t = rnd(town.length ? town : nonMaf);
+                    if (t) processMafiaAction(st, 'mafiaVote', { targetId: t.id }, bp.index);
+                    // Дон також перевіряє випадкового гравця
+                    const tCheck = rnd(others);
+                    if (tCheck) processMafiaAction(st, 'donCheck', { targetId: tCheck.id }, bp.index);
+                } else if (p.role === 'mafia') {
                     const t = rnd(town.length ? town : nonMaf);
                     if (t) processMafiaAction(st, 'mafiaVote', { targetId: t.id }, bp.index);
                 } else if (p.role === 'sheriff' || p.role === 'deputy') {

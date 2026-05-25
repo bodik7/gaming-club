@@ -1973,6 +1973,71 @@ body {
     justify-content: center;
 }
 
+/* ── Чат у залі очікування ────────────────────── */
+.lobby-chat-box {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.lobby-chat-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 0.5px;
+}
+.lobby-chat-messages {
+    height: 140px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+.lobby-chat-msg {
+    font-size: 13px;
+    color: rgba(255,255,255,0.8);
+    line-height: 1.4;
+    word-break: break-word;
+}
+.lobby-chat-msg-name {
+    font-weight: 700;
+    color: #ffd700;
+    margin-right: 4px;
+}
+.lobby-chat-input-row {
+    display: flex;
+    gap: 8px;
+}
+.lobby-chat-input {
+    flex: 1;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.lobby-chat-input:focus { border-color: rgba(255,215,0,0.4); }
+.lobby-chat-input::placeholder { color: rgba(255,255,255,0.3); }
+.lobby-chat-send-btn {
+    background: rgba(255,215,0,0.15);
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 8px;
+    color: #ffd700;
+    font-size: 15px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.lobby-chat-send-btn:hover { background: rgba(255,215,0,0.28); }
+
 /* ── Лідерборд: вкладки ігор ──────────────────── */
 .lb-game-tab {
     padding: 5px 10px;

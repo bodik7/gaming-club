@@ -336,6 +336,18 @@
                     Хост бачить кнопку старту · Мінімум 2 гравці
                 </p>
 
+                <!-- Чат у залі очікування -->
+                <div class="lobby-chat-box">
+                    <div class="lobby-chat-title">💬 Чат</div>
+                    <div id="lobby-chat-messages" class="lobby-chat-messages"></div>
+                    <div class="lobby-chat-input-row">
+                        <input id="lobby-chat-input" class="lobby-chat-input"
+                               type="text" maxlength="200" placeholder="Написати повідомлення…"
+                               onkeydown="if(event.key==='Enter')sendLobbyMsg()">
+                        <button class="lobby-chat-send-btn" onclick="sendLobbyMsg()">➤</button>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>

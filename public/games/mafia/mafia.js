@@ -64,6 +64,21 @@ function updateMafia(state, sideEffect) {
                     showToast('👮 Комісар загинув — тепер ви Комісар!', { color: '#0277bd' });
             }, 1200);
         }
+        if (sideEffect.event === 'donResult') {
+            const r = sideEffect;
+            const chatMsgs = document.getElementById('m-chat-msgs');
+            if (chatMsgs) {
+                const msg = document.createElement('div');
+                msg.className = 'm-chat-msg system';
+                msg.innerHTML = `<span class="m-chat-msg-sender">Перевірка Дона</span>
+                    <span class="m-chat-msg-text" style="color:${r.isSheriff ? '#fca5a5' : '#6ee7b7'}">
+                        👁 ${r.targetName} — ${r.isSheriff ? '🚨 КОМІСАР!' : '✅ Не комісар'}
+                    </span>`;
+                chatMsgs.appendChild(msg);
+                chatMsgs.scrollTop = chatMsgs.scrollHeight;
+                mBumpChatBadge();
+            }
+        }
         // Sheriff check result shown in chat area
         if (sideEffect.event === 'sheriffResult') {
             const r = sideEffect;
@@ -289,7 +304,8 @@ function mRenderPlayers() {
         const meCls      = isMe ? 'me' : '';
 
         // Sheriff finding for this player (visible to sheriff+deputy only)
-        const finding = s.sheriffFindings?.find(f => f.id === p.id);
+        const finding    = s.sheriffFindings?.find(f => f.id === p.id);
+        const donFinding = s.donFindings?.find(f => f.id === p.id);
 
         // State badge
         let stateBadge = '';
@@ -307,13 +323,25 @@ function mRenderPlayers() {
         if (me?.isAlive) {
             if (s.phase === 'night') {
                 const actionType = mGetActionTypeForRole(me.role);
-                if (actionType) {
-                    const canTarget = (!isMe) || (me.role === 'doctor'); // doctor can self-heal
+                const secondaryType = mGetSecondaryActionForRole(me.role);
+                if (actionType && !isMe) {
+                    const canTarget = (!isMe) || (me.role === 'doctor');
                     if (canTarget) {
                         const isSel = _mNightSelections[actionType] === p.id;
                         const icons = { mafia:'🎯', don:'🎯', sheriff:'🔍', deputy:'🔍', doctor:'💊', roleblocker:'🚫', maniac:'🔪' };
-                        actionBtn = `<button class="m-card-action-btn${isSel ? ' selected' : ''}"
-                            onclick="mNightAction('${actionType}', ${p.id})">${isSel ? '✓' : (icons[me.role] || '🎯')}</button>`;
+                        // Для дона показуємо дві кнопки: вбити (🎯) і перевірити (👁)
+                        if (secondaryType) {
+                            const isSelCheck = _mNightSelections[secondaryType] === p.id;
+                            actionBtn = `<div class="m-card-action-duo">
+                                <button class="m-card-action-btn${isSel ? ' selected' : ''}"
+                                    onclick="mNightAction('${actionType}', ${p.id})" title="Вбити">${isSel ? '✓' : '🎯'}</button>
+                                <button class="m-card-action-btn check-btn${isSelCheck ? ' selected' : ''}"
+                                    onclick="mNightAction('${secondaryType}', ${p.id})" title="Перевірити">${isSelCheck ? '✓' : '👁'}</button>
+                            </div>`;
+                        } else {
+                            actionBtn = `<button class="m-card-action-btn${isSel ? ' selected' : ''}"
+                                onclick="mNightAction('${actionType}', ${p.id})">${isSel ? '✓' : (icons[me.role] || '🎯')}</button>`;
+                        }
                     }
                 }
             } else if (s.phase === 'day_voting' && !isMe && !me.isSilenced) {
@@ -359,10 +387,11 @@ function mRenderPlayers() {
             ${finding ? (() => {
                 const frl = M_ROLE_LABELS[finding.role] || { ua: finding.role, icon: '?', faction: 'town', color: '#888' };
                 const isBad = frl.faction === 'mafia';
-                return `<div class="m-sheriff-finding ${isBad ? 'bad' : 'good'}">
-                    🔍 ${frl.icon} ${frl.ua}
-                </div>`;
+                return `<div class="m-sheriff-finding ${isBad ? 'bad' : 'good'}">🔍 ${frl.icon} ${frl.ua}</div>`;
             })() : ''}
+            ${donFinding ? `<div class="m-sheriff-finding ${donFinding.isSheriff ? 'bad' : 'good'}">
+                👁 ${donFinding.isSheriff ? '🚨 КОМІСАР' : '✅ Не комісар'}
+            </div>` : ''}
         </div>`;
     }).join('');
 }
@@ -503,7 +532,7 @@ function mRenderActionPanel(s, me) {
 
         const cfgs = {
             mafia:       { icon: '🩸', title: 'ГОЛОСУВАННЯ МАФІЇ', desc: 'Оберіть кого вбити цієї ночі' },
-            don:         { icon: '🩸', title: 'ГОЛОСУВАННЯ ДОНА',  desc: 'Оберіть кого вбити цієї ночі' },
+            don:         { icon: '🩸', title: 'ГОЛОСУВАННЯ ДОНА',  desc: 'Голосуйте та оберіть гравця для перевірки' },
             sheriff:     { icon: '🔍', title: 'ПЕРЕВІРКА КОМІСАРА', desc: 'Оберіть гравця для перевірки' },
             deputy:      { icon: '🔍', title: 'ПЕРЕВІРКА ПОМІЧНИКА', desc: 'Оберіть гравця для перевірки' },
             doctor:      { icon: '💊', title: 'ПОРЯТУНОК', desc: 'Оберіть кого рятувати цієї ночі' },
@@ -811,6 +840,9 @@ function mQuickReply(prefix) {
 function mGetActionTypeForRole(role) {
     return { mafia:'mafiaVote', don:'mafiaVote', sheriff:'sheriffCheck', deputy:'sheriffCheck',
              doctor:'doctorHeal', roleblocker:'roleblockerBlock', maniac:'maniacKill' }[role] || null;
+}
+function mGetSecondaryActionForRole(role) {
+    return role === 'don' ? 'donCheck' : null;
 }
 
 function mPanelSkip() {
