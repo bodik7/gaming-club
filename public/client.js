@@ -141,21 +141,24 @@ function _enterLobby(username, joinCode) {
             nameInput.style.opacity = '0.65';
             nameInput.title = 'Ім\'я прив\'язане до акаунту';
         }
-        // Показуємо рядок акаунту
+        // Показуємо рядок акаунту (тільки для авторизованих)
         const bar = document.getElementById('account-bar');
         const nameEl = document.getElementById('account-name');
         const avatarEl = document.getElementById('account-avatar');
+        const logoutBtn = document.getElementById('account-logout-btn');
         if (bar) bar.classList.remove('hidden');
         if (nameEl) nameEl.textContent = username;
         if (avatarEl) avatarEl.textContent = username[0].toUpperCase();
+        if (logoutBtn) logoutBtn.style.display = '';
     } else {
-        // Гість — поле вільне
+        // Гість — поле вільне, кнопка виходу прихована
         if (nameInput) {
             nameInput.value    = loadName();
             nameInput.readOnly = false;
             nameInput.style.opacity = '1';
             nameInput.removeAttribute('title');
         }
+        document.getElementById('account-logout-btn')?.style.setProperty('display', 'none');
     }
 
     // Показуємо банер запрошення якщо є код у URL або sessionStorage
