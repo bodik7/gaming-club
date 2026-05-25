@@ -8,8 +8,8 @@ let _client = null;
 function getClient() {
     if (!_client) {
         _client = createClient({
-            url:       process.env.TURSO_DATABASE_URL || 'file:gameclub.db',
-            authToken: process.env.TURSO_AUTH_TOKEN,
+            url:       (process.env.TURSO_DATABASE_URL || 'file:gameclub.db').trim(),
+            authToken: process.env.TURSO_AUTH_TOKEN?.trim(),
         });
     }
     return _client;
