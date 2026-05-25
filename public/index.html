@@ -89,6 +89,15 @@
 
                 <div class="lobby-left-label">Оберіть гру</div>
 
+                <!-- Dropdown для мобільних — замінює grid -->
+                <select id="game-select-mobile" class="game-select-mobile" onchange="selectGame(this.value)">
+                    <option value="monopoly">🏦 Монополія України (2–6)</option>
+                    <option value="tysyacha">🃏 Тисяча (2–3)</option>
+                    <option value="mafia">🔫 Мафія (5–15)</option>
+                    <option value="durak">🂡 Дурак (2–6)</option>
+                    <option value="bunker">🏚️ Бункер (4–15)</option>
+                </select>
+
                 <div class="game-grid">
                     <button id="game-btn-monopoly" class="game-card active" data-game="monopoly" onclick="selectGame('monopoly')">
                         <div class="game-card-icon">🏦</div>
@@ -618,11 +627,11 @@
                 }
                 const medals = ['🥇','🥈','🥉'];
                 list.innerHTML = rows.slice(0, 10).map((r, i) => {
-                    const winRate = r.total ? Math.round(r.wins / r.total * 100) : 0;
+                    const winRate = r.games ? Math.round(r.wins / r.games * 100) : 0;
                     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.05)">
                         <span style="font-size:16px;width:22px;text-align:center">${medals[i] || (i+1)}</span>
                         <span style="flex:1;font-size:13px;font-weight:600;color:#fff">${r.username}</span>
-                        <span style="font-size:12px;color:rgba(255,255,255,0.4)">${r.wins}/${r.total}</span>
+                        <span style="font-size:12px;color:rgba(255,255,255,0.4)">${r.wins}/${r.games}</span>
                         <span style="font-size:12px;font-weight:700;color:${winRate>=60?'#4caf50':winRate>=40?'#ffd700':'rgba(255,255,255,0.5)'}">${winRate}%</span>
                     </div>`;
                 }).join('');

@@ -220,6 +220,18 @@ setInterval(() => {
     });
 }, 5 * 60 * 1000);
 
+// Чистимо кімнату після завершення гри: від'єднуємо сокети і видаляємо з пам'яті
+function cleanupRoom(code) {
+    const r = roomStore.get(code);
+    if (!r) return;
+    r.players.forEach(rp => {
+        if (!rp.socketId) return;
+        const s = io.sockets.sockets.get(rp.socketId);
+        if (s) { s.leave(code); s.roomCode = null; s.playerIndex = null; }
+    });
+    roomStore.delete(code);
+}
+
 // Ініціалізуємо ігрові модулі
 monopolyMod.init(io);
 tysyachaMod.init(io);
@@ -421,7 +433,10 @@ io.on('connection', (socket) => {
         const alive = state.players.filter(p => !p.bankrupt);
         if (alive.length === 1) {
             addLog(state, `🏆 ${alive[0].name} — переможець!`, 'success');
+            db.saveGameStats(room, rp => alive[0].name === state.players[rp.index]?.name);
+            db.deleteRoom(room.code);
             io.to(code).emit('gameOver', { winner: alive[0], state: sanitize(state) });
+            cleanupRoom(code);
             return;
         }
 
@@ -725,7 +740,7 @@ io.on('connection', (socket) => {
             room.lastActivityAt = Date.now();
             const result = processDurakAction(state, type, data||{}, socket.playerIndex);
             if (result?.event === 'dGameOver') {
-                saveGameStats(room, rp => state.loser !== rp.index);
+                db.saveGameStats(room, rp => state.loser !== rp.index);
                 db.deleteRoom(room.code);
                 room.players.forEach(rp => {
                     io.to(rp.socketId).emit('gameOver', {
@@ -733,6 +748,7 @@ io.on('connection', (socket) => {
                         gameType: 'durak',
                     });
                 });
+                cleanupRoom(room.code);
             } else {
                 emitDurakUpdate(room, result);
             }
@@ -765,6 +781,7 @@ io.on('connection', (socket) => {
                         gameType: 'mafia',
                     });
                 });
+                cleanupRoom(room.code);
             } else {
                 emitMafiaUpdate(room, null);
             }
@@ -777,7 +794,7 @@ io.on('connection', (socket) => {
             clearTysyachaTimer(room);
             const result = processTysyachaAction(state, type, data || {}, socket.playerIndex);
             if (result?.event === 'tGameOver') {
-                saveGameStats(room, rp => state.winner === rp.index);
+                db.saveGameStats(room, rp => state.winner === rp.index);
                 db.deleteRoom(room.code);
                 room.players.forEach(rp => {
                     io.to(rp.socketId).emit('gameOver', {
@@ -786,6 +803,7 @@ io.on('connection', (socket) => {
                         gameType: 'tysyacha',
                     });
                 });
+                cleanupRoom(room.code);
             } else {
                 emitTysyachaUpdate(room, result, null);
                 startTysyachaTimer(room);
@@ -826,8 +844,12 @@ io.on('connection', (socket) => {
         const alive = state.players.filter(p => !p.bankrupt);
         if (alive.length === 1) {
             clearTurnTimer(room);
+            clearTradeTimer(room);
             addLog(state, `🏆 ${alive[0].name} — переможець!`, 'success');
+            db.saveGameStats(room, rp => alive[0].name === state.players[rp.index]?.name);
+            db.deleteRoom(room.code);
             io.to(socket.roomCode).emit('gameOver', { winner: alive[0], state: sanitize(state) });
+            cleanupRoom(socket.roomCode);
             return;
         }
 

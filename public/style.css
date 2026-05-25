@@ -1575,7 +1575,12 @@ body {
     }
     .lobby-right .lobby-glass {
         flex: 1;
-        justify-content: center;
+        justify-content: flex-start;
+    }
+
+    /* Dropdown вибору гри (тільки мобільний) */
+    .game-select-mobile {
+        display: none;
     }
 
     /* Мобільний: стек вертикально */
@@ -1592,14 +1597,43 @@ body {
             padding: 20px 16px 16px;
             overflow-y: visible;
         }
+        /* Ховаємо grid на мобільному — замість нього dropdown */
         .lobby-left .game-grid {
-            /* Горизонтальний скрол на мобільному */
-            grid-template-columns: repeat(3, minmax(150px, 1fr));
-            overflow-x: auto;
+            display: none;
+        }
+        .game-select-mobile {
+            display: block;
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.4)' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 36px;
+        }
+        .game-select-mobile option {
+            background: #0f1e2e;
+            color: #fff;
         }
         .lobby-right {
             width: auto;
             padding: 20px 16px 24px;
+        }
+        /* Лідерборд на мобільному: обмежуємо висоту замість height:100% */
+        #panel-leaderboard {
+            max-height: 400px;
+        }
+        #leaderboard-list {
+            max-height: 300px;
         }
     }
 

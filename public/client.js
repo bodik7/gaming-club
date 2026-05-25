@@ -546,11 +546,12 @@ let _pendingJoinCode = '';
 
 function selectGame(type) {
     _selectedGame = type;
-    // Знімаємо active з усіх карток і ставимо на обрану
     document.querySelectorAll('.game-card').forEach(btn => {
         const game = btn.dataset.game || btn.id?.replace('game-btn-', '');
         btn.classList.toggle('active', game === type);
     });
+    const sel = document.getElementById('game-select-mobile');
+    if (sel && sel.value !== type) sel.value = type;
 }
 
 function _lobbyError(msg, focusId) {
