@@ -59,12 +59,12 @@ app.post('/api/register', async (req, res) => {
     if (password.length < 6)
         return res.status(400).json({ error: 'Пароль: мінімум 6 символів' });
 
-    if (db.getUser(username))
+    if (await db.getUser(username))
         return res.status(409).json({ error: 'Цей логін вже зайнятий' });
 
     const hash = await bcrypt.hash(password, 10);
     try {
-        db.createUser(username, hash);
+        await db.createUser(username, hash);
     } catch {
         return res.status(409).json({ error: 'Цей логін вже зайнятий' });
     }
@@ -78,7 +78,7 @@ app.post('/api/login', async (req, res) => {
     if (!username || !password)
         return res.status(400).json({ error: 'Заповніть усі поля' });
 
-    const user = db.getUser(username);
+    const user = await db.getUser(username);
     if (!user) return res.status(401).json({ error: 'Невірний логін або пароль' });
 
     const ok = await bcrypt.compare(password, user.hash);
@@ -97,13 +97,13 @@ app.get('/api/rooms/count', (req, res) => {
     res.json(counts);
 });
 
-app.get('/api/me', (req, res) => {
+app.get('/api/me', async (req, res) => {
     const auth = req.headers.authorization;
     if (!auth?.startsWith('Bearer '))
         return res.status(401).json({ error: 'Не авторизовано' });
     try {
         const payload = jwt.verify(auth.slice(7), JWT_SECRET);
-        const stats   = db.getStats(payload.username);
+        const stats   = await db.getStats(payload.username);
         res.json({ username: payload.username, stats });
     } catch {
         res.status(401).json({ error: 'Токен недійсний або прострочений' });
@@ -111,14 +111,14 @@ app.get('/api/me', (req, res) => {
 });
 
 // Статистика конкретного гравця
-app.get('/api/stats/:username', (req, res) => {
-    const stats = db.getStats(req.params.username);
+app.get('/api/stats/:username', async (req, res) => {
+    const stats = await db.getStats(req.params.username);
     res.json({ username: req.params.username, stats });
 });
 
 // Лідерборд по грі
-app.get('/api/leaderboard/:gameType', (req, res) => {
-    const rows = db.getLeaderboard(req.params.gameType);
+app.get('/api/leaderboard/:gameType', async (req, res) => {
+    const rows = await db.getLeaderboard(req.params.gameType);
     res.json(rows);
 });
 
@@ -3727,9 +3727,9 @@ function sanitize(state) {
 }
 
 // ── Відновлення кімнат після перезапуску ─────
-function restoreRoomsFromDB() {
-    db.cleanOldRooms();
-    const saved = db.getAllRooms();
+async function restoreRoomsFromDB() {
+    await db.cleanOldRooms();
+    const saved = await db.getAllRooms();
     let restored = 0;
     for (const { code, gameType, state } of saved) {
         if (rooms[code]) continue; // вже є
@@ -3749,18 +3749,19 @@ function restoreRoomsFromDB() {
 }
 
 // Автозбереження активних кімнат кожні 30 секунд
-function autoSaveRooms() {
-    Object.values(rooms).forEach(room => {
+async function autoSaveRooms() {
+    for (const room of Object.values(rooms)) {
         if (room.started && room.state) {
-            db.saveRoom(room.code, room.gameType || room.state.gameType || 'monopoly', room.state);
+            await db.saveRoom(room.code, room.gameType || room.state.gameType || 'monopoly', room.state);
         }
-    });
+    }
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
     console.log(`🇺🇦 Ігровий Клуб запущено: http://localhost:${PORT}`);
-    restoreRoomsFromDB();
+    await db.init();
+    await restoreRoomsFromDB();
     setInterval(autoSaveRooms, 30_000);
     // Self-ping щоб Render не засипав (тільки на продакшені)
     if (process.env.RENDER_EXTERNAL_URL) {

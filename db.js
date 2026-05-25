@@ -1,126 +1,158 @@
 // ============================================
-// db.js — SQLite через better-sqlite3
+// db.js — Turso (libsql) хмарна БД
 // ============================================
-const Database = require('better-sqlite3');
-const path     = require('path');
+const { createClient } = require('@libsql/client');
 
-const db = new Database(path.join(__dirname, 'gameclub.db'));
+let _client = null;
 
-// Продуктивність: WAL-mode для конкурентних читань
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+function getClient() {
+    if (!_client) {
+        _client = createClient({
+            url:       process.env.TURSO_DATABASE_URL || 'file:gameclub.db',
+            authToken: process.env.TURSO_AUTH_TOKEN,
+        });
+    }
+    return _client;
+}
 
 // ── Схема ────────────────────────────────────
-db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-        id         INTEGER PRIMARY KEY AUTOINCREMENT,
-        username   TEXT    NOT NULL UNIQUE COLLATE NOCASE,
-        hash       TEXT    NOT NULL,
-        created_at TEXT    NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS game_stats (
-        id         INTEGER PRIMARY KEY AUTOINCREMENT,
-        username   TEXT NOT NULL,
-        game_type  TEXT NOT NULL,
-        won        INTEGER NOT NULL DEFAULT 0,
-        played_at  TEXT NOT NULL DEFAULT (datetime('now')),
-        FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
-    );
-
-    CREATE TABLE IF NOT EXISTS rooms_backup (
-        code       TEXT PRIMARY KEY,
-        game_type  TEXT NOT NULL,
-        state_json TEXT NOT NULL,
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_stats_username   ON game_stats(username);
-    CREATE INDEX IF NOT EXISTS idx_stats_game_type  ON game_stats(game_type);
-    CREATE INDEX IF NOT EXISTS idx_rooms_updated    ON rooms_backup(updated_at);
-`);
+async function init() {
+    const c = getClient();
+    await c.batch([
+        { sql: `CREATE TABLE IF NOT EXISTS users (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            username   TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+            hash       TEXT    NOT NULL,
+            created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+        )` },
+        { sql: `CREATE TABLE IF NOT EXISTS game_stats (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            username   TEXT NOT NULL,
+            game_type  TEXT NOT NULL,
+            won        INTEGER NOT NULL DEFAULT 0,
+            played_at  TEXT NOT NULL DEFAULT (datetime('now'))
+        )` },
+        { sql: `CREATE TABLE IF NOT EXISTS rooms_backup (
+            code       TEXT PRIMARY KEY,
+            game_type  TEXT NOT NULL,
+            state_json TEXT NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )` },
+        { sql: `CREATE INDEX IF NOT EXISTS idx_stats_username  ON game_stats(username)` },
+        { sql: `CREATE INDEX IF NOT EXISTS idx_stats_game_type ON game_stats(game_type)` },
+        { sql: `CREATE INDEX IF NOT EXISTS idx_rooms_updated   ON rooms_backup(updated_at)` },
+    ], 'deferred');
+}
 
 // ── Users ─────────────────────────────────────
-const stmts = {
-    getUser:    db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE'),
-    createUser: db.prepare('INSERT INTO users (username, hash) VALUES (?, ?)'),
-    deleteUser: db.prepare('DELETE FROM users WHERE username = ? COLLATE NOCASE'),
+async function getUser(username) {
+    const result = await getClient().execute({
+        sql:  'SELECT * FROM users WHERE username = ? COLLATE NOCASE LIMIT 1',
+        args: [username],
+    });
+    return result.rows[0] || null;
+}
 
-    addStat:    db.prepare('INSERT INTO game_stats (username, game_type, won) VALUES (?, ?, ?)'),
-    getStats:   db.prepare(`
-        SELECT game_type,
-               COUNT(*)        AS games,
-               SUM(won)        AS wins
-        FROM game_stats
-        WHERE username = ? COLLATE NOCASE
-        GROUP BY game_type
-    `),
-    getLeaderboard: db.prepare(`
-        SELECT username,
-               game_type,
-               COUNT(*)   AS games,
-               SUM(won)   AS wins,
-               ROUND(100.0 * SUM(won) / COUNT(*), 1) AS winrate
-        FROM game_stats
-        WHERE game_type = ?
-        GROUP BY username
-        ORDER BY wins DESC, games ASC
-        LIMIT 20
-    `),
+async function createUser(username, hash) {
+    await getClient().execute({
+        sql:  'INSERT INTO users (username, hash) VALUES (?, ?)',
+        args: [username, hash],
+    });
+}
 
-    saveRoom:   db.prepare(`
-        INSERT INTO rooms_backup (code, game_type, state_json, updated_at)
-        VALUES (?, ?, ?, datetime('now'))
-        ON CONFLICT(code) DO UPDATE SET
-            state_json = excluded.state_json,
-            updated_at = excluded.updated_at
-    `),
-    getRoom:    db.prepare('SELECT * FROM rooms_backup WHERE code = ?'),
-    deleteRoom: db.prepare('DELETE FROM rooms_backup WHERE code = ?'),
-    // Видаляємо кімнати старші за 6 годин
-    cleanRooms: db.prepare(`DELETE FROM rooms_backup WHERE updated_at < datetime('now', '-6 hours')`),
-    getAllRooms: db.prepare('SELECT * FROM rooms_backup'),
-};
+// ── Stats ──────────────────────────────────────
+async function addStat(username, gameType, won) {
+    try {
+        await getClient().execute({
+            sql:  'INSERT INTO game_stats (username, game_type, won) VALUES (?, ?, ?)',
+            args: [username, gameType, won ? 1 : 0],
+        });
+    } catch {}
+}
 
-// ── API ───────────────────────────────────────
-module.exports = {
-    // Users
-    getUser:    (username)         => stmts.getUser.get(username),
-    createUser: (username, hash)   => stmts.createUser.run(username, hash),
+async function getStats(username) {
+    const result = await getClient().execute({
+        sql:  `SELECT game_type, COUNT(*) AS games, SUM(won) AS wins
+               FROM game_stats WHERE username = ? COLLATE NOCASE GROUP BY game_type`,
+        args: [username],
+    });
+    const stats = {};
+    result.rows.forEach(r => {
+        stats[r.game_type] = { g: Number(r.games), w: Number(r.wins) };
+    });
+    return stats;
+}
 
-    // Stats
-    addStat:    (username, gameType, won) => {
-        try { stmts.addStat.run(username, gameType, won ? 1 : 0); }
-        catch {} // гість не в БД — ігноруємо
-    },
-    getStats:   (username) => {
-        const rows = stmts.getStats.all(username);
-        const result = {};
-        rows.forEach(r => { result[r.game_type] = { g: r.games, w: r.wins }; });
-        return result;
-    },
-    getLeaderboard: (gameType) => stmts.getLeaderboard.all(gameType),
+async function getLeaderboard(gameType) {
+    const result = await getClient().execute({
+        sql:  `SELECT username, game_type, COUNT(*) AS games, SUM(won) AS wins,
+                      ROUND(100.0 * SUM(won) / COUNT(*), 1) AS winrate
+               FROM game_stats WHERE game_type = ?
+               GROUP BY username ORDER BY wins DESC, games ASC LIMIT 20`,
+        args: [gameType],
+    });
+    return result.rows.map(r => ({
+        username:  r.username,
+        game_type: r.game_type,
+        games:     Number(r.games),
+        wins:      Number(r.wins),
+        winrate:   Number(r.winrate),
+    }));
+}
 
-    // Rooms (crash recovery)
-    saveRoom:   (code, gameType, state) => {
-        try { stmts.saveRoom.run(code, gameType, JSON.stringify(state)); }
-        catch {}
-    },
-    getRoom:    (code) => {
-        const row = stmts.getRoom.get(code);
-        if (!row) return null;
-        try { return { gameType: row.game_type, state: JSON.parse(row.state_json) }; }
+// ── Rooms (crash recovery) ────────────────────
+async function saveRoom(code, gameType, state) {
+    try {
+        await getClient().execute({
+            sql: `INSERT INTO rooms_backup (code, game_type, state_json, updated_at)
+                  VALUES (?, ?, ?, datetime('now'))
+                  ON CONFLICT(code) DO UPDATE SET
+                      state_json = excluded.state_json,
+                      updated_at = excluded.updated_at`,
+            args: [code, gameType, JSON.stringify(state)],
+        });
+    } catch {}
+}
+
+async function getRoom(code) {
+    const result = await getClient().execute({
+        sql:  'SELECT * FROM rooms_backup WHERE code = ?',
+        args: [code],
+    });
+    const row = result.rows[0];
+    if (!row) return null;
+    try { return { gameType: row.game_type, state: JSON.parse(row.state_json) }; }
+    catch { return null; }
+}
+
+async function deleteRoom(code) {
+    try {
+        await getClient().execute({
+            sql:  'DELETE FROM rooms_backup WHERE code = ?',
+            args: [code],
+        });
+    } catch {}
+}
+
+async function getAllRooms() {
+    const result = await getClient().execute('SELECT * FROM rooms_backup');
+    return result.rows.map(row => {
+        try { return { code: row.code, gameType: row.game_type, state: JSON.parse(row.state_json) }; }
         catch { return null; }
-    },
-    deleteRoom: (code) => stmts.deleteRoom.run(code),
-    getAllRooms: ()    => {
-        return stmts.getAllRooms.all().map(row => {
-            try { return { code: row.code, gameType: row.game_type, state: JSON.parse(row.state_json) }; }
-            catch { return null; }
-        }).filter(Boolean);
-    },
-    cleanOldRooms: () => stmts.cleanRooms.run(),
+    }).filter(Boolean);
+}
 
-    // Raw db for transactions if needed
-    db,
+async function cleanOldRooms() {
+    try {
+        await getClient().execute(
+            `DELETE FROM rooms_backup WHERE updated_at < datetime('now', '-6 hours')`
+        );
+    } catch {}
+}
+
+module.exports = {
+    init,
+    getUser, createUser,
+    addStat, getStats, getLeaderboard,
+    saveRoom, getRoom, deleteRoom, getAllRooms, cleanOldRooms,
 };
