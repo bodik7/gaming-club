@@ -4,14 +4,7 @@ export function DiscussionPhase() {
   const scenario = useGameStore(s => s.gameState?.scenario)
 
   return (
-    <div className="phase-fixed-panel" style={{
-      position: 'fixed',
-      bottom: 0, left: 0, right: 0,
-      zIndex: 40,
-      padding: '0 16px',
-      paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
-      background: 'linear-gradient(to top, #0b0d0c 65%, transparent)',
-    }}>
+    <div className="phase-fixed-panel">
       <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
 
         {/* Опис сценарію (на мобільному — окрема вкладка) */}

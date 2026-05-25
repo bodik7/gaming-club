@@ -31,7 +31,7 @@ const S = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '24px 16px',
-    background: 'radial-gradient(ellipse at 60% 0%, rgba(0,87,183,0.18) 0%, transparent 55%), #0b1120',
+    background: 'radial-gradient(ellipse at 60% 0%, rgba(0,87,183,0.15) 0%, transparent 55%), #0b0d0c',
     fontFamily: "'Segoe UI', sans-serif",
   } as React.CSSProperties,
   wrapper: {
@@ -349,11 +349,6 @@ export function WaitingScreen() {
             ⏳ Чекаємо поки хост почне гру...
           </button>
         )}
-
-        {/* "Як грати" для не-хостів (кнопка) */}
-        <button style={S.btnOutline} onClick={() => setShowHowTo(v => !v)}>
-          📖 Як грати
-        </button>
 
         <button style={S.btnDanger} onClick={leaveRoom}>
           🚪 Вийти з кімнати

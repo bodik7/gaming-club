@@ -151,6 +151,27 @@ body {
 /* Кнопка надіслати в чаті */
 .chat-send-btn { padding: 4px 10px; font-size: 12px; }
 
+/* ── Фіксована панель фаз (mobile=fixed, desktop=inline) ── */
+.phase-fixed-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  padding: 0 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, #0b0d0c 70%, transparent);
+}
+
+@media (min-width: 769px) {
+  .phase-fixed-panel {
+    position: static;
+    background: none;
+    padding: 0;
+    z-index: auto;
+  }
+}
+
 /* ── Мобільний лейаут (tabs) ── */
 .mobile-game-body { display: none; }
 

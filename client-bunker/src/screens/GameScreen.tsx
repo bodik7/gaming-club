@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { AnimatePresence, motion } from 'framer-motion'
 import { GameStartPhase }    from '../components/phases/GameStartPhase'
@@ -47,6 +47,7 @@ export function GameScreen() {
   const chatCount = useGameStore(s => s.chat.length)
   const [mobileTab, setMobileTab]       = useState<MobileTab>('players')
   const [lastSeenChat, setLastSeenChat] = useState(0)
+  const playersScrollRef = useRef<HTMLDivElement>(null)
 
   if (!gameState) return null
 
@@ -57,10 +58,11 @@ export function GameScreen() {
 
   const unreadChat = mobileTab !== 'chat' ? Math.max(0, chatCount - lastSeenChat) : 0
 
-  // Автоматично перемикаємо на вкладку гравців при активних фазах
+  // Автоматично перемикаємо на вкладку гравців при активних фазах та скролимо нагору
   useEffect(() => {
-    if (phase === 'round_reveal' || phase === 'voting' || phase === 'game_start') {
+    if (phase === 'round_reveal' || phase === 'voting' || phase === 'game_start' || phase === 'end_game') {
       setMobileTab('players')
+      setTimeout(() => playersScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 60)
     }
   }, [phase])
 
@@ -224,7 +226,8 @@ export function GameScreen() {
 
           {/* Вкладка: Гравці */}
           {mobileTab === 'players' && (
-            <div className="flex-1 overflow-y-auto">
+            <div ref={playersScrollRef} className="flex-1 overflow-y-auto"
+                 style={{ paddingBottom: ['game_start','round_reveal','discussion'].includes(phase) ? 200 : 16 }}>
               <div className="p-2 game-bg-texture">
                 <PlayerGrid />
               </div>
@@ -247,7 +250,7 @@ export function GameScreen() {
             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
               {characterCard}
               <ActionCardPanel />
-              <div style={{ height: 200 }}>
+              <div style={{ height: 260 }}>
                 <LogPanel />
               </div>
             </div>

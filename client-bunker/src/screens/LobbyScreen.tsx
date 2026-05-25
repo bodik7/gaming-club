@@ -42,8 +42,8 @@ export function LobbyScreen() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4"
-         style={{ background: 'radial-gradient(ellipse at 30% 20%, rgba(100,20,0,0.4) 0%, transparent 60%), radial-gradient(ellipse at 70% 80%, rgba(200,100,0,0.15) 0%, transparent 55%), #111212' }}>
+    <div className="flex items-center justify-center p-4"
+         style={{ minHeight: '100dvh', background: 'radial-gradient(ellipse at 30% 20%, rgba(100,20,0,0.4) 0%, transparent 60%), radial-gradient(ellipse at 70% 80%, rgba(200,100,0,0.15) 0%, transparent 55%), #111212' }}>
 
       <div className="w-full max-w-md flex flex-col gap-5">
 
