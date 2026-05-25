@@ -48,9 +48,9 @@ export function RoundRevealPhase() {
           </div>
         </div>
 
-        {/* Підказка для людей */}
+        {/* Підказка для людей — тільки на мобільному */}
         {iMustReveal && (
-          <div className="px-4 py-2.5 rounded-xl text-xs text-center animate-pulse-urgent"
+          <div className="mobile-only px-4 py-2.5 rounded-xl text-xs text-center animate-pulse-urgent"
                style={{ background: 'rgba(224,150,0,0.1)', border: '1px solid rgba(224,150,0,0.3)', color: 'var(--bunker-yellow)' }}>
             👆 Перейди на вкладку <strong>«Я»</strong> і натисни на атрибут щоб розкрити
           </div>

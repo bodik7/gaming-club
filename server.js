@@ -2306,8 +2306,8 @@ function processBunkerAction(room, type, data, pidx) {
             s.votes[pidx] = target;
             addBunkerLog(s, `🗳️ ${p.name} проголосував(ла)`);
 
-            // Якщо всі живі проголосували — завершуємо достроково
-            const aliveIds  = s.players.filter(pl => pl.isAlive).map(pl => pl.id);
+            // Якщо всі хто може голосувати — проголосували, завершуємо достроково
+            const aliveIds  = s.players.filter(pl => pl.isAlive && !s.quarantined?.includes(pl.id)).map(pl => pl.id);
             const allVoted  = aliveIds.every(id => s.votes[id] !== undefined);
             if (allVoted) {
                 clearBunkerTimer(room);

@@ -148,6 +148,9 @@ body {
 /* Топбар: десктоп показує окремо фазу+таймер, мобільний — компактний блок */
 .topbar-phase-mobile { display: none; }
 
+/* Елементи тільки для мобільного */
+.mobile-only { display: none; }
+
 /* Кнопка надіслати в чаті */
 .chat-send-btn { padding: 4px 10px; font-size: 12px; }
 
@@ -201,6 +204,9 @@ body {
 
   /* Блок сценарію у панелях фаз — прибираємо на мобільному, є окрема вкладка */
   .phase-scenario-block { display: none; }
+
+  /* Елементи тільки для мобільного */
+  .mobile-only { display: block; }
 
   /* Кнопка надіслати — більша на мобільному */
   .chat-send-btn { padding: 10px 18px; font-size: 18px; }
