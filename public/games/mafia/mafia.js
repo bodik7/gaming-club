@@ -1,140 +1,268 @@
 // ============================================
-// МАФІЯ — клієнт (п.2: нічна фаза)
+// МАФІЯ — клієнт (Noir UI redesign)
 // ============================================
-let mState            = null;
-let mMyIdx            = null;
-let mSideEffect       = null;
-let mDeadChatLog      = [];
-let _mFlavorTimeouts  = [];
-let _mLastNightDL     = 0;
+let mState             = null;
+let mMyIdx             = null;
+let mDeadChatLog       = [];
+let _mFlavorTimeouts   = [];
+let _mLastNightDL      = 0;
 let mGameoverProcessed = false;
-let _mNightSelections = {}; // { actionType: targetId }
-let _mActiveTab       = 'action';
-let _mLogBadge        = 0; // unread log entries while not on log tab
+let _mNightSelections  = {}; // { actionType: targetId }
+let _mActiveTab        = 'players';
+let _mLogBadge         = 0;
+let _mChatBadge        = 0;
+let _mLastLogLen       = 0;
+let _mChatRound        = 0;
+let _mLastPhase        = null;
 
 function initMafia(state, myIdx) {
     mState             = state;
     mMyIdx             = myIdx;
-    mSideEffect        = null;
     mDeadChatLog       = [];
     _mFlavorTimeouts   = [];
     _mLastNightDL      = 0;
     mGameoverProcessed = false;
     _mNightSelections  = {};
-    _mActiveTab        = 'action';
+    _mActiveTab        = 'players';
     _mLogBadge         = 0;
-    mSwitchTab('action', true);
+    _mChatBadge        = 0;
+    _mLastLogLen       = 0;
+    _mChatRound        = 0;
+    _mLastPhase        = null;
+    mSwitchTab('players', true);
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('mafia-screen').classList.remove('hidden');
     document.getElementById('mafia-screen').classList.add('visible');
     if (typeof switchViewport === 'function') switchViewport('mafia');
     setQuitBtn(true);
+    // Clear chat area on init
+    const chatMsgs = document.getElementById('m-chat-msgs');
+    if (chatMsgs) chatMsgs.innerHTML = '';
     renderMafia();
 }
 
 function updateMafia(state, sideEffect) {
     const prevPhase = mState?.phase;
-    if (state.phase === 'night' && prevPhase !== 'night') { mSideEffect = null; _mNightSelections = {}; }
+    if (state.phase === 'night' && prevPhase !== 'night') {
+        _mNightSelections = {};
+        // Clear chat for new night
+        const chatMsgs = document.getElementById('m-chat-msgs');
+        if (chatMsgs) chatMsgs.innerHTML = '';
+    }
+    if (state.phase === 'day_discussion' && prevPhase !== 'day_discussion') {
+        // Clear chat when day starts
+        const chatMsgs = document.getElementById('m-chat-msgs');
+        if (chatMsgs) chatMsgs.innerHTML = '';
+        _mChatRound = 0;
+    }
     mState = state;
-    if (sideEffect) mSideEffect = sideEffect;
-    // При зміні фази — повертаємось на вкладку Дія
-    if (state.phase !== prevPhase) mSwitchTab('action');
-
-    // Звуки при зміні фази
+    if (sideEffect) {
+        // Deputy став Sheriff
+        if (sideEffect.newSheriff) {
+            setTimeout(() => {
+                if (typeof showToast === 'function')
+                    showToast('👮 Комісар загинув — тепер ви Комісар!', { color: '#0277bd' });
+            }, 1200);
+        }
+        // Sheriff check result shown in chat area
+        if (sideEffect.event === 'sheriffResult') {
+            const r = sideEffect;
+            const chatMsgs = document.getElementById('m-chat-msgs');
+            if (chatMsgs) {
+                const msg = document.createElement('div');
+                msg.className = 'm-chat-msg system';
+                msg.innerHTML = `<span class="m-chat-msg-sender">Результат перевірки</span>
+                    <span class="m-chat-msg-text" style="color:${r.isBad ? '#fca5a5' : '#6ee7b7'}">
+                        🔍 ${r.targetName} — ${r.isBad ? '🔴 МАФІЯ!' : '🟢 Мирний'}
+                    </span>`;
+                chatMsgs.appendChild(msg);
+                chatMsgs.scrollTop = chatMsgs.scrollHeight;
+                mBumpChatBadge();
+            }
+        }
+    }
+    // Phase change effects
     if (state.phase !== prevPhase) {
-        if (state.phase === 'night')           playSound('night');
+        _mLastPhase = prevPhase;
+        if (state.phase === 'night')             playSound('night');
         else if (state.phase === 'day_discussion') playSound('day');
-        else if (state.phase === 'day_voting')  playSound('vote');
+        else if (state.phase === 'day_voting')   playSound('vote');
         else if (state.phase === 'morning' && state.lastDeaths?.length > 0) playSound('death');
+        // Return to players tab on phase change
+        mSwitchTab('players');
     }
-    // Deputy став Sheriff
-    if (sideEffect?.newSheriff) {
-        setTimeout(() => {
-            if (typeof showToast === 'function')
-                showToast('👮 Комісар загинув — тепер ви Комісар!', { color: '#0277bd' });
-        }, 1200);
-    }
-
     renderMafia();
 }
 
-// ── Перемикання вкладок ───────────────────────
+// ── Tab switching ─────────────────────────────
 function mSwitchTab(tab, silent) {
     _mActiveTab = tab;
     const body = document.querySelector('.m-body');
     if (body) {
-        body.classList.remove('tab-action', 'tab-players', 'tab-log');
+        body.classList.remove('tab-chat', 'tab-players', 'tab-passport');
         body.classList.add('tab-' + tab);
     }
     document.querySelectorAll('.m-tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
     });
-    // Скидаємо бейдж при переході на відповідну вкладку
-    if (tab === 'log') {
+    if (tab === 'chat') {
+        _mChatBadge = 0;
+        const b = document.getElementById('m-tab-badge-chat');
+        if (b) b.style.display = 'none';
+    }
+    if (tab === 'passport') {
         _mLogBadge = 0;
         const b = document.getElementById('m-tab-badge-log');
         if (b) b.style.display = 'none';
     }
+    if (tab === 'players') {
+        const b = document.getElementById('m-tab-badge-players');
+        if (b) b.style.display = 'none';
+    }
 }
 
-// ── Бейдж нових записів логу ─────────────────
 function mBumpLogBadge() {
-    if (_mActiveTab === 'log') return;
+    if (_mActiveTab === 'passport') return;
     _mLogBadge++;
     const b = document.getElementById('m-tab-badge-log');
     if (b) { b.textContent = _mLogBadge > 9 ? '9+' : _mLogBadge; b.style.display = ''; }
 }
 
-// ── Головний рендер ───────────────────────────
+function mBumpChatBadge() {
+    if (_mActiveTab === 'chat') return;
+    _mChatBadge++;
+    const b = document.getElementById('m-tab-badge-chat');
+    if (b) { b.textContent = _mChatBadge > 9 ? '9+' : _mChatBadge; b.style.display = ''; }
+}
+
+// ── Main render ───────────────────────────────
 function renderMafia() {
     if (!mState) return;
     mRenderPhaseInfo();
     mRenderPlayers();
     mRenderActions();
+    mRenderPassport();
     mRenderLog();
 }
 
-// ── Інфо про фазу ─────────────────────────────
+// ── Phase info ────────────────────────────────
 function mRenderPhaseInfo() {
     const el = document.getElementById('m-phase-info');
-    if (!el) return;
+    const me = mMyIdx !== null ? mState.players[mMyIdx] : null;
+
     const phaseMap = {
-        role_reveal:     '📋 Перегляд ролі',
-        night:           '🌙 Ніч',
-        morning:         '🌅 Ранок',
-        resolving:       '⚖️ Підрахунок голосів',
-        day_discussion:  '☀️ Обговорення',
-        day_voting:      '🗳️ Голосування',
-        gameover:        '🏁 Кінець гри',
+        role_reveal:    { label: 'ПІДГОТОВКА',   name: 'Перегляд ролі', bar: 5  },
+        night:          { label: 'ФАЗА НОЧІ',     name: 'Ніч',           bar: 33 },
+        morning:        { label: 'РАНОК',          name: 'Ранок',         bar: 50 },
+        resolving:      { label: 'ПІДРАХУНОК',    name: 'Голосування',   bar: 90 },
+        day_discussion: { label: 'ФАЗА ДНЯ',      name: 'Обговорення',   bar: 66 },
+        day_voting:     { label: 'ДЕННИЙ СУД',    name: 'Голосування',   bar: 85 },
+        gameover:       { label: 'КІНЕЦЬ ГРИ',    name: 'Фінал',         bar: 100},
     };
-    el.textContent = `${phaseMap[mState.phase] || mState.phase} · Раунд ${mState.round}`;
-    // Фазова атмосфера
+    const ph = phaseMap[mState.phase] || { label: mState.phase.toUpperCase(), name: mState.phase, bar: 50 };
+
+    if (el) el.textContent = `${ph.name} · Раунд ${mState.round}`;
+
+    const lblEl   = document.getElementById('m-phase-block-label');
+    const nameEl  = document.getElementById('m-phase-block-name');
+    const barEl   = document.getElementById('m-phase-bar');
+    const roundEl = document.getElementById('m-phase-round');
+    if (lblEl)   lblEl.textContent  = ph.label;
+    if (nameEl)  nameEl.textContent = ph.name;
+    if (barEl)   barEl.style.width  = ph.bar + '%';
+    if (roundEl) roundEl.textContent = `Раунд ${mState.round}`;
+
+    // Phase timer in left col
+    let deadline = null;
+    if (mState.phase === 'night')           deadline = mState.nightDeadline;
+    else if (mState.phase === 'day_discussion') deadline = mState.dayDeadline;
+    else if (mState.phase === 'day_voting') deadline = mState.voteDeadline;
+    else if (mState.phase === 'role_reveal') deadline = mState.revealDeadline;
+    mStartPhaseTimer(deadline);
+
+    // Phase atmosphere class
     const scr = document.getElementById('mafia-screen');
     if (scr) {
-        scr.classList.remove('phase-night','phase-day');
-        if (['night','morning','resolving'].includes(mState.phase)) scr.classList.add('phase-night');
-        else if (['day_discussion','day_voting'].includes(mState.phase)) scr.classList.add('phase-day');
+        scr.classList.remove('phase-night', 'phase-day');
+        if (['night', 'morning', 'resolving'].includes(mState.phase)) scr.classList.add('phase-night');
+        else if (['day_discussion', 'day_voting'].includes(mState.phase)) scr.classList.add('phase-day');
     }
-    // Бейдж ролі в топбарі
-    const badge = document.getElementById('m-role-badge');
-    if (badge && mMyIdx !== null) {
-        const me = mState.players[mMyIdx];
-        if (me?.role) {
-            const rl = mRoleLabel(me.role);
-            badge.textContent = `${rl?.icon || ''} ${rl?.ua || me.role}`;
-            badge.style.cssText = `background:${mFactionColor(me.role)}33;color:${mFactionColor(me.role)};border:1px solid ${mFactionColor(me.role)}66`;
-        }
+
+    // Chat UI update
+    mUpdateChatUI();
+
+    // Action prompt
+    const promptEl = document.getElementById('m-action-prompt');
+    if (promptEl && me) {
+        const actionType = mGetActionTypeForRole(me.role);
+        const prompts = {
+            night:          me.isAlive ? (actionType ? 'Нічна дія: оберіть ціль' : 'Ви спите...') : 'Ви загинули',
+            day_discussion: 'Обговорення: шукайте мафію',
+            day_voting:     'Голосуйте проти підозрюваного',
+            morning:        'Місто прокидається...',
+            role_reveal:    'Ознайомтесь зі своєю роллю',
+            resolving:      'Підраховуємо голоси...',
+            gameover:       'Гра завершена',
+        };
+        promptEl.textContent = prompts[mState.phase] || '';
+    }
+
+    // Alive count
+    const aliveEl = document.getElementById('m-alive-count');
+    if (aliveEl) {
+        const alive = mState.players.filter(p => p.isAlive).length;
+        const dead  = mState.players.filter(p => !p.isAlive).length;
+        aliveEl.textContent = `(${alive} живих, ${dead} мертвих)`;
     }
 }
 
-// ── Список гравців ─────────────────────────────
+function mUpdateChatUI() {
+    if (!mState || mMyIdx === null) return;
+    const me = mState.players[mMyIdx];
+    if (!me) return;
+
+    const chatTitleEl = document.getElementById('m-chat-title');
+    const chatInputEl = document.getElementById('m-chat-area-input');
+    const quickEl     = document.getElementById('m-quick-replies');
+
+    let title    = 'Чат 💬';
+    let canChat  = false;
+    let showQuick = false;
+
+    if (!me.isAlive) {
+        title    = 'Чат Привидів 👻';
+        canChat  = true;
+    } else if (mState.phase === 'night') {
+        if (me.role === 'mafia' || me.role === 'don') {
+            title   = 'Чат Мафії 🍷';
+            canChat = true;
+        } else {
+            title   = 'Місто спить 🌙';
+            canChat = false;
+        }
+    } else if (mState.phase === 'day_discussion' || mState.phase === 'day_voting') {
+        title     = 'Загальний чат 💬';
+        canChat   = !me.isSilenced;
+        showQuick = !me.isSilenced;
+    }
+
+    if (chatTitleEl) chatTitleEl.textContent = title;
+    if (chatInputEl) chatInputEl.style.display = canChat  ? '' : 'none';
+    if (quickEl)     quickEl.style.display     = showQuick ? '' : 'none';
+}
+
+// ── Player grid ───────────────────────────────
 function mRenderPlayers() {
-    const el = document.getElementById('m-players');
+    const el = document.getElementById('m-players-grid');
     if (!el) return;
-    const isGameover = mState.phase === 'gameover';
-    const isMorning  = mState.phase === 'morning';
-    const newlyDead  = isMorning ? (mState.lastDeaths || []) : [];
-    // Бейдж на вкладці Гравці якщо хтось помер і ми не там
+    const s  = mState;
+    const me = mMyIdx !== null ? s.players[mMyIdx] : null;
+
+    const isGameover = s.phase === 'gameover';
+    const isMorning  = s.phase === 'morning';
+    const newlyDead  = isMorning ? (s.lastDeaths || []) : [];
+
+    // Players tab badge on death
     if (newlyDead.length > 0 && _mActiveTab !== 'players') {
         const b = document.getElementById('m-tab-badge-players');
         if (b) { b.textContent = '💀'; b.style.display = ''; }
@@ -142,72 +270,158 @@ function mRenderPlayers() {
         const b = document.getElementById('m-tab-badge-players');
         if (b) b.style.display = 'none';
     }
-    // Живі гравці спочатку, мертві знизу (крім gameover де важливий порядок перемоги)
+
+    // Sort: alive first except gameover
     const displayPlayers = isGameover
-        ? mState.players
-        : [...mState.players].sort((a, b) => (b.isAlive ? 1 : 0) - (a.isAlive ? 1 : 0));
+        ? s.players
+        : [...s.players].sort((a, b) => (b.isAlive ? 1 : 0) - (a.isAlive ? 1 : 0));
+
     el.innerHTML = displayPlayers.map(p => {
         const isMe = p.id === mMyIdx;
-        const roleLabel = p.role ? mRoleLabel(p.role) : null;
-        const showRole  = p.role && (p.id === mMyIdx || isGameover ||
-            (mState.myFaction === 'mafia' && roleLabel?.faction === 'mafia'));
-        const factionCls = isGameover && roleLabel?.faction ? `faction-${roleLabel.faction}` : '';
+        const rl   = p.role ? mRoleLabel(p.role) : null;
+        const showRole = p.role && (
+            p.id === mMyIdx || isGameover ||
+            (s.myFaction === 'mafia' && rl?.faction === 'mafia')
+        );
+        const factionCls = isGameover && rl?.faction ? `faction-${rl.faction}` : '';
         const dyingCls   = newlyDead.includes(p.id) ? 'dying' : '';
+        const deadCls    = !p.isAlive ? 'dead' : '';
+        const meCls      = isMe ? 'me' : '';
+
+        // State badge
+        let stateBadge = '';
+        if (!p.isAlive) {
+            stateBadge = `<span class="m-player-state-badge dead-badge">УБИТИЙ</span>`;
+        } else if (p.isSilenced) {
+            stateBadge = `<span class="m-player-state-badge silenced-badge">🤫 МОВЧИТЬ</span>`;
+        } else if (s.phase === 'day_voting' && s.allVotes) {
+            const cnt = Object.values(s.allVotes).filter(tid => tid === p.id).length;
+            if (cnt > 0) stateBadge = `<span class="m-player-state-badge vote-badge">⚖️ ${cnt}</span>`;
+        }
+
+        // Action button
+        let actionBtn = '';
+        if (me?.isAlive) {
+            if (s.phase === 'night') {
+                const actionType = mGetActionTypeForRole(me.role);
+                if (actionType) {
+                    const canTarget = (!isMe) || (me.role === 'doctor'); // doctor can self-heal
+                    if (canTarget) {
+                        const isSel = _mNightSelections[actionType] === p.id;
+                        const icons = { mafia:'🎯', don:'🎯', sheriff:'🔍', deputy:'🔍', doctor:'💊', roleblocker:'🚫', maniac:'🔪' };
+                        actionBtn = `<button class="m-card-action-btn${isSel ? ' selected' : ''}"
+                            onclick="mNightAction('${actionType}', ${p.id})">${isSel ? '✓' : (icons[me.role] || '🎯')}</button>`;
+                    }
+                }
+            } else if (s.phase === 'day_voting' && !isMe && !me.isSilenced) {
+                const isSel = s.myVote === p.id;
+                actionBtn = `<button class="m-card-action-btn vote-btn${isSel ? ' selected' : ''}"
+                    onclick="mDayVote(${isSel ? 'null' : p.id})">${isSel ? '✓' : '⚖️'}</button>`;
+            }
+        }
+
+        // Role display
+        let roleText = '';
+        let roleColor = '#71717a';
+        if (showRole && rl) {
+            roleText  = `${rl.icon} ${rl.ua}`;
+            roleColor = rl.color || '#71717a';
+        } else if (isMe && rl) {
+            roleText  = `${rl.icon} ${rl.ua}`;
+            roleColor = rl.color || '#71717a';
+        } else if (!p.isAlive && rl) {
+            roleText  = `${rl.icon} ${rl.ua}`;
+            roleColor = rl.color || '#71717a';
+        } else {
+            roleText = '🔒 ПРИХОВАНА';
+        }
+
         return `
-        <div class="m-player ${!p.isAlive ? 'dead' : ''} ${isMe ? 'me' : ''} ${factionCls} ${dyingCls}">
-            <span class="m-player-icon">${roleLabel?.icon || '👤'}</span>
-            <span class="m-player-name">${p.name}${isMe ? ' (я)' : ''}</span>
-            ${p.isSilenced ? '<span class="m-silenced">🔇</span>' : ''}
-            ${!p.isAlive ? '<span class="m-dead-label">💀</span>' : ''}
-            ${showRole
-                ? `<span class="m-role-badge" style="background:${mFactionColor(p.role)}">${roleLabel?.icon} ${roleLabel?.ua}</span>`
-                : ''}
+        <div class="m-player-card ${deadCls} ${meCls} ${factionCls} ${dyingCls}">
+            ${actionBtn}
+            <div>
+                <div class="m-player-card-top">
+                    <div class="m-player-card-name-wrap">
+                        <span class="m-player-alive-dot ${p.isAlive ? 'alive' : 'dead'}"></span>
+                        <span class="m-player-card-name">${p.name}${isMe ? ' (Я)' : ''}</span>
+                    </div>
+                    ${stateBadge}
+                </div>
+            </div>
+            <div class="m-player-card-bottom">
+                <span class="m-player-card-status">${p.isAlive ? 'ЖИВИЙ' : 'МЕРТВИЙ'}</span>
+                <span class="m-player-card-role${(showRole || isMe || !p.isAlive) && rl ? ' revealed' : ''}"
+                    style="color:${roleColor}">${roleText}</span>
+            </div>
         </div>`;
     }).join('');
 }
 
-// ── Панель дій ────────────────────────────────
+// ── Actions (full-screen + panel) ─────────────
 function mRenderActions() {
-    const el = document.getElementById('m-actions');
-    if (!el) return;
-    const s = mState;
-    const me = s.players[mMyIdx];
+    const s  = mState;
+    const me = mMyIdx !== null ? s.players[mMyIdx] : null;
     if (!me) return;
 
-    // ── Перегляд ролі
+    const actionsEl  = document.getElementById('m-actions');
+    const playersSec = document.getElementById('m-players-section');
+    const panelEl    = document.getElementById('m-action-panel');
+
+    const fullScreenPhases = ['role_reveal', 'morning', 'resolving', 'gameover'];
+    const isFullScreen = fullScreenPhases.includes(s.phase);
+
+    if (isFullScreen) {
+        if (actionsEl)  actionsEl.style.display  = 'flex';
+        if (playersSec) playersSec.style.display = 'none';
+        if (panelEl)    panelEl.style.display    = 'none';
+        mRenderFullScreen(s, me, actionsEl);
+    } else {
+        if (actionsEl)  actionsEl.style.display  = 'none';
+        if (playersSec) playersSec.style.display = 'flex';
+        mRenderActionPanel(s, me);
+
+        // Night flavor for citizens (goes to chat area)
+        if (s.phase === 'night' && me.role === 'citizen' && me.isAlive) {
+            if (s.nightDeadline !== _mLastNightDL) {
+                _mLastNightDL = s.nightDeadline;
+                mStartNightFlavor(s.nightDeadline);
+            }
+        }
+    }
+}
+
+function mRenderFullScreen(s, me, el) {
+    if (!el) return;
+
+    // ── Role reveal
     if (s.phase === 'role_reveal') {
         const rl = mRoleLabel(me.role);
-        const isMafia = rl?.faction === 'mafia';
-        const factionLabel = isMafia ? '🔴 Мафія' : '🔵 Місто';
+        const isMafia  = rl?.faction === 'mafia';
+        const isManiac = rl?.faction === 'maniac';
+        const themeCls = isMafia ? 'mafia' : isManiac ? 'maniac' : 'town';
+        const factionLabel = isMafia ? '🔴 Мафія' : isManiac ? '🟣 Маньяк' : '🔵 Місто';
         const allies = isMafia
             ? s.players.filter(p => p.id !== mMyIdx && s.mafiaIds?.includes(p.id)).map(p => p.name)
             : [];
-        const totalPlayers = s.players.length;
+
         el.innerHTML = `
-            <div class="m-role-reveal m-role-reveal--${isMafia ? 'mafia' : 'town'}">
+            <div class="m-role-reveal m-role-reveal--${themeCls}">
                 <div class="m-role-reveal-faction">${factionLabel}</div>
                 <div class="m-role-reveal-icon">${rl?.icon || '?'}</div>
                 <div class="m-role-reveal-name">${rl?.ua || me.role}</div>
                 <div class="m-role-reveal-desc">${mRoleDesc(me.role)}</div>
-                ${allies.length ? `
-                <div class="m-role-allies">
-                    🤝 Ваші спільники: <b>${allies.join(', ')}</b>
-                </div>` : ''}
+                ${allies.length ? `<div class="m-role-allies">🤝 Спільники: <b>${allies.join(', ')}</b></div>` : ''}
                 <div class="m-reveal-footer">
-                    <div class="m-reveal-auto">
-                        Автостарт через <b id="m-reveal-countdown">25</b>с
-                    </div>
+                    <div class="m-reveal-auto">Автостарт через <b id="m-reveal-countdown">25</b>с</div>
                     <button class="m-btn primary" onclick="mReady()" id="m-ready-btn">✅ Готовий!</button>
-                    <div class="m-reveal-ready-count">
-                        Готові: <b>${s.readyCount}</b> / <b>${totalPlayers}</b>
-                    </div>
+                    <div class="m-reveal-ready-count">Готові: <b>${s.readyCount}</b> / <b>${s.players.length}</b></div>
                 </div>
             </div>`;
         mStartTimer('m-reveal-countdown', s.revealDeadline);
         return;
     }
 
-    // ── Підрахунок голосів (пауза між голосуванням і наступною ніччю)
+    // ── Resolving
     if (s.phase === 'resolving') {
         const eliminated = (s.lastDeaths || []).map(id => s.players[id]).filter(Boolean);
         const resultHtml = eliminated.length
@@ -218,159 +432,182 @@ function mRenderActions() {
                 <div class="m-morning-title">⚖️ Результат голосування</div>
                 ${resultHtml}
                 <div class="m-wait" style="margin-top:12px">🌙 Ніч починається...</div>
-                ${!me.isAlive ? mDeadUI() : ''}
             </div>`;
         return;
     }
 
-    // ── Ніч
-    if (s.phase === 'night') {
-        if (!me.isAlive) { el.innerHTML = mDeadUI(); return; }
-        el.innerHTML = mNightActions(s, me);
-        if (me.role === 'citizen') {
-            mStartTimer('m-night-cit-timer', s.nightDeadline);
-            if (s.nightDeadline !== _mLastNightDL) {
-                _mLastNightDL = s.nightDeadline;
-                mStartNightFlavor(s.nightDeadline);
-            }
-        } else {
-            mStartTimer('m-night-act-timer', s.nightDeadline);
-        }
-        return;
-    }
-
-    // ── Ранок
+    // ── Morning
     if (s.phase === 'morning') {
         let html = `<div class="m-morning">`;
-        if (s.lastDeaths?.length === 0) {
+        if (!s.lastDeaths?.length) {
             html += `<div class="m-morning-title">🌅 Місто прокинулось</div>
                      <div class="m-morning-sub">Цієї ночі ніхто не загинув</div>`;
         } else {
             html += `<div class="m-morning-title">💀 Вночі загинули</div>`;
             s.lastDeaths.forEach(id => {
                 const p = s.players[id];
-                html += `<div class="m-morning-victim">${p.name} — ${mRoleLabel(p.role)?.ua || p.role}</div>`;
+                if (p) html += `<div class="m-morning-victim">${p.name} — ${mRoleLabel(p.role)?.ua || p.role}</div>`;
             });
         }
-        if (mSideEffect?.event === 'sheriffResult') {
-            const r = mSideEffect;
-            html += `<div class="m-check-result ${r.isBad ? 'bad' : 'good'}">
-                🔍 <b>${r.targetName}</b> — ${r.isBad ? '🔴 Мафія!' : '🟢 Мирний'}
-            </div>`;
-        }
-
-        if (me.isAlive) html += `<div class="m-wait" style="margin-top:10px">⏳ Переходимо до дня...</div>`;
-        else html += mDeadUI();
+        if (!me.isAlive) html += `<div class="m-wait" style="margin-top:10px">💀 Ви загинули</div>`;
+        else             html += `<div class="m-wait" style="margin-top:10px">⏳ Переходимо до дня...</div>`;
         html += `</div>`;
         el.innerHTML = html;
         return;
     }
 
-    // ── Денне обговорення
-    if (s.phase === 'day_discussion') {
-        const timer = mDeadlineTimer(s.dayDeadline);
-        const isSilenced = me.isSilenced;
-        const isAlive    = me.isAlive;
-        el.innerHTML = `
-            <div class="m-day-ui">
-                <div class="m-day-title">☀️ Обговорення</div>
-                <div class="m-day-timer" id="m-day-timer">${timer}</div>
-                <div class="m-timer-track"><div class="m-timer-bar-fill" id="m-day-timer-bar"></div></div>
-                <div class="m-day-players">
-                    ${s.players.filter(p => p.isAlive).map(p => `
-                        <div class="m-day-player ${p.isSilenced ? 'silenced' : ''} ${p.id === mMyIdx ? 'me' : ''}">
-                            ${p.name}${p.isSilenced ? ' 🔇' : ''}${p.id === mMyIdx ? ' (я)' : ''}
-                        </div>`).join('')}
-                </div>
-                <div class="m-day-chat">
-                    <div class="m-day-chat-log" id="m-day-chat-log">
-                        <div class="m-log-empty">Поки тихо...</div>
-                    </div>
-                    ${isAlive && !isSilenced
-                        ? `<div class="m-chat-input-row">
-                                <input id="m-day-chat-input" class="m-chat-input" maxlength="200"
-                                    placeholder="Повідомлення..."
-                                    onkeydown="if(event.key==='Enter')mSendDayChat()">
-                                <button class="m-chat-send" onclick="mSendDayChat()">➤</button>
-                           </div>`
-                        : `<div class="m-day-chat-muted">${isSilenced ? '🔇 Ви заглушені' : '💀 Ви загинули'}</div>`
-                    }
-                </div>
-                <button class="m-btn secondary" onclick="mShowMyRole()"
-                    style="margin-top:6px;font-size:11px;padding:5px 10px;width:auto;align-self:center">
-                    👤 Моя роль
-                </button>
-            </div>`;
-        mStartTimer('m-day-timer', s.dayDeadline);
-        return;
-    }
-
-    // ── Голосування
-    if (s.phase === 'day_voting') {
-        const me = s.players[mMyIdx];
-        const myVote = s.myVote;
-        const timer = mDeadlineTimer(s.voteDeadline, () => renderMafia());
-        const targets = s.players.filter(p => p.isAlive && p.id !== mMyIdx);
-
-        const canVote = me.isAlive && !me.isSilenced;
-        const alreadyVoted = myVote !== null && myVote !== undefined;
-
-        // Рахуємо голоси по цілях
-        const voteTally = {};
-        const voterMap  = {};
-        Object.entries(s.allVotes || {}).forEach(([vid, tid]) => {
-            const voter = s.players[+vid];
-            if (!voter) return;
-            voterMap[+vid] = tid;
-            if (tid !== 'skip' && tid !== null) {
-                voteTally[tid] = (voteTally[tid] || []);
-                voteTally[tid].push(voter.name);
-            }
-        });
-
-        const voteLog = Object.entries(voterMap).map(([vid, tid]) => {
-            const voter  = s.players[+vid]?.name || '?';
-            const target = tid === 'skip' ? 'пропуск' : (s.players[tid]?.name || '?');
-            return `<span class="m-vote-log-item">${voter} → ${target}</span>`;
-        }).join('');
-
-        el.innerHTML = `
-            <div class="m-vote-ui">
-                <div class="m-day-title">🗳️ Голосування</div>
-                <div class="m-day-timer" id="m-vote-timer">${timer}</div>
-                <div class="m-timer-track"><div class="m-timer-bar-fill" id="m-vote-timer-bar"></div></div>
-                <div class="m-vote-count">${s.voteCount} / ${s.eligibleVoters} проголосували</div>
-                ${voteLog ? `<div class="m-vote-log">${voteLog}</div>` : ''}
-
-                ${!canVote
-                    ? `${me.isAlive ? '' : mDeadUI()}`
-                    : alreadyVoted
-                    ? `<div class="m-voted-info">
-                            ✅ Ви проголосували: <b>${myVote === 'skip' ? 'пропустити' : s.players[myVote]?.name || '?'}</b>
-                            <button class="m-btn-small" onclick="mDayVote(null)">↩ Змінити</button>
-                        </div>`
-                    : `<div class="m-vote-targets">
-                            ${targets.map(p => {
-                                const cnt = (voteTally[p.id] || []).length;
-                                return `<button class="m-vote-target-btn" onclick="mDayVote(${p.id})">
-                                    ${p.name}${cnt ? ` <span class="m-vote-badge">${cnt}</span>` : ''}
-                                </button>`;
-                            }).join('')}
-                            <button class="m-vote-skip-btn" onclick="mDayVote('skip')">⏭️ Пропустити</button>
-                        </div>`}
-            </div>`;
-        mStartTimer('m-vote-timer', s.voteDeadline);
-        return;
-    }
-
-    // ── Кінець гри
+    // ── Gameover
     if (s.phase === 'gameover') {
         el.innerHTML = mGameoverUI(s);
         mSpawnConfetti(s.winner);
-        return;
     }
 }
 
+function mRenderActionPanel(s, me) {
+    const panel      = document.getElementById('m-action-panel');
+    const iconEl     = document.getElementById('m-panel-icon');
+    const titleEl    = document.getElementById('m-panel-title');
+    const descEl     = document.getElementById('m-panel-desc');
+    const skipBtn    = document.getElementById('m-panel-skip');
+    const confirmBtn = document.getElementById('m-panel-confirm');
+    if (!panel || !me) return;
+
+    if (s.phase === 'night') {
+        if (!me.isAlive) { panel.style.display = 'none'; return; }
+
+        const actionType = mGetActionTypeForRole(me.role);
+        if (!actionType) {
+            // Citizen: show minimal night panel
+            panel.style.display = 'flex';
+            if (iconEl)  iconEl.textContent  = '🌙';
+            if (titleEl) titleEl.textContent = 'МІСТО СПИТЬ';
+            if (descEl)  descEl.textContent  = 'Очікуйте результатів ночі...';
+            if (skipBtn)    skipBtn.style.display    = 'none';
+            if (confirmBtn) confirmBtn.style.display = 'none';
+            return;
+        }
+
+        panel.style.display = 'flex';
+        const sel     = _mNightSelections[actionType];
+        const selName = sel !== undefined ? s.players.find(p => p.id === sel)?.name : null;
+
+        const cfgs = {
+            mafia:       { icon: '🩸', title: 'ГОЛОСУВАННЯ МАФІЇ', desc: 'Оберіть кого вбити цієї ночі' },
+            don:         { icon: '🩸', title: 'ГОЛОСУВАННЯ ДОНА',  desc: 'Оберіть кого вбити цієї ночі' },
+            sheriff:     { icon: '🔍', title: 'ПЕРЕВІРКА КОМІСАРА', desc: 'Оберіть гравця для перевірки' },
+            deputy:      { icon: '🔍', title: 'ПЕРЕВІРКА ПОМІЧНИКА', desc: 'Оберіть гравця для перевірки' },
+            doctor:      { icon: '💊', title: 'ПОРЯТУНОК', desc: 'Оберіть кого рятувати цієї ночі' },
+            roleblocker: { icon: '🚫', title: 'НІЧНИЙ ВІЗИТ', desc: 'Оберіть кого заблокувати' },
+            maniac:      { icon: '🔪', title: 'ПОЛЮВАННЯ МАНЬЯКА', desc: 'Оберіть свою жертву' },
+        };
+        const cfg = cfgs[me.role] || { icon: '🎯', title: 'ДІЯ', desc: 'Оберіть ціль' };
+
+        if (iconEl)  iconEl.textContent  = cfg.icon;
+        if (titleEl) titleEl.textContent = cfg.title;
+        if (descEl)  descEl.textContent  = selName
+            ? `✅ Обрано: ${selName} — натисніть ще раз для скасування`
+            : cfg.desc;
+        if (skipBtn)    skipBtn.style.display    = '';
+        if (confirmBtn) confirmBtn.style.display = '';
+
+    } else if (s.phase === 'day_voting') {
+        if (!me.isAlive || me.isSilenced) { panel.style.display = 'none'; return; }
+        panel.style.display = 'flex';
+
+        if (iconEl)  iconEl.textContent  = '⚖️';
+        if (titleEl) titleEl.textContent = 'ДЕННИЙ СУД';
+
+        const votedName = s.myVote && s.myVote !== 'skip' ? s.players[s.myVote]?.name : null;
+        if (descEl) descEl.textContent = s.myVote
+            ? `Ваш голос: ${votedName || 'пропустити'} — натисніть ↩ для скасування`
+            : `${s.voteCount ?? 0}/${s.eligibleVoters ?? '?'} проголосували`;
+
+        if (skipBtn)    { skipBtn.style.display = ''; skipBtn.textContent = 'ПРОПУСТИТИ'; }
+        if (confirmBtn) confirmBtn.style.display = 'none';
+
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+// ── Passport (right col) ──────────────────────
+function mRenderPassport() {
+    if (!mState || mMyIdx === null) return;
+    const me = mState.players[mMyIdx];
+    if (!me?.role) return;
+
+    const rl   = M_ROLE_LABELS[me.role] || { ua: me.role, icon: '?', faction: 'town', color: '#888' };
+    const desc = mRoleDesc(me.role);
+
+    const fcColors = {
+        town:   { chip: '#1d4ed8', bg: 'rgba(29,78,216,0.09)',   border: 'rgba(59,130,246,0.28)',  ability: 'rgba(29,78,216,0.06)',   abilityBorder: 'rgba(59,130,246,0.2)' },
+        mafia:  { chip: '#b91c1c', bg: 'rgba(185,28,28,0.09)',   border: 'rgba(220,38,38,0.28)',   ability: 'rgba(185,28,28,0.06)',   abilityBorder: 'rgba(220,38,38,0.2)' },
+        maniac: { chip: '#7c3aed', bg: 'rgba(109,40,217,0.09)', border: 'rgba(168,85,247,0.28)',  ability: 'rgba(109,40,217,0.06)', abilityBorder: 'rgba(168,85,247,0.2)' },
+    };
+    const fc = fcColors[rl.faction] || fcColors.town;
+
+    // Chip
+    const chipEl = document.getElementById('m-passport-chip');
+    if (chipEl) {
+        chipEl.textContent = (rl.ua || 'РОЛЬ').toUpperCase().slice(0, 10);
+        chipEl.style.cssText = `background:${fc.bg};border:1px solid ${fc.border};color:${rl.color || '#aaa'}`;
+    }
+
+    // Role card
+    const cardEl = document.getElementById('m-passport-card');
+    if (cardEl) {
+        cardEl.innerHTML = `
+            <div class="m-passport-role-wrap">
+                <span class="m-passport-role-emoji">${rl.icon}</span>
+                <h4 class="m-passport-role-name" style="color:${rl.color}">${rl.ua}</h4>
+            </div>
+            <p class="m-passport-role-desc">${desc}</p>
+            <div class="m-passport-ability" style="background:${fc.ability};border:1px solid ${fc.abilityBorder}">
+                <span class="m-passport-ability-title" style="color:${rl.color}">Ваша здібність</span>
+                <span class="m-passport-ability-text">${mRoleAbility(me.role)}</span>
+            </div>`;
+    }
+
+    // Stats
+    const statsEl = document.getElementById('m-passport-stats');
+    if (statsEl) {
+        const factionName = { town: 'МИРНІ', mafia: 'МАФІЯ', maniac: 'МАНЬЯК' }[rl.faction] || '?';
+        const statusColor = me.isAlive ? '#10b981' : '#ef4444';
+        const blockedColor = me.isSilenced ? '#c084fc' : '#71717a';
+        statsEl.innerHTML = `
+            <div class="m-passport-stat-row">
+                <span class="m-passport-stat-label">СТАТУС:</span>
+                <span class="m-passport-stat-value" style="color:${statusColor}">${me.isAlive ? 'ЖИВИЙ' : 'МЕРТВИЙ'}</span>
+            </div>
+            <div class="m-passport-stat-row">
+                <span class="m-passport-stat-label">КЛАН:</span>
+                <span class="m-passport-stat-value" style="color:${rl.color}">${factionName}</span>
+            </div>
+            <div class="m-passport-stat-row">
+                <span class="m-passport-stat-label">БЛОКУВАННЯ:</span>
+                <span class="m-passport-stat-value" style="color:${blockedColor}">${me.isSilenced ? 'ТАК 🔇' : 'НІ'}</span>
+            </div>`;
+    }
+}
+
+// ── Log ───────────────────────────────────────
+function mRenderLog() {
+    const el = document.getElementById('m-log');
+    if (!el) return;
+    const entries = (mState.log || []).slice(0, 25);
+    if (!entries.length) { el.innerHTML = '<div class="m-log-empty">Лог порожній</div>'; return; }
+    el.innerHTML = entries.map((e, i) => {
+        const text = e.text || e;
+        const type = e.type || '';
+        const cls  = type ? `m-log-entry m-log-${type}` : 'm-log-entry';
+        return `<div class="${cls}${i === 0 ? ' m-log-newest' : ''}">${text}</div>`;
+    }).join('');
+    const newLen = (mState.log || []).length;
+    if (newLen > _mLastLogLen && _mLastLogLen > 0) mBumpLogBadge();
+    _mLastLogLen = newLen;
+}
+
+// ── Gameover UI ───────────────────────────────
 function mGameoverUI(s) {
     const isTown   = s.winner === 'town';
     const isMafia  = s.winner === 'mafia';
@@ -384,7 +621,6 @@ function mGameoverUI(s) {
     const bannerIcon  = isTown ? '🏙️' : isMafia ? '🔫' : '🔪';
     const bannerText  = isTown ? 'Місто перемогло!' : isMafia ? 'Мафія перемогла!' : 'Маньяк переміг!';
 
-    // Групуємо гравців: спочатку переможці, потім решта
     const sorted = [...s.players].sort((a, b) => {
         const aWin = (isTown && M_ROLE_LABELS[a.role]?.faction === 'town') ||
                      (isMafia && M_ROLE_LABELS[a.role]?.faction === 'mafia') ||
@@ -398,8 +634,8 @@ function mGameoverUI(s) {
     });
 
     const playerRows = sorted.map(p => {
-        const rl = M_ROLE_LABELS[p.role] || { ua: p.role, icon: '?', faction: 'town', color: '#888' };
-        const won = (isTown && rl.faction === 'town') || (isMafia && rl.faction === 'mafia');
+        const rl  = M_ROLE_LABELS[p.role] || { ua: p.role, icon: '?', faction: 'town', color: '#888' };
+        const won = (isTown && rl.faction === 'town') || (isMafia && rl.faction === 'mafia') || (isManiac && p.role === 'maniac');
         return `
         <div class="m-result-row ${won ? 'winner' : 'loser'} ${!p.isAlive ? 'dead' : ''} ${p.id === mMyIdx ? 'me' : ''}">
             <span class="m-result-icon">${rl.icon}</span>
@@ -416,18 +652,12 @@ function mGameoverUI(s) {
                 <div class="m-gameover-headline">${bannerText}</div>
                 <div class="m-gameover-sub">${iWon ? '🎉 Ви у команді переможців!' : '😔 Ваша команда програла.'}</div>
             </div>
-
             <div class="m-result-list">
-                <div class="m-result-header">
-                    <span>Гравець</span><span>Роль</span><span>Статус</span>
-                </div>
+                <div class="m-result-header"><span>Гравець</span><span>Роль</span><span>Статус</span></div>
                 ${playerRows}
             </div>
-
             <div class="m-gameover-stats">
-                Раундів зіграно: <b>${s.round}</b> ·
-                Вижило: <b>${s.players.filter(p => p.isAlive).length}</b> /
-                <b>${s.players.length}</b>
+                Раундів: <b>${s.round}</b> · Вижило: <b>${s.players.filter(p => p.isAlive).length}</b>/<b>${s.players.length}</b>
             </div>
             ${(() => {
                 if (!mGameoverProcessed) {
@@ -438,22 +668,19 @@ function mGameoverUI(s) {
                 const st = getStats('mafia');
                 const isHost = mMyIdx === 0;
                 const statsHtml = st.g > 0
-                    ? `<div style="font-size:11px;color:rgba(245,230,200,0.35);font-family:sans-serif;margin-bottom:8px">Статистика: ${st.w}/${st.g} перемог</div>`
+                    ? `<div style="font-size:10px;color:rgba(161,161,170,0.5);font-family:'Share Tech Mono',monospace;margin-bottom:6px">Статистика: ${st.w}/${st.g} перемог</div>`
                     : '';
                 const rematch = isHost
-                    ? `<button class="m-btn primary m-btn-wide" onclick="socket.emit('restartGame')" style="background:linear-gradient(135deg,#c9a227,#9a7a10);color:#1a0800;margin-bottom:6px">🔄 Реванш</button>`
+                    ? `<button class="m-btn primary m-btn-wide" onclick="socket.emit('restartGame')" style="background:linear-gradient(135deg,#b91c1c,#7f1d1d);color:white;margin-bottom:6px">🔄 Реванш</button>`
                     : `<div class="m-wait" style="margin-bottom:8px">Очікуємо реваншу від хоста...</div>`;
                 return statsHtml + rematch;
             })()}
-            <button class="m-btn primary m-btn-wide" onclick="mReturnToLobby()">
-                🏠 Нова гра
-            </button>
+            <button class="m-btn primary m-btn-wide" onclick="mReturnToLobby()">🏠 Нова гра</button>
         </div>`;
 }
 
 function mReturnToLobby() {
     clearSession();
-    // Прибираємо confetti перед поверненням
     document.querySelectorAll('[style*="confetti-fall"]').forEach(el => el.remove());
     _mFlavorTimeouts.forEach(clearTimeout);
     _mFlavorTimeouts = [];
@@ -468,21 +695,18 @@ function mReturnToLobby() {
 function mSpawnConfetti(winner) {
     const myFaction = M_ROLE_LABELS[mState?.players[mMyIdx]?.role]?.faction;
     const iWon = (winner === 'town' && myFaction === 'town') ||
-                 (winner === 'mafia' && myFaction === 'mafia');
+                 (winner === 'mafia' && myFaction === 'mafia') ||
+                 (winner === 'maniac' && myFaction === 'maniac');
     if (!iWon) return;
-
     const colors = winner === 'mafia'
         ? ['#c62828','#e53935','#ff7043','#ffd700','#880e4f']
         : winner === 'maniac'
         ? ['#6a1b9a','#ab47bc','#ce93d8','#e040fb','#4a148c']
         : ['#1565c0','#0288d1','#ffd700','#4caf50','#81d4fa'];
-
     for (let i = 0; i < 80; i++) {
-        const el = document.createElement('div');
+        const el   = document.createElement('div');
         const size = 6 + Math.random() * 8;
-        el.style.cssText = `
-            position:fixed;top:-12px;left:${Math.random()*100}vw;
-            width:${size}px;height:${size}px;
+        el.style.cssText = `position:fixed;top:-12px;left:${Math.random()*100}vw;width:${size}px;height:${size}px;
             background:${colors[Math.floor(Math.random()*colors.length)]};
             border-radius:${Math.random()>.5?'50%':'2px'};
             animation:confetti-fall ${2+Math.random()*3}s linear ${Math.random()*1.5}s forwards;
@@ -492,107 +716,133 @@ function mSpawnConfetti(winner) {
     }
 }
 
-// ── Нічні дії по ролі ─────────────────────────
-function mNightActions(s, me) {
-    const alive = s.players.filter(p => p.isAlive && p.id !== mMyIdx);
-    // Таймер показується всім активним ролям (не тільки мирним)
-    const nightTimerHtml = `
-        <div class="m-night-timer-active">
-            🌙 Ранок через <b id="m-night-act-timer">${mDeadlineTimer(s.nightDeadline)}</b>
-        </div>`;
+// ── Chat ──────────────────────────────────────
+socket.on('mafiaChat', ({ playerId, name, text }) => {
+    const msgs = document.getElementById('m-chat-msgs');
+    if (!msgs) return;
+    const msg = document.createElement('div');
+    msg.className = 'm-chat-msg mafia' + (playerId === mMyIdx ? ' me' : '');
+    msg.innerHTML = `<span class="m-chat-msg-sender">${name}</span><span class="m-chat-msg-text">${text}</span>`;
+    msgs.appendChild(msg);
+    msgs.scrollTop = msgs.scrollHeight;
+    mBumpChatBadge();
+});
 
-    const targetSelect = (actionType, label) => {
-        const selId = _mNightSelections[actionType];
-        const selName = selId !== undefined ? alive.find(p => p.id === selId)?.name : null;
-        return `
-        <div class="m-night-action">
-            <div class="m-night-label">${label}</div>
-            <div class="m-target-list">
-                ${alive.map(p => {
-                    const isSel = selId === p.id;
-                    const isOther = selId !== undefined && !isSel;
-                    return `<button class="m-target-btn${isSel ? ' selected' : ''}"
-                        style="${isOther ? 'opacity:0.35;pointer-events:none' : ''}"
-                        onclick="mNightAction('${actionType}', ${p.id})">
-                        ${isSel ? '☑ ' : ''}${p.name}
-                    </button>`;
-                }).join('')}
-            </div>
-            ${selName ? `<div class="m-night-confirmed">✅ Обрано: <b>${selName}</b> — натисніть ще раз щоб скасувати</div>` : ''}
-        </div>`;
-    };
+function mSendMafiaChat() { /* legacy — use mSendActiveChat */ }
 
-    switch (me.role) {
-        case 'mafia':
-            return nightTimerHtml + targetSelect('mafiaVote', '🔫 Оберіть жертву') + mMafiaChat();
+socket.on('dayChatMsg', ({ playerId, name, text, round }) => {
+    const msgs = document.getElementById('m-chat-msgs');
+    if (!msgs) return;
+    if (round && round !== _mChatRound) {
+        _mChatRound = round;
+        const sep = document.createElement('div');
+        sep.className = 'm-chat-round-sep';
+        sep.textContent = `— День ${round} —`;
+        msgs.appendChild(sep);
+    }
+    const msg = document.createElement('div');
+    msg.className = 'm-chat-msg' + (playerId === mMyIdx ? ' me' : '');
+    msg.innerHTML = `<span class="m-chat-msg-sender">${name}</span><span class="m-chat-msg-text">${_esc ? _esc(text) : text}</span>`;
+    msgs.appendChild(msg);
+    msgs.scrollTop = msgs.scrollHeight;
+    mBumpChatBadge();
+});
 
-        case 'don':
-            return nightTimerHtml +
-                   targetSelect('mafiaVote', '🔫 Оберіть жертву') + mMafiaChat();
+socket.on('deadChat', ({ name, text }) => {
+    mDeadChatLog.push({ name, text });
+    const msgs = document.getElementById('m-chat-msgs');
+    if (!msgs) return;
+    const msg = document.createElement('div');
+    msg.className = 'm-chat-msg ghost';
+    msg.innerHTML = `<span class="m-chat-msg-sender">👻 ${name}</span><span class="m-chat-msg-text">${text}</span>`;
+    msgs.appendChild(msg);
+    msgs.scrollTop = msgs.scrollHeight;
+    mBumpChatBadge();
+});
 
-        case 'sheriff':
-        case 'deputy':
-            return nightTimerHtml + targetSelect('sheriffCheck', '🔍 Перевірити гравця');
+// ── Unified chat send ─────────────────────────
+function mSendActiveChat() {
+    const input = document.getElementById('m-chat-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    const me = mState?.players[mMyIdx];
+    if (!me) return;
 
-        case 'doctor': {
-            const docSelId = _mNightSelections['doctorHeal'];
-            const docSelName = docSelId !== undefined ? s.players.find(p => p.id === docSelId)?.name : null;
-            return nightTimerHtml + `<div class="m-night-action">
-                <div class="m-night-label">💊 Врятувати гравця</div>
-                <div class="m-target-list">
-                    ${s.players.filter(p => p.isAlive).map(p => {
-                        const isSel = docSelId === p.id;
-                        const isOther = docSelId !== undefined && !isSel;
-                        return `<button class="m-target-btn${isSel ? ' selected' : ''}"
-                            style="${isOther ? 'opacity:0.35;pointer-events:none' : ''}"
-                            onclick="mNightAction('doctorHeal', ${p.id})">
-                            ${isSel ? '☑ ' : ''}${p.name}${p.id === mMyIdx ? ' (я)' : ''}
-                        </button>`;
-                    }).join('')}
-                </div>
-                ${docSelName ? `<div class="m-night-confirmed">✅ Обрано: <b>${docSelName}</b> — натисніть ще раз щоб скасувати</div>` : ''}
-            </div>`;
+    if (!me.isAlive) {
+        socket.emit('deadChat', { text });
+    } else if (mState?.phase === 'night' && (me.role === 'mafia' || me.role === 'don')) {
+        socket.emit('mafiaChat', { text });
+    } else if (mState?.phase === 'day_discussion' || mState?.phase === 'day_voting') {
+        socket.emit('dayChatMsg', { text });
+    }
+    input.value = '';
+}
+
+function mQuickReply(prefix) {
+    if (!mState) return;
+    let text = prefix;
+    if (prefix.includes('...')) {
+        const me = mState.players[mMyIdx];
+        const targets = mState.players.filter(p => p.isAlive && p.id !== mMyIdx);
+        if (targets.length) {
+            const rnd = targets[Math.floor(Math.random() * targets.length)];
+            text = prefix.replace('...', ` ${rnd.name}`);
         }
-
-        case 'roleblocker':
-            return nightTimerHtml + targetSelect('roleblockerBlock', '🚫 Заблокувати гравця');
-
-        case 'maniac':
-            return nightTimerHtml + targetSelect('maniacKill', '🔪 Оберіть жертву');
-
-        default:
-            return `
-                <div class="m-night-atmosphere">
-                    <div class="m-night-title">🌙 Місто спить</div>
-                    <div class="m-night-timer-row">
-                        Ранок через <b id="m-night-cit-timer">${mDeadlineTimer(s.nightDeadline)}</b>
-                    </div>
-                    <div class="m-night-flavor" id="m-night-flavor"></div>
-                </div>`;
+    }
+    const input = document.getElementById('m-chat-input');
+    if (input) {
+        input.value = text;
+        mSendActiveChat();
     }
 }
 
-// ── Лог ──────────────────────────────────────
-let _mLastLogLen = 0;
-function mRenderLog() {
-    const el = document.getElementById('m-log');
-    if (!el) return;
-    const entries = (mState.log || []).slice(0, 25);
-    if (!entries.length) { el.innerHTML = '<div class="m-log-empty">Лог порожній</div>'; return; }
-    el.innerHTML = entries.map((e, i) => {
-        const text = e.text || e;
-        const type = e.type || '';
-        const cls  = type ? `m-log-entry m-log-${type}` : 'm-log-entry';
-        const newest = i === 0 ? ' m-log-newest' : '';
-        return `<div class="${cls}${newest}">${text}</div>`;
-    }).join('');
-    // Бейдж нових записів
-    const newLen = (mState.log || []).length;
-    if (newLen > _mLastLogLen && _mLastLogLen > 0) mBumpLogBadge();
-    _mLastLogLen = newLen;
+// ── Action panel buttons ──────────────────────
+function mGetActionTypeForRole(role) {
+    return { mafia:'mafiaVote', don:'mafiaVote', sheriff:'sheriffCheck', deputy:'sheriffCheck',
+             doctor:'doctorHeal', roleblocker:'roleblockerBlock', maniac:'maniacKill' }[role] || null;
 }
 
-// ── Дії гравця ────────────────────────────────
+function mPanelSkip() {
+    if (!mState || mMyIdx === null) return;
+    const me = mState.players[mMyIdx];
+    if (!me) return;
+    if (mState.phase === 'night') {
+        const actionType = mGetActionTypeForRole(me.role);
+        if (actionType && _mNightSelections[actionType] !== undefined) {
+            delete _mNightSelections[actionType];
+            socket.emit('action', { type: 'cancelNightAction', data: { actionType } });
+            renderMafia();
+        }
+    } else if (mState.phase === 'day_voting') {
+        mDayVote('skip');
+    }
+}
+
+function mPanelConfirm() {
+    if (!mState || mMyIdx === null) return;
+    const me = mState.players[mMyIdx];
+    if (!me) return;
+    const actionType = mGetActionTypeForRole(me.role);
+    if (actionType && _mNightSelections[actionType] !== undefined) {
+        if (typeof showToast === 'function')
+            showToast('✅ Рішення зафіксовано', { duration: 2000 });
+    }
+}
+
+// ── Night actions ─────────────────────────────
+function mNightAction(type, targetId) {
+    if (_mNightSelections[type] === targetId) {
+        delete _mNightSelections[type];
+        socket.emit('action', { type: 'cancelNightAction', data: { actionType: type } });
+    } else {
+        _mNightSelections[type] = targetId;
+        socket.emit('action', { type, data: { targetId } });
+    }
+    if (navigator.vibrate) navigator.vibrate(35);
+    renderMafia();
+}
+
 function mReady() {
     socket.emit('action', { type: 'mafiaReady', data: {} });
     const btn = document.getElementById('m-ready-btn');
@@ -600,120 +850,61 @@ function mReady() {
 }
 
 function mDayVote(targetId) {
-    // null = скасування → сервер видаляє голос, stateUpdate оновить UI
     socket.emit('action', { type: 'dayVote', data: { targetId } });
 }
 
-// ── Приватний чат мафії ───────────────────────
-socket.on('mafiaChat', ({ playerId, name, text }) => {
-    const el = document.getElementById('m-mafia-chat');
-    if (!el) return;
-    const msg = document.createElement('div');
-    msg.className = 'm-chat-msg';
-    msg.innerHTML = `<b>${name}:</b> ${text}`;
-    el.appendChild(msg);
-    el.scrollTop = el.scrollHeight;
-});
+// ── Timers ────────────────────────────────────
+const _mTimers = {};
 
-function mSendMafiaChat() {
-    const input = document.getElementById('m-mafia-input');
-    if (!input) return;
-    const text = input.value.trim();
-    if (!text) return;
-    socket.emit('mafiaChat', { text });
-    input.value = '';
+function mDeadlineTimer(deadline) {
+    if (!deadline) return '—';
+    const sec = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+    return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2,'0')}`;
 }
 
-// ── Чат мертвих ───────────────────────────────
-function mDeadUI() {
-    const msgs = mDeadChatLog.map(m =>
-        `<div class="m-dead-chat-msg"><span class="m-day-chat-name">👻 ${m.name}:</span> ${m.text}</div>`
-    ).join('') || `<div class="m-log-empty">Тут говорять привиди...</div>`;
-    return `
-        <div class="m-dead-chat-wrap">
-            <div class="m-dead-chat-title">👻 Чат мертвих</div>
-            <div class="m-dead-chat-log" id="m-dead-chat-log">${msgs}</div>
-            <div class="m-chat-input-row">
-                <input id="m-dead-chat-input" class="m-chat-input m-dead-input" maxlength="200"
-                    placeholder="Тільки мертві чують..."
-                    onkeydown="if(event.key==='Enter')mSendDeadChat()">
-                <button class="m-chat-send m-dead-send" onclick="mSendDeadChat()">➤</button>
-            </div>
-        </div>`;
+function mStartTimer(elId, deadline) {
+    clearInterval(_mTimers[elId]);
+    if (!deadline) return;
+    const total = Math.max(1, deadline - Date.now());
+    _mTimers[elId] = setInterval(() => {
+        const el = document.getElementById(elId);
+        if (!el) { clearInterval(_mTimers[elId]); return; }
+        const rem = Math.max(0, deadline - Date.now());
+        const sec = Math.ceil(rem / 1000);
+        el.textContent = `${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`;
+        const bar = document.getElementById(elId + '-bar');
+        if (bar) {
+            const pct = rem / total * 100;
+            bar.style.width = pct + '%';
+            bar.className = 'm-timer-bar-fill' + (pct > 40 ? '' : pct > 15 ? ' warn' : ' danger');
+        }
+        if (rem <= 0) clearInterval(_mTimers[elId]);
+    }, 300);
 }
 
-socket.on('deadChat', ({ name, text }) => {
-    mDeadChatLog.push({ name, text });
-    // Якщо вже є живий елемент — додаємо без перерендеру
-    const log = document.getElementById('m-dead-chat-log');
-    if (log) {
-        const empty = log.querySelector('.m-log-empty');
-        if (empty) empty.remove();
-        const msg = document.createElement('div');
-        msg.className = 'm-dead-chat-msg';
-        msg.innerHTML = `<span class="m-day-chat-name">👻 ${name}:</span> ${text}`;
-        log.appendChild(msg);
-        log.scrollTop = log.scrollHeight;
-    }
-});
-
-function mSendDeadChat() {
-    const input = document.getElementById('m-dead-chat-input');
-    if (!input) return;
-    const text = input.value.trim();
-    if (!text) return;
-    socket.emit('deadChat', { text });
-    input.value = '';
+function mStartPhaseTimer(deadline) {
+    clearInterval(_mTimers['phase-timer']);
+    const el = document.getElementById('m-phase-block-timer');
+    if (!deadline) { if (el) el.textContent = ''; return; }
+    const update = () => {
+        const el2 = document.getElementById('m-phase-block-timer');
+        if (!el2) { clearInterval(_mTimers['phase-timer']); return; }
+        const rem = Math.max(0, deadline - Date.now());
+        const sec = Math.ceil(rem / 1000);
+        el2.textContent = `🕒 ${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`;
+        if (rem <= 0) clearInterval(_mTimers['phase-timer']);
+    };
+    update();
+    _mTimers['phase-timer'] = setInterval(update, 300);
 }
 
-// ── Переглянути свою роль ────────────────────
-function mShowMyRole() {
-    if (!mState) return;
-    const me = mState.players[mMyIdx];
-    if (!me?.role) return;
-    const rl = M_ROLE_LABELS[me.role] || { ua: me.role, icon: '?', color: '#888' };
-    const desc = mRoleDesc(me.role);
-    showToast(`${rl.icon} ${rl.ua}${desc ? ' — ' + desc.slice(0, 60) : ''}`, { color: rl.color || '#333', duration: 4000 });
-}
-
-// ── Денний чат ────────────────────────────────
-let _mChatRound = 0; // відстежуємо раунд для роздільника
-socket.on('dayChatMsg', ({ playerId, name, text, round }) => {
-    const log = document.getElementById('m-day-chat-log');
-    if (!log) return;
-    const empty = log.querySelector('.m-log-empty');
-    if (empty) empty.remove();
-    // Роздільник нового раунду
-    if (round && round !== _mChatRound) {
-        _mChatRound = round;
-        const sep = document.createElement('div');
-        sep.className = 'm-chat-round-sep';
-        sep.textContent = `— День ${round} —`;
-        log.appendChild(sep);
-    }
-    const msg = document.createElement('div');
-    msg.className = 'm-day-chat-msg' + (playerId === mMyIdx ? ' me' : '');
-    msg.innerHTML = `<span class="m-day-chat-name">${name}:</span> ${_esc ? _esc(text) : text}`;
-    log.appendChild(msg);
-    log.scrollTop = log.scrollHeight;
-});
-
-function mSendDayChat() {
-    const input = document.getElementById('m-day-chat-input');
-    if (!input) return;
-    const text = input.value.trim();
-    if (!text) return;
-    socket.emit('dayChatMsg', { text });
-    input.value = '';
-}
-
-// ── Нічний флейвор для мирних ─────────────────
+// ── Night flavor (into chat area) ────────────
 const NIGHT_FLAVOR = [
     { pct: 0.06, icon: '🌙', text: 'Місто вкрилось тишею. Але не всі лягли спати...' },
     { pct: 0.20, icon: '🤫', text: 'В темному кварталі — приглушені голоси. Кілька тіней вийшли на вулицю.' },
-    { pct: 0.33, icon: '💊', text: 'У місті загострився грип. Місцевий лікар наповнив саквояж і попрямував до когось із мешканців — для профілактики.' },
-    { pct: 0.46, icon: '🚪', text: 'Хтось зателефонував і замовив нічний візит. Повія зібрала сумочку і вийшла з дому — в когось цієї ночі зіпсуються плани.' },
-    { pct: 0.58, icon: '🔦', text: 'Силует із блокнотом завмер під ліхтарем. Комісар перевіряє підозрюваних — хтось цієї ночі дізнається правду.' },
+    { pct: 0.33, icon: '💊', text: 'Місцевий лікар наповнив саквояж і попрямував до когось із мешканців — для профілактики.' },
+    { pct: 0.46, icon: '🚪', text: 'Хтось замовив нічний візит. Повія зібрала сумочку і вийшла з дому — в когось цієї ночі зіпсуються плани.' },
+    { pct: 0.58, icon: '🔦', text: 'Силует із блокнотом завмер під ліхтарем. Комісар перевіряє підозрюваних.' },
     { pct: 0.70, icon: '🔫', text: 'За шторою мигнула тінь. Мафія зібралась на нараду — і обрала жертву.' },
     { pct: 0.81, icon: '🔪', text: 'У провулку мигнуло щось гостре. Самотній маньяк іде через ніч зі своїми думками.' },
     { pct: 0.93, icon: '⏰', text: 'Небо на сході починає світлішати. Скоро місто дізнається що трапилось...' },
@@ -725,97 +916,70 @@ function mStartNightFlavor(deadline) {
     const remaining = Math.max(500, deadline - Date.now());
     NIGHT_FLAVOR.forEach(({ pct, icon, text }) => {
         const t = setTimeout(() => {
-            const feed = document.getElementById('m-night-flavor');
-            if (!feed) return;
+            const msgs = document.getElementById('m-chat-msgs');
+            if (!msgs) return;
             const msg = document.createElement('div');
             msg.className = 'm-flavor-msg';
             msg.innerHTML = `<span class="m-flavor-icon">${icon}</span><span>${text}</span>`;
-            feed.appendChild(msg);
-            feed.scrollTop = feed.scrollHeight;
+            msgs.appendChild(msg);
+            msgs.scrollTop = msgs.scrollHeight;
         }, pct * remaining);
         _mFlavorTimeouts.push(t);
     });
 }
 
-// ── Таймер відліку ────────────────────────────
-const _mTimers = {};
-function mDeadlineTimer(deadline, onTick) {
-    if (!deadline) return '—';
-    const sec = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-    const m = Math.floor(sec / 60), s = sec % 60;
-    return `${m}:${String(s).padStart(2,'0')}`;
-}
-function mStartTimer(elId, deadline) {
-    clearInterval(_mTimers[elId]);
-    if (!deadline) return;
-    const total = Math.max(1, deadline - Date.now());
-    _mTimers[elId] = setInterval(() => {
-        const el = document.getElementById(elId);
-        if (!el) { clearInterval(_mTimers[elId]); return; }
-        const rem = Math.max(0, deadline - Date.now());
-        const sec = Math.ceil(rem / 1000);
-        el.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2,'0')}`;
-        const bar = document.getElementById(elId + '-bar');
-        if (bar) {
-            const pct = rem / total * 100;
-            bar.style.width = pct + '%';
-            bar.className = 'm-timer-bar-fill' + (pct > 40 ? '' : pct > 15 ? ' warn' : ' danger');
-        }
-        if (rem === 0) clearInterval(_mTimers[elId]);
-    }, 300);
-}
-
-function mNightAction(type, targetId) {
-    // Toggle: tap selected again to cancel
-    if (_mNightSelections[type] === targetId) {
-        delete _mNightSelections[type];
-        socket.emit('action', { type: 'cancelNightAction', data: { actionType: type } });
-    } else {
-        _mNightSelections[type] = targetId;
-        socket.emit('action', { type, data: { targetId } });
-    }
-    renderMafia();
-}
-
-// ── Хелпери ──────────────────────────────────
+// ── Role meta ─────────────────────────────────
 const M_ROLE_LABELS = {
-    citizen:     { ua: 'Мирний житель', icon: '👤', faction: 'town',  color: '#1565c0' },
-    sheriff:     { ua: 'Комісар',       icon: '🔍', faction: 'town',  color: '#0277bd' },
-    deputy:      { ua: 'Помічник',      icon: '🛡️', faction: 'town',  color: '#01579b' },
-    doctor:      { ua: 'Лікар',         icon: '💊', faction: 'town',  color: '#2e7d32' },
-    roleblocker: { ua: 'Повія',         icon: '🚫', faction: 'town',  color: '#6a1b9a' },
-    mafia:       { ua: 'Мафія',         icon: '🔫', faction: 'mafia',   color: '#c62828' },
-    don:         { ua: 'Дон',           icon: '👑', faction: 'mafia',   color: '#b71c1c' },
-    maniac:      { ua: 'Маньяк',        icon: '🔪', faction: 'maniac',  color: '#6a1b9a' },
+    citizen:     { ua: 'Мирний житель', icon: '👤', faction: 'town',   color: '#3b82f6' },
+    sheriff:     { ua: 'Комісар',       icon: '🔍', faction: 'town',   color: '#60a5fa' },
+    deputy:      { ua: 'Помічник',      icon: '🛡️', faction: 'town',   color: '#93c5fd' },
+    doctor:      { ua: 'Лікар',         icon: '💊', faction: 'town',   color: '#34d399' },
+    roleblocker: { ua: 'Повія',         icon: '🚫', faction: 'town',   color: '#c084fc' },
+    mafia:       { ua: 'Мафія',         icon: '🔫', faction: 'mafia',  color: '#ef4444' },
+    don:         { ua: 'Дон',           icon: '🍷', faction: 'mafia',  color: '#dc2626' },
+    maniac:      { ua: 'Маньяк',        icon: '🔪', faction: 'maniac', color: '#a855f7' },
 };
 
-function mMafiaChat() {
-    return `
-        <div class="m-night-action" style="margin-top:16px">
-            <div class="m-night-label">🔴 Чат мафії (приватний)</div>
-            <div class="m-chat-box" id="m-mafia-chat"></div>
-            <div class="m-chat-input-row">
-                <input id="m-mafia-input" class="m-chat-input" type="text"
-                       placeholder="Написати спільникам…" maxlength="120"
-                       onkeydown="if(event.key==='Enter')mSendMafiaChat()">
-                <button class="m-chat-send" onclick="mSendMafiaChat()">➤</button>
-            </div>
-        </div>`;
-}
-
-function mRoleLabel(role) { return M_ROLE_LABELS[role] || null; }
-function mFactionColor(role) { return M_ROLE_LABELS[role]?.color || '#555'; }
+function mRoleLabel(role)    { return M_ROLE_LABELS[role] || null; }
+function mFactionColor(role) { return M_ROLE_LABELS[role]?.color || '#71717a'; }
 
 function mRoleDesc(role) {
-    const descs = {
+    const d = {
         citizen:     'Знайдіть мафію та виженіть її на денному голосуванні.',
         sheriff:     'Кожної ночі перевіряйте одного гравця — ви дізнаєтесь чи він мафія.',
         deputy:      'Отримуєте результати перевірок Комісара. Якщо він гине — займаєте його місце.',
-        doctor:      'Кожної ночі рятуйте одного гравця від смерті.',
+        doctor:      'Кожної ночі рятуйте одного гравця від смерті (в тому числі себе).',
         roleblocker: 'Блокуйте нічні дії будь-якого гравця. Вдень заблокований мовчить.',
         mafia:       'Разом з командою вбивайте мирних щоночі. Виживіть до перемоги.',
-        don:         'Лідер мафії. Ваш голос вирішальний. Перевіряйте чи є гравець Комісаром.',
-        maniac:      'Вбивайте всіх підряд — без різниці хто. Перемагаєте коли всі інші мертві.',
+        don:         'Лідер мафії. Ваш голос вирішальний при рівних голосах.',
+        maniac:      'Вбивайте всіх підряд — і мафію і мирних. Перемагаєте поодинці.',
     };
-    return descs[role] || '';
+    return d[role] || '';
 }
+
+function mRoleAbility(role) {
+    const a = {
+        citizen:     'Вночі ви спите. Вдень голосуєте за вигнання підозрюваних мешканців.',
+        sheriff:     '1 перевірка за ніч. Дізнаєтесь фракцію гравця (мафія / мирний).',
+        deputy:      'Автоматично отримуєте результати перевірок Комісара. При його загибелі стаєте Комісаром.',
+        doctor:      '1 порятунок за ніч. Можете рятувати себе, але не двічі поспіль.',
+        roleblocker: '1 блокування за ніч. Скасовує нічну дію цілі та позбавляє її голосу наступного дня.',
+        mafia:       'Командне голосування за жертву кожної ночі. Виграєте коли мафія ≥ мирних.',
+        don:         'Голосує за жертву разом з командою. Голос Дона вирішальний при рівних.',
+        maniac:      '1 вбивство за ніч (будь-який гравець). Виграє якщо залишається поодинці.',
+    };
+    return a[role] || 'Особлива роль.';
+}
+
+// ── Show my role (quick view) ─────────────────
+function mShowMyRole() {
+    if (!mState) return;
+    const me = mState.players[mMyIdx];
+    if (!me?.role) return;
+    const rl = M_ROLE_LABELS[me.role] || { ua: me.role, icon: '?', color: '#888' };
+    const desc = mRoleDesc(me.role);
+    showToast(`${rl.icon} ${rl.ua}${desc ? ' — ' + desc.slice(0, 60) : ''}`, { color: rl.color || '#333', duration: 4000 });
+}
+
+function mSendDayChat() { mSendActiveChat(); }
+function mSendDeadChat() { mSendActiveChat(); }

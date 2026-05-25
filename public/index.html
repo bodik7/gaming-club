@@ -11,6 +11,9 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <title>Ігровий Клуб</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Inter:wght@400;500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="games/tysyacha/tysyacha.css">
     <link rel="stylesheet" href="games/mafia/mafia.css">
@@ -941,30 +944,119 @@
 
     <!-- ===== МАФІЯ — ігровий екран ===== -->
     <div id="mafia-screen" class="hidden">
-        <div class="m-topbar">
-            <div class="m-title">🔫 Мафія</div>
-            <div id="m-role-badge" class="m-role-topbar-badge"></div>
-            <div id="m-phase-info"></div>
-            <button id="quit-btn-mafia" class="hidden m-quit-btn" onclick="confirmAbandonGame()">← Лоббі</button>
-        </div>
-        <div class="m-body">
-            <div class="m-sidebar">
-                <div class="m-sidebar-label">Гравці</div>
-                <div id="m-players"></div>
-                <div id="m-log" class="m-log"></div>
+        <!-- Topbar -->
+        <header class="m-topbar">
+            <div class="m-logo-wrap">
+                <div class="m-logo-icon mono red-glow">☠</div>
+                <div>
+                    <h1 class="m-title cinzel">МАФІЯ</h1>
+                    <p class="m-room-code mono" id="m-room-code">КІМНАТА</p>
+                </div>
             </div>
-            <div id="m-actions" class="m-actions"></div>
-        </div>
+            <div id="m-phase-info" class="m-phase-topbar"></div>
+            <button id="quit-btn-mafia" class="hidden m-quit-btn" onclick="confirmAbandonGame()">← Лоббі</button>
+        </header>
+
+        <!-- 3-column body -->
+        <main class="m-body tab-players">
+
+            <!-- LEFT: Chat -->
+            <div id="m-col-chat" class="m-col m-col-chat">
+                <div class="m-phase-block">
+                    <span class="mono m-phase-block-label" id="m-phase-block-label">ФАЗА НОЧІ</span>
+                    <span class="m-phase-block-name" id="m-phase-block-name">Ніч</span>
+                    <div class="m-phase-bar-track"><div class="m-phase-bar-fill" id="m-phase-bar"></div></div>
+                    <div class="m-phase-block-sub">
+                        <span id="m-phase-round">Раунд 1</span>
+                        <span class="mono m-phase-block-timer" id="m-phase-block-timer"></span>
+                    </div>
+                </div>
+                <div class="m-chat-area">
+                    <div class="m-chat-area-hdr">
+                        <span class="mono m-chat-area-title" id="m-chat-title">Загальний чат 💬</span>
+                        <span class="m-chat-live-dot"></span>
+                    </div>
+                    <div class="m-chat-msgs" id="m-chat-msgs"></div>
+                    <div class="m-chat-area-input" id="m-chat-area-input" style="display:none">
+                        <input id="m-chat-input" class="m-chat-inp" type="text"
+                            placeholder="Написати..." maxlength="200"
+                            onkeydown="if(event.key==='Enter')mSendActiveChat()">
+                        <button class="m-chat-send-btn" onclick="mSendActiveChat()">➔</button>
+                    </div>
+                </div>
+                <div class="m-quick-replies" id="m-quick-replies" style="display:none">
+                    <span class="m-quick-label mono">Швидкі фрази</span>
+                    <div class="m-quick-grid">
+                        <button class="m-quick-btn" onclick="mQuickReply('🔍 Підозрюю...')">🔍 Підозрюю</button>
+                        <button class="m-quick-btn" onclick="mQuickReply('🛡️ Я мирний!')">🛡️ Я мирний</button>
+                        <button class="m-quick-btn" onclick="mQuickReply('🗳️ Голосуємо за...')">🗳️ Голосуємо</button>
+                        <button class="m-quick-btn" onclick="mQuickReply('🤫 Він мовчить...')">🤫 Мовчить</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CENTER: Players grid + action panel + full-screen overlay -->
+            <div id="m-col-players" class="m-col m-col-players">
+                <div id="m-players-section">
+                    <div class="m-players-sec-hdr">
+                        <div>
+                            <h2 class="m-players-title cinzel">👥 Гравці за Столом</h2>
+                            <p class="m-action-prompt mono" id="m-action-prompt"></p>
+                        </div>
+                        <span class="m-alive-count mono" id="m-alive-count"></span>
+                    </div>
+                    <div class="m-players-grid" id="m-players-grid"></div>
+                </div>
+                <div class="m-action-panel" id="m-action-panel" style="display:none">
+                    <div class="m-action-panel-info">
+                        <span class="m-action-panel-icon" id="m-panel-icon">🩸</span>
+                        <div>
+                            <h3 class="m-action-panel-title mono" id="m-panel-title">ДІЯ</h3>
+                            <p class="m-action-panel-desc" id="m-panel-desc">Оберіть ціль</p>
+                        </div>
+                    </div>
+                    <div class="m-action-panel-btns">
+                        <button class="m-panel-skip mono" id="m-panel-skip" onclick="mPanelSkip()">ПРОПУСТИТИ</button>
+                        <button class="m-panel-confirm mono" id="m-panel-confirm" onclick="mPanelConfirm()">ПІДТВЕРДИТИ</button>
+                    </div>
+                </div>
+                <!-- Full-screen overlay for role_reveal / morning / resolving / gameover -->
+                <div class="m-actions" id="m-actions" style="display:none"></div>
+            </div>
+
+            <!-- RIGHT: Passport -->
+            <div id="m-col-passport" class="m-col m-col-passport">
+                <div class="m-passport-hdr">
+                    <div>
+                        <span class="mono m-passport-secret">КОНФІДЕНЦІЙНО</span>
+                        <h3 class="m-passport-title cinzel">Особиста Картка</h3>
+                    </div>
+                    <span class="m-passport-chip" id="m-passport-chip"></span>
+                </div>
+                <div class="m-passport-card" id="m-passport-card"></div>
+                <div class="m-passport-stats" id="m-passport-stats"></div>
+                <div class="m-log-section">
+                    <span class="m-log-section-title mono">Журнал подій 📋</span>
+                    <div class="m-log" id="m-log"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Mobile bottom tabs -->
         <nav class="m-bottom-tabs" aria-label="Навігація">
-            <button class="m-tab-btn active" data-tab="action" onclick="mSwitchTab('action')">
-                <span class="m-tab-icon">🎯</span><span class="m-tab-label">Дія</span>
+            <button class="m-tab-btn" data-tab="chat" onclick="mSwitchTab('chat')">
+                <span class="m-tab-icon">💬</span>
+                <span class="m-tab-label">Чат</span>
+                <span class="m-tab-badge" id="m-tab-badge-chat" style="display:none"></span>
             </button>
-            <button class="m-tab-btn" data-tab="players" onclick="mSwitchTab('players')">
-                <span class="m-tab-icon">👥</span><span class="m-tab-label">Гравці</span>
+            <button class="m-tab-btn active" data-tab="players" onclick="mSwitchTab('players')">
+                <span class="m-tab-icon">👥</span>
+                <span class="m-tab-label">Гравці</span>
                 <span class="m-tab-badge" id="m-tab-badge-players" style="display:none"></span>
             </button>
-            <button class="m-tab-btn" data-tab="log" onclick="mSwitchTab('log')">
-                <span class="m-tab-icon">📋</span><span class="m-tab-label">Лог</span>
+            <button class="m-tab-btn" data-tab="passport" onclick="mSwitchTab('passport')">
+                <span class="m-tab-icon">🪪</span>
+                <span class="m-tab-label">Картка</span>
                 <span class="m-tab-badge" id="m-tab-badge-log" style="display:none"></span>
             </button>
         </nav>

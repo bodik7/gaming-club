@@ -1,331 +1,904 @@
 /* ============================================
-   МАФІЯ — стилі (п.2: нічна фаза)
+   МАФІЯ — NOIR UI
    ============================================ */
+
+/* ── Utility font classes ── */
+.cinzel { font-family: 'Cinzel', serif; }
+.mono   { font-family: 'Share Tech Mono', monospace; }
+
 :root {
-    --m-bg:       #080a12;
-    --m-surface:  rgba(255,255,255,0.05);
-    --m-border:   rgba(255,255,255,0.09);
-    --m-text:     #e8edf5;
-    --m-sub:      rgba(232,237,245,0.45);
-    --m-red:      #c62828;
-    --m-gold:     #ffd700;
-    --m-blue:     #1565c0;
-    --m-green:    #2e7d32;
+    --m-bg:      #09090b;
+    --m-surface: #18181b;
+    --m-border:  #27272a;
+    --m-border-l:#3f3f46;
+    --m-muted:   #71717a;
+    --m-sub:     #a1a1aa;
+    --m-text:    #e4e4e7;
+    --m-bright:  #f4f4f5;
+    --m-red:     #dc2626;
+    --m-red-l:   #ef4444;
+    --m-red-d:   #b91c1c;
+    --m-green:   #10b981;
+    --m-blue:    #3b82f6;
+    --m-purple:  #a855f7;
+    --m-gold:    #ffd700;
 }
 
+/* ── Custom scrollbar ── */
+#mafia-screen ::-webkit-scrollbar { width: 4px; height: 4px; }
+#mafia-screen ::-webkit-scrollbar-track { background: var(--m-bg); }
+#mafia-screen ::-webkit-scrollbar-thumb { background: var(--m-border); border-radius: 2px; }
+#mafia-screen ::-webkit-scrollbar-thumb:hover { background: var(--m-red); }
+
+/* ── Animations ── */
+@keyframes pulse-red {
+    0%, 100% { filter: drop-shadow(0 0 4px rgba(220,38,38,0.8)); opacity: 1; }
+    50%       { filter: drop-shadow(0 0 1px rgba(220,38,38,0.2)); opacity: 0.6; }
+}
+.red-glow { animation: pulse-red 2.5s infinite ease-in-out; }
+
+.mafia-hazard {
+    background: repeating-linear-gradient(
+        -45deg, #b91c1c, #b91c1c 8px, #09090b 8px, #09090b 16px
+    );
+}
+
+@keyframes playerDie {
+    0%   { opacity: 1;   filter: none; }
+    100% { opacity: 0.3; filter: grayscale(1) brightness(0.5); }
+}
+@keyframes flavorIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: none; }
+}
+@keyframes roleRevealIn {
+    0%   { opacity: 0; transform: scale(0.75) translateY(20px); }
+    60%  { transform: scale(1.04) translateY(-3px); }
+    100% { opacity: 1; transform: none; }
+}
+@keyframes confetti-fall {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+}
+
+/* ── Screen ── */
 #mafia-screen {
     height: 100dvh;
-    background: radial-gradient(ellipse at 30% 20%, rgba(198,40,40,0.18) 0%, transparent 55%),
-                radial-gradient(ellipse at 80% 80%, rgba(21,101,192,0.12) 0%, transparent 50%),
-                var(--m-bg);
+    background-color: #060608;
+    background-image:
+        radial-gradient(circle at center, rgba(185,28,28,0.05) 0%, transparent 70%),
+        linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+    background-size: 100% 100%, 25px 25px, 25px 25px;
     color: var(--m-text);
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
     display: none;
     flex-direction: column;
     overflow: hidden;
-    transition: background 2.5s ease;
 }
 #mafia-screen.visible { display: flex; }
 
-/* ── Фазова атмосфера ── */
+/* Phase atmosphere */
 #mafia-screen.phase-night {
-    background: radial-gradient(ellipse at 50% 0%,   rgba(100,0,0,0.15) 0%, transparent 60%),
-                radial-gradient(ellipse at 20% 100%, rgba(0,0,20,0.9)   0%, transparent 60%),
-                #020308;
+    background-color: #06030a;
+    background-image:
+        radial-gradient(circle at 50% 0%, rgba(185,28,28,0.1) 0%, transparent 60%),
+        linear-gradient(rgba(255,255,255,0.008) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.008) 1px, transparent 1px);
 }
-#mafia-screen.phase-night .m-topbar  { border-bottom-color: rgba(160,0,0,0.5); }
-#mafia-screen.phase-night .m-sidebar { border-right-color: rgba(255,255,255,0.05); }
-
 #mafia-screen.phase-day {
-    background: radial-gradient(ellipse at 30% 10%, rgba(21,101,192,0.22) 0%, transparent 55%),
-                radial-gradient(ellipse at 80% 90%, rgba(46,125,50,0.08) 0%, transparent 50%),
-                #06091a;
-}
-#mafia-screen.phase-day .m-topbar { border-bottom-color: rgba(21,101,192,0.55); }
-
-/* ── Таймер з прогрес-баром ── */
-.m-timer-track {
-    width: 100%;
-    max-width: 220px;
-    height: 3px;
-    background: rgba(255,255,255,0.07);
-    border-radius: 2px;
-    overflow: hidden;
-    margin-top: -6px;
-}
-.m-timer-bar-fill {
-    height: 100%;
-    width: 100%;
-    border-radius: 2px;
-    background: #2e7d32;
-    transition: width 0.4s linear, background-color 0.8s;
-}
-.m-timer-bar-fill.warn   { background: #f9a825; }
-.m-timer-bar-fill.danger { background: #c62828; }
-
-/* ── Смерть гравця ── */
-@keyframes playerDie {
-    0%   { opacity: 1;    transform: scale(1);    filter: none; }
-    40%  { opacity: 0.6;  transform: scale(0.97); filter: grayscale(0.6) brightness(0.7); }
-    100% { opacity: 0.35; transform: scale(1);    filter: grayscale(1)   brightness(0.6); }
-}
-.m-player.dying { animation: playerDie 1.8s ease forwards; }
-
-/* ── Нічна атмосфера для мирних ── */
-.m-night-atmosphere {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-    width: 100%;
-    max-width: 440px;
-}
-.m-night-title {
-    font-size: 20px;
-    font-weight: 900;
-    color: rgba(232,237,245,0.4);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-}
-.m-night-timer-row {
-    font-size: 13px;
-    color: var(--m-sub);
-}
-.m-night-timer-row b {
-    font-size: 18px;
-    color: rgba(255,255,255,0.6);
-    font-variant-numeric: tabular-nums;
-}
-.m-night-timer-active {
-    font-size: 12px;
-    color: var(--m-sub);
-    text-align: center;
-    padding: 4px 0 10px;
-    width: 100%;
-}
-.m-night-timer-active b {
-    color: rgba(255,255,255,0.55);
-    font-variant-numeric: tabular-nums;
-}
-.m-night-flavor {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 260px;
-    overflow-y: auto;
-}
-.m-flavor-msg {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    font-size: 13px;
-    color: rgba(232,237,245,0.55);
-    line-height: 1.55;
-    padding: 8px 12px;
-    background: rgba(255,255,255,0.025);
-    border-left: 2px solid rgba(255,255,255,0.07);
-    border-radius: 0 6px 6px 0;
-    animation: flavorIn 0.7s ease both;
-}
-.m-flavor-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
-@keyframes flavorIn {
-    from { opacity: 0; transform: translateX(-8px); }
-    to   { opacity: 1; transform: translateX(0); }
+    background-color: #04060e;
+    background-image:
+        radial-gradient(circle at 30% 10%, rgba(29,78,216,0.07) 0%, transparent 60%),
+        linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
 }
 
-/* ── Топбар ── */
+/* ── Topbar ── */
 .m-topbar {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 10px 20px;
-    background: rgba(0,0,0,0.6);
-    border-bottom: 2px solid var(--m-red);
+    gap: 12px;
+    padding: 8px 16px;
+    background: rgba(9,9,11,0.92);
+    border-bottom: 1px solid var(--m-border);
+    backdrop-filter: blur(10px);
+    flex-shrink: 0;
+    z-index: 10;
+}
+.m-logo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.m-logo-icon {
+    width: 24px;
+    height: 24px;
+    background: rgba(220,38,38,0.08);
+    border: 1px solid rgba(220,38,38,0.25);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--m-red-l);
+    font-size: 12px;
+    font-family: 'Share Tech Mono', monospace;
     flex-shrink: 0;
 }
 .m-title {
-    font-size: 16px;
-    font-weight: 900;
-    color: var(--m-gold);
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-}
-#m-phase-info {
-    flex: 1;
     font-size: 13px;
-    color: var(--m-sub);
+    font-weight: 900;
+    color: var(--m-red);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-family: 'Cinzel', serif;
+    line-height: 1;
+}
+.m-room-code {
+    font-size: 8px;
+    color: var(--m-muted);
+    letter-spacing: 1px;
+    margin-top: 1px;
+}
+.m-phase-topbar {
+    flex: 1;
+    font-size: 11px;
+    color: var(--m-muted);
     text-align: center;
+    font-family: 'Share Tech Mono', monospace;
 }
 .m-quit-btn {
-    background: rgba(198,40,40,0.7);
-    color: white;
-    border: none;
+    background: rgba(220,38,38,0.1);
+    color: var(--m-red-l);
+    border: 1px solid rgba(220,38,38,0.25);
     border-radius: 6px;
-    padding: 4px 12px;
-    font-size: 12px;
+    padding: 4px 10px;
+    font-size: 11px;
     font-weight: 700;
     cursor: pointer;
     transition: background 0.2s;
-}
-.m-quit-btn:hover { background: var(--m-red); }
-
-/* ── Роль у топбарі ── */
-.m-role-topbar-badge {
-    font-size: 11px;
-    font-weight: 800;
-    padding: 2px 9px;
-    border-radius: 20px;
-    white-space: nowrap;
     flex-shrink: 0;
-    letter-spacing: 0.03em;
 }
+.m-quit-btn:hover { background: rgba(220,38,38,0.22); }
 
-/* ── Layout ── */
+/* ── Body: 3 columns ── */
 .m-body {
     flex: 1;
     display: flex;
-    gap: 0;
     overflow: hidden;
     min-height: 0;
 }
-
-/* ── Бокова панель: гравці + лог ── */
-.m-sidebar {
-    width: 220px;
-    flex-shrink: 0;
+.m-col {
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+}
+
+/* ═══════════════════════════════
+   LEFT COL: Chat
+   ═══════════════════════════════ */
+.m-col-chat {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--m-bg);
     border-right: 1px solid var(--m-border);
-    padding: 14px 12px;
-    gap: 8px;
+    padding: 14px;
+    gap: 10px;
     overflow-y: auto;
 }
-.m-sidebar-label {
-    font-size: 10px;
-    font-weight: 700;
+
+/* Phase block */
+.m-phase-block {
+    background: rgba(220,38,38,0.04);
+    border: 1px solid rgba(220,38,38,0.18);
+    border-radius: 10px;
+    padding: 10px 12px;
+    flex-shrink: 0;
+}
+.m-phase-block-label {
+    font-size: 9px;
+    color: var(--m-red-l);
     text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--m-sub);
-    margin-bottom: 4px;
+    letter-spacing: 2px;
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+}
+.m-phase-block-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--m-bright);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+    margin: 2px 0 8px;
+}
+.m-phase-bar-track {
+    width: 100%;
+    height: 2px;
+    background: var(--m-border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+.m-phase-bar-fill {
+    height: 100%;
+    width: 33%;
+    background: var(--m-red-d);
+    border-radius: 2px;
+    transition: width 0.8s ease;
+}
+.m-phase-block-sub {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.m-phase-block-sub span {
+    font-size: 9px;
+    color: var(--m-muted);
+    font-family: 'Share Tech Mono', monospace;
+}
+.m-phase-block-timer {
+    color: var(--m-red-l) !important;
+    font-weight: bold;
 }
 
-/* ── Гравці ── */
-.m-player {
+/* Chat area */
+.m-chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: rgba(24,24,27,0.3);
+    border: 1px solid var(--m-border);
+    border-radius: 10px;
+    overflow: hidden;
+    min-height: 120px;
+}
+.m-chat-area-hdr {
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 6px 8px;
-    border-radius: 8px;
-    background: var(--m-surface);
-    font-size: 13px;
-    margin-bottom: 3px;
-    transition: opacity 0.2s;
+    justify-content: space-between;
+    padding: 7px 11px 6px;
+    border-bottom: 1px solid var(--m-border);
+    flex-shrink: 0;
 }
-.m-player.dead { opacity: 0.35; text-decoration: line-through; }
-.m-player.me   { background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.25); }
-.m-player.faction-town  { background: rgba(21,101,192,0.12); border: 1px solid rgba(21,101,192,0.2); }
-.m-player.faction-mafia { background: rgba(198,40,40,0.12);  border: 1px solid rgba(198,40,40,0.2); }
-.m-player-icon { font-size: 16px; flex-shrink: 0; }
-.m-player-name { flex: 1; font-weight: 600; }
-.m-silenced    { font-size: 12px; }
-.m-dead-label  { font-size: 11px; }
-.m-role-badge  {
+.m-chat-area-title {
+    font-size: 9px;
+    color: var(--m-muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-family: 'Share Tech Mono', monospace;
+}
+.m-chat-live-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--m-red);
+    flex-shrink: 0;
+    animation: pulse-red 1.8s infinite;
+}
+.m-chat-msgs {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-height: 0;
+}
+.m-chat-msg {
+    font-size: 11px;
+    line-height: 1.45;
+    color: rgba(228,228,231,0.8);
+    padding: 4px 7px;
+    border-radius: 4px;
+}
+.m-chat-msg.system {
+    background: rgba(39,39,42,0.5);
+    border-left: 2px solid var(--m-border-l);
+    color: var(--m-muted);
+}
+.m-chat-msg.mafia {
+    background: rgba(185,28,28,0.07);
+    border-left: 2px solid var(--m-red-d);
+}
+.m-chat-msg.me { color: rgba(255,215,0,0.9); }
+.m-chat-msg.ghost { color: rgba(228,228,231,0.38); font-style: italic; }
+.m-chat-msg-sender {
+    font-weight: 800;
+    font-size: 8px;
+    display: block;
+    margin-bottom: 1px;
+    font-family: 'Share Tech Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--m-sub);
+}
+.m-chat-msg.mafia .m-chat-msg-sender { color: var(--m-red-l); }
+.m-chat-msg.me .m-chat-msg-sender    { color: var(--m-gold); }
+.m-chat-msg.ghost .m-chat-msg-sender { color: rgba(228,228,231,0.3); }
+.m-chat-msg-text { }
+.m-chat-round-sep {
+    text-align: center;
+    font-size: 9px;
+    color: rgba(255,255,255,0.18);
+    letter-spacing: 2px;
+    padding: 4px 0;
+    font-style: italic;
+    font-family: 'Share Tech Mono', monospace;
+}
+.m-chat-area-input {
+    display: flex;
+    gap: 4px;
+    padding: 6px 8px;
+    border-top: 1px solid var(--m-border);
+    flex-shrink: 0;
+}
+.m-chat-inp {
+    flex: 1;
+    background: var(--m-bg);
+    border: 1px solid var(--m-border);
+    border-radius: 8px;
+    color: var(--m-text);
+    font-size: 11px;
+    padding: 5px 10px;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+.m-chat-inp:focus { border-color: var(--m-red); }
+.m-chat-inp::placeholder { color: var(--m-muted); }
+.m-chat-send-btn {
+    background: none;
+    border: none;
+    color: var(--m-muted);
+    font-size: 14px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+.m-chat-send-btn:hover { color: var(--m-red-l); }
+
+/* Quick replies */
+.m-quick-replies {
+    flex-shrink: 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--m-border);
+}
+.m-quick-label {
+    font-size: 8px;
+    color: var(--m-muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 6px;
+    font-family: 'Share Tech Mono', monospace;
+}
+.m-quick-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+}
+.m-quick-btn {
+    padding: 5px 7px;
+    background: var(--m-surface);
+    border: 1px solid var(--m-border);
+    border-radius: 6px;
+    color: var(--m-sub);
+    font-size: 9px;
+    font-family: 'Share Tech Mono', monospace;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+}
+.m-quick-btn:hover { background: var(--m-border); color: var(--m-text); }
+
+/* Flavor messages in chat */
+.m-flavor-msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
     font-size: 10px;
-    padding: 1px 6px;
-    border-radius: 10px;
-    color: white;
-    font-weight: 700;
-    white-space: nowrap;
+    color: rgba(228,228,231,0.42);
+    line-height: 1.5;
+    padding: 5px 7px;
+    background: rgba(255,255,255,0.015);
+    border-left: 1px solid rgba(255,255,255,0.05);
+    border-radius: 0 4px 4px 0;
+    animation: flavorIn 0.7s ease both;
+}
+.m-flavor-icon { font-size: 12px; flex-shrink: 0; }
+
+/* ═══════════════════════════════
+   CENTER COL: Players
+   ═══════════════════════════════ */
+.m-col-players {
+    flex: 1;
+    border-right: 1px solid var(--m-border);
+    overflow: hidden;
+    position: relative;
 }
 
-/* ── Лог ── */
+#m-players-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 14px 14px 0;
+    height: 100%;
+}
+.m-players-sec-hdr {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--m-border);
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+.m-players-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--m-bright);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 0;
+    font-family: 'Cinzel', serif;
+}
+.m-action-prompt {
+    font-size: 9px;
+    color: var(--m-muted);
+    margin: 2px 0 0;
+    font-family: 'Share Tech Mono', monospace;
+}
+.m-alive-count {
+    font-size: 9px;
+    color: var(--m-muted);
+    font-family: 'Share Tech Mono', monospace;
+    white-space: nowrap;
+    padding-top: 2px;
+}
+
+/* Player grid */
+.m-players-grid {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 10px;
+    align-content: start;
+    padding-bottom: 10px;
+}
+
+/* Player card */
+.m-player-card {
+    background: rgba(9,9,11,0.82);
+    border: 1px solid var(--m-border);
+    border-radius: 12px;
+    padding: 12px;
+    position: relative;
+    transition: border-color 0.2s, opacity 0.3s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 95px;
+}
+.m-player-card.dead    { opacity: 0.38; filter: grayscale(0.6); }
+.m-player-card.dying   { animation: playerDie 1.8s ease forwards; }
+.m-player-card.me      { border-color: var(--m-red); box-shadow: 0 0 14px rgba(220,38,38,0.08); }
+.m-player-card.faction-town  { border-color: rgba(59,130,246,0.28); }
+.m-player-card.faction-mafia { border-color: rgba(220,38,38,0.35); background: rgba(185,28,28,0.03); }
+
+.m-player-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    padding-right: 36px; /* space for action btn */
+}
+.m-player-card-name-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+.m-player-alive-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.m-player-alive-dot.alive { background: var(--m-green); }
+.m-player-alive-dot.dead  { background: #3f3f46; }
+.m-player-card-name {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--m-bright);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.m-player-card.me .m-player-card-name { color: var(--m-red-l); }
+
+/* State badges */
+.m-player-state-badge {
+    font-size: 8px;
+    font-weight: 800;
+    font-family: 'Share Tech Mono', monospace;
+    padding: 2px 6px;
+    border-radius: 99px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.m-player-state-badge.dead-badge {
+    background: rgba(220,38,38,0.1);
+    border: 1px solid rgba(220,38,38,0.28);
+    color: var(--m-red-l);
+}
+.m-player-state-badge.silenced-badge {
+    background: rgba(168,85,247,0.1);
+    border: 1px solid rgba(168,85,247,0.28);
+    color: #c084fc;
+}
+.m-player-state-badge.vote-badge {
+    background: rgba(220,38,38,0.1);
+    border: 1px solid rgba(220,38,38,0.28);
+    color: var(--m-red-l);
+}
+
+/* Card action button */
+.m-card-action-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    border: 1px solid rgba(220,38,38,0.28);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--m-surface);
+    color: var(--m-red-l);
+}
+.m-card-action-btn:hover       { background: var(--m-red); color: white; transform: scale(1.1); border-color: var(--m-red); }
+.m-card-action-btn.selected    { background: var(--m-red); color: white; border-color: var(--m-red); animation: pulse-red 1.5s infinite; }
+.m-card-action-btn.vote-btn    { color: var(--m-sub); border-color: var(--m-border); background: var(--m-surface); }
+.m-card-action-btn.vote-btn:hover    { background: var(--m-red); color: white; border-color: var(--m-red); }
+.m-card-action-btn.vote-btn.selected { background: var(--m-red); color: white; border-color: var(--m-red); }
+
+/* Card bottom strip */
+.m-player-card-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 7px;
+    border-top: 1px solid rgba(39,39,42,0.6);
+    margin-top: 4px;
+}
+.m-player-card-status {
+    font-size: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--m-muted);
+    text-transform: uppercase;
+}
+.m-player-card-role {
+    font-size: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--m-muted);
+    text-transform: uppercase;
+    text-align: right;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.m-player-card-role.revealed { color: var(--m-red-l); }
+
+/* Action panel */
+.m-action-panel {
+    flex-shrink: 0;
+    padding: 10px 14px;
+    background: rgba(185,28,28,0.04);
+    border-top: 1px solid rgba(220,38,38,0.14);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.m-action-panel-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+.m-action-panel-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(220,38,38,0.08);
+    border: 1px solid rgba(220,38,38,0.22);
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+.m-action-panel-title {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--m-red-l);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-family: 'Share Tech Mono', monospace;
+    margin: 0 0 2px;
+}
+.m-action-panel-desc {
+    font-size: 10px;
+    color: var(--m-sub);
+    margin: 0;
+    line-height: 1.35;
+}
+.m-action-panel-btns {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+.m-panel-skip {
+    padding: 6px 10px;
+    background: var(--m-surface);
+    border: 1px solid var(--m-border);
+    border-radius: 6px;
+    color: var(--m-text);
+    font-size: 8px;
+    font-weight: 700;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.m-panel-skip:hover { background: var(--m-border); }
+.m-panel-confirm {
+    padding: 6px 10px;
+    background: var(--m-red-d);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 8px;
+    font-weight: 700;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.m-panel-confirm:hover { background: var(--m-red); }
+
+/* Full-screen overlay */
+.m-actions {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    background: #060608;
+    z-index: 5;
+}
+
+/* ═══════════════════════════════
+   RIGHT COL: Passport
+   ═══════════════════════════════ */
+.m-col-passport {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--m-bg);
+    overflow-y: auto;
+    padding: 14px;
+    gap: 10px;
+}
+.m-passport-hdr {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--m-border);
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+.m-passport-secret {
+    font-size: 8px;
+    color: var(--m-red-l);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+}
+.m-passport-title {
+    font-size: 12px;
+    font-weight: 900;
+    color: var(--m-bright);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 2px 0 0;
+    font-family: 'Cinzel', serif;
+}
+.m-passport-chip {
+    font-size: 8px;
+    font-weight: 700;
+    font-family: 'Share Tech Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 99px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.5px;
+}
+.m-passport-card {
+    background: rgba(24,24,27,0.4);
+    border: 1px solid var(--m-border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+}
+.m-passport-role-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.m-passport-role-emoji { font-size: 18px; }
+.m-passport-role-name {
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: 'Cinzel', serif;
+}
+.m-passport-role-desc {
+    font-size: 10px;
+    color: var(--m-sub);
+    line-height: 1.6;
+    margin: 0;
+}
+.m-passport-ability {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+}
+.m-passport-ability-title {
+    font-weight: 700;
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: block;
+    margin-bottom: 3px;
+    font-family: 'Share Tech Mono', monospace;
+}
+.m-passport-ability-text {
+    font-size: 10px;
+    color: var(--m-sub);
+    line-height: 1.5;
+}
+.m-passport-stats {
+    padding: 0 0 10px;
+    border-top: 1px solid var(--m-border);
+    display: flex;
+    flex-direction: column;
+    padding-top: 8px;
+    margin-bottom: 10px;
+}
+.m-passport-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 9px;
+    font-family: 'Share Tech Mono', monospace;
+    border-bottom: 1px solid rgba(39,39,42,0.4);
+}
+.m-passport-stat-row:last-child { border-bottom: none; }
+.m-passport-stat-label { color: var(--m-muted); text-transform: uppercase; }
+.m-passport-stat-value { font-weight: 700; }
+
+/* Log section */
+.m-log-section {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 80px;
+}
+.m-log-section-title {
+    font-size: 8px;
+    color: var(--m-muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 6px;
+    font-family: 'Share Tech Mono', monospace;
+}
 .m-log {
     flex: 1;
     overflow-y: auto;
-    margin-top: 8px;
-    border-top: 1px solid var(--m-border);
-    padding-top: 8px;
-}
-.m-log-entry {
-    font-size: 11px;
-    color: var(--m-sub);
-    padding: 3px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    line-height: 1.4;
-    transition: opacity 0.2s;
-}
-.m-log-newest  { color: var(--m-text); font-weight: 600; }
-.m-log-success { color: #a5d6a7; }
-.m-log-error   { color: #ef9a9a; }
-.m-log-warn    { color: #ffe082; }
-.m-log-empty { font-size: 11px; color: rgba(255,255,255,0.2); font-style: italic; }
-
-/* ── Панель дій ── */
-.m-actions {
-    flex: 1;
-    padding: 24px;
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    gap: 2px;
 }
-
-/* ── Розкриття ролі ── */
-@keyframes roleRevealIn {
-    0%   { opacity: 0; transform: scale(0.7) translateY(20px); }
-    60%  { transform: scale(1.04) translateY(-3px); }
-    100% { opacity: 1; transform: scale(1) translateY(0); }
+.m-log-entry {
+    font-size: 10px;
+    color: var(--m-muted);
+    line-height: 1.4;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(39,39,42,0.35);
 }
+.m-log-newest  { color: var(--m-text); }
+.m-log-success { color: #6ee7b7; }
+.m-log-error   { color: #fca5a5; }
+.m-log-warn    { color: #fde68a; }
+.m-log-empty   { font-size: 10px; color: rgba(255,255,255,0.18); font-style: italic; }
 
+/* ═══════════════════════════════
+   BOTTOM TABS (mobile only)
+   ═══════════════════════════════ */
+.m-bottom-tabs { display: none; }
+
+/* ═══════════════════════════════
+   FULL-SCREEN PHASE UIs
+   (rendered inside .m-actions)
+   ═══════════════════════════════ */
+
+/* Role reveal */
 .m-role-reveal {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 14px;
-    max-width: 400px;
+    max-width: 380px;
     width: 100%;
     text-align: center;
-    border-radius: 18px;
-    padding: 28px 28px 22px;
+    border-radius: 16px;
+    padding: 28px 24px 22px;
     animation: roleRevealIn 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
+    position: relative;
+    overflow: hidden;
+    margin: 0 auto;
 }
-.m-role-reveal--town {
-    background: radial-gradient(ellipse at 50% 0%, rgba(21,101,192,0.28) 0%, rgba(0,0,0,0) 70%);
-    border: 1.5px solid rgba(21,101,192,0.35);
+.m-role-reveal::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: repeating-linear-gradient(-45deg, #b91c1c, #b91c1c 8px, #09090b 8px, #09090b 16px);
 }
-.m-role-reveal--mafia {
-    background: radial-gradient(ellipse at 50% 0%, rgba(198,40,40,0.28) 0%, rgba(0,0,0,0) 70%);
-    border: 1.5px solid rgba(198,40,40,0.35);
-}
+.m-role-reveal--town  { background: radial-gradient(ellipse at 50% 0%, rgba(29,78,216,0.12) 0%, transparent 70%); border: 1.5px solid rgba(59,130,246,0.28); }
+.m-role-reveal--mafia { background: radial-gradient(ellipse at 50% 0%, rgba(185,28,28,0.18) 0%, transparent 70%); border: 1.5px solid rgba(220,38,38,0.28); }
+.m-role-reveal--maniac{ background: radial-gradient(ellipse at 50% 0%, rgba(109,40,217,0.12) 0%, transparent 70%); border: 1.5px solid rgba(168,85,247,0.28); }
 .m-role-reveal-faction {
-    font-size: 12px;
+    font-size: 9px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: var(--m-sub);
+    letter-spacing: 2.5px;
+    color: var(--m-muted);
+    font-family: 'Share Tech Mono', monospace;
 }
-.m-role-reveal-icon { font-size: 72px; line-height: 1; }
-.m-role-reveal-name {
-    font-size: 28px;
-    font-weight: 900;
-    color: white;
-    letter-spacing: 0.5px;
-}
-.m-role-reveal-desc {
-    font-size: 14px;
-    color: var(--m-sub);
-    line-height: 1.6;
-    max-width: 340px;
-}
+.m-role-reveal-icon { font-size: 64px; line-height: 1; }
+.m-role-reveal-name { font-size: 22px; font-weight: 900; color: white; font-family: 'Cinzel', serif; text-transform: uppercase; }
+.m-role-reveal-desc { font-size: 12px; color: var(--m-sub); line-height: 1.65; }
 .m-role-allies {
-    font-size: 13px;
-    color: #ef9a9a;
-    background: rgba(198,40,40,0.15);
-    border: 1px solid rgba(198,40,40,0.3);
+    font-size: 12px;
+    color: #fca5a5;
+    background: rgba(185,28,28,0.08);
+    border: 1px solid rgba(220,38,38,0.22);
     border-radius: 8px;
-    padding: 8px 16px;
+    padding: 8px 14px;
     width: 100%;
 }
 .m-reveal-footer {
@@ -333,143 +906,79 @@
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    margin-top: 4px;
     width: 100%;
 }
-.m-reveal-auto {
-    font-size: 12px;
-    color: var(--m-sub);
-}
+.m-reveal-auto { font-size: 11px; color: var(--m-muted); }
 .m-reveal-auto b { color: var(--m-text); }
 .m-reveal-ready-count {
-    font-size: 12px;
-    color: var(--m-sub);
-    background: var(--m-surface);
+    font-size: 11px;
+    color: var(--m-muted);
+    background: rgba(24,24,27,0.5);
     border: 1px solid var(--m-border);
     border-radius: 20px;
     padding: 3px 14px;
 }
-.m-reveal-ready-count b { color: var(--m-text); }
-#m-ready-btn:disabled {
-    opacity: 0.55;
-    cursor: default;
-    filter: none;
-    transform: none;
-}
+#m-ready-btn:disabled { opacity: 0.5; cursor: default; filter: none; transform: none; }
 
-/* ── Нічні дії ── */
-.m-night-action {
-    width: 100%;
-    max-width: 420px;
-    margin-bottom: 20px;
-}
-.m-night-label {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--m-sub);
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    margin-bottom: 10px;
-}
-.m-target-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-.m-target-btn {
-    padding: 9px 16px;
-    background: var(--m-surface);
-    border: 1.5px solid var(--m-border);
-    border-radius: 8px;
-    color: var(--m-text);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
-}
-.m-target-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
-.m-target-btn.selected {
-    border-color: var(--m-gold);
-    background: rgba(255,215,0,0.18);
-    color: var(--m-gold);
-    font-weight: 800;
-    box-shadow: 0 0 10px rgba(255,215,0,0.25);
-}
-.m-night-confirmed {
-    margin-top: 8px;
-    padding: 7px 12px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #a8e6a3;
-    background: rgba(60,140,60,0.15);
-    border: 1px solid rgba(60,140,60,0.35);
-}
-.m-night-confirmed b { color: white; }
-
-/* ── Результат ранку ── */
-.m-morning { text-align: center; }
-.m-morning-title { font-size: 22px; font-weight: 900; color: white; margin-bottom: 10px; }
-.m-morning-sub { font-size: 14px; color: var(--m-sub); }
+/* Morning / resolving */
+.m-morning { text-align: center; max-width: 380px; width: 100%; }
+.m-morning-title { font-size: 20px; font-weight: 900; color: white; margin-bottom: 10px; }
+.m-morning-sub   { font-size: 13px; color: var(--m-sub); }
 .m-morning-victim {
-    font-size: 15px;
-    color: #ef9a9a;
-    padding: 6px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    font-size: 14px;
+    color: #fca5a5;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .m-check-result {
-    margin-top: 14px;
-    padding: 10px 18px;
+    margin-top: 12px;
+    padding: 10px 16px;
     border-radius: 10px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
 }
-.m-check-result.bad  { background: rgba(198,40,40,0.15); border: 1px solid rgba(198,40,40,0.35); }
-.m-check-result.good { background: rgba(46,125,50,0.15);  border: 1px solid rgba(46,125,50,0.35); }
+.m-check-result.bad  { background: rgba(185,28,28,0.1);  border: 1px solid rgba(220,38,38,0.28); }
+.m-check-result.good { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.28); }
 
-/* ── Кінець гри ── */
-.m-gameover { text-align: center; }
-.m-gameover-title { font-size: 28px; font-weight: 900; color: var(--m-gold); margin-bottom: 20px; }
-
+/* Gameover */
 .m-gameover-ui {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 14px;
     width: 100%;
-    max-width: 540px;
-    padding: 10px 0;
+    max-width: 480px;
+    padding: 0 0 10px;
 }
-
 .m-gameover-banner {
     width: 100%;
-    border-radius: 14px;
-    padding: 22px 28px;
+    border-radius: 12px;
+    padding: 18px;
     text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
+    position: relative;
+    overflow: hidden;
 }
-.m-gameover-banner.town {
-    background: linear-gradient(135deg, rgba(21,101,192,0.35) 0%, rgba(46,125,50,0.2) 100%);
-    border: 1.5px solid rgba(21,101,192,0.5);
+.m-gameover-banner::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: repeating-linear-gradient(-45deg, #b91c1c, #b91c1c 8px, #09090b 8px, #09090b 16px);
 }
-.m-gameover-banner.mafia {
-    background: linear-gradient(135deg, rgba(198,40,40,0.35) 0%, rgba(136,14,79,0.2) 100%);
-    border: 1.5px solid rgba(198,40,40,0.5);
-}
-.m-gameover-banner.maniac {
-    background: linear-gradient(135deg, rgba(106,27,154,0.35) 0%, rgba(74,20,140,0.2) 100%);
-    border: 1.5px solid rgba(106,27,154,0.5);
-}
-.m-gameover-big-icon { font-size: 56px; line-height: 1; }
-.m-gameover-headline { font-size: 26px; font-weight: 900; color: white; letter-spacing: 0.5px; }
-.m-gameover-sub { font-size: 14px; color: var(--m-sub); }
+.m-gameover-banner.town   { background: rgba(29,78,216,0.1);  border: 1.5px solid rgba(59,130,246,0.28); }
+.m-gameover-banner.mafia  { background: rgba(185,28,28,0.1);  border: 1.5px solid rgba(220,38,38,0.28); }
+.m-gameover-banner.maniac { background: rgba(109,40,217,0.1); border: 1.5px solid rgba(168,85,247,0.28); }
+.m-gameover-big-icon    { font-size: 44px; }
+.m-gameover-headline    { font-size: 20px; font-weight: 900; color: white; font-family: 'Cinzel', serif; text-transform: uppercase; }
+.m-gameover-sub         { font-size: 12px; color: var(--m-sub); }
 
 .m-result-list {
     width: 100%;
-    background: var(--m-surface);
+    background: rgba(24,24,27,0.4);
     border: 1px solid var(--m-border);
     border-radius: 10px;
     overflow: hidden;
@@ -477,377 +986,268 @@
 .m-result-header {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    padding: 8px 14px;
-    font-size: 11px;
+    padding: 6px 12px;
+    font-size: 8px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: var(--m-sub);
+    letter-spacing: 1px;
+    color: var(--m-muted);
     border-bottom: 1px solid var(--m-border);
     background: rgba(0,0,0,0.3);
+    font-family: 'Share Tech Mono', monospace;
 }
 .m-result-row {
     display: grid;
-    grid-template-columns: 28px 1fr 1fr 1fr;
+    grid-template-columns: 22px 1fr 1fr 1fr;
     align-items: center;
-    gap: 6px;
-    padding: 9px 14px;
-    font-size: 13px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    transition: background 0.15s;
+    gap: 4px;
+    padding: 7px 12px;
+    font-size: 11px;
+    border-bottom: 1px solid rgba(39,39,42,0.35);
 }
 .m-result-row:last-child { border-bottom: none; }
-.m-result-row.winner { background: rgba(255,215,0,0.06); }
-.m-result-row.loser  { background: transparent; }
-.m-result-row.dead   { opacity: 0.5; }
-.m-result-row.me     { border-left: 2px solid var(--m-gold); }
-.m-result-icon  { font-size: 16px; }
-.m-result-name  { font-weight: 600; }
-.m-result-role  { font-size: 12px; }
-.m-result-status { font-size: 12px; color: var(--m-sub); }
-
+.m-result-row.winner { background: rgba(255,215,0,0.03); }
+.m-result-row.dead   { opacity: 0.42; }
+.m-result-row.me     { border-left: 2px solid var(--m-red); }
+.m-result-icon   { font-size: 13px; }
+.m-result-name   { font-weight: 600; font-size: 11px; }
+.m-result-role   { font-size: 10px; }
+.m-result-status { font-size: 10px; color: var(--m-muted); }
 .m-gameover-stats {
-    font-size: 13px;
-    color: var(--m-sub);
-    background: var(--m-surface);
+    font-size: 11px;
+    color: var(--m-muted);
+    background: rgba(24,24,27,0.4);
     border: 1px solid var(--m-border);
     border-radius: 20px;
-    padding: 6px 20px;
+    padding: 5px 16px;
 }
 .m-gameover-stats b { color: var(--m-text); }
 
-.m-btn-wide { width: 100%; max-width: 320px; padding: 13px 0; font-size: 15px; }
-
-@keyframes confetti-fall {
-    0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
-    100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+/* Timer track (gameover/day) */
+.m-timer-track {
+    width: 100%;
+    max-width: 200px;
+    height: 2px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    overflow: hidden;
 }
-
-/* ── Очікування ── */
-.m-wait {
-    font-size: 14px;
-    color: var(--m-sub);
-    font-style: italic;
-    text-align: center;
+.m-timer-bar-fill {
+    height: 100%;
+    width: 100%;
+    border-radius: 2px;
+    background: var(--m-green);
+    transition: width 0.4s linear;
 }
+.m-timer-bar-fill.warn   { background: #f59e0b; }
+.m-timer-bar-fill.danger { background: var(--m-red); }
 
-/* ── Кнопки ── */
-.m-btn {
-    padding: 11px 22px;
-    border: none;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.15s;
-    font-family: 'Segoe UI', sans-serif;
-}
-.m-btn.primary { background: linear-gradient(135deg,#ffd700,#ffaa00); color: #1a0a00; }
-.m-btn.primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
-
-/* ── Денна фаза ── */
+/* Day / vote UI (full-screen take in m-actions) */
 .m-day-ui, .m-vote-ui {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 14px;
     width: 100%;
-    max-width: 500px;
+    max-width: 420px;
 }
 .m-day-title {
-    font-size: 24px;
+    font-size: 18px;
     font-weight: 900;
-    color: #ffd700;
-    letter-spacing: 0.5px;
+    color: var(--m-gold);
+    font-family: 'Cinzel', serif;
+    text-transform: uppercase;
 }
 .m-day-timer, #m-vote-timer {
-    font-size: 48px;
+    font-size: 40px;
     font-weight: 900;
     color: white;
     font-variant-numeric: tabular-nums;
-    text-shadow: 0 2px 12px rgba(255,215,0,0.3);
 }
-.m-day-hint {
-    font-size: 13px;
-    color: var(--m-sub);
-    text-align: center;
-    line-height: 1.6;
-}
-.m-day-players {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-}
+.m-day-hint { font-size: 12px; color: var(--m-sub); text-align: center; }
+.m-day-players { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
 .m-day-player {
-    padding: 6px 14px;
+    padding: 5px 12px;
     background: var(--m-surface);
     border: 1px solid var(--m-border);
     border-radius: 20px;
-    font-size: 13px;
+    font-size: 12px;
 }
-.m-day-player.me      { border-color: rgba(255,215,0,0.4); color: #ffd700; }
-.m-day-player.silenced { opacity: 0.4; text-decoration: line-through; }
-
-/* ── Денний чат ── */
+.m-day-player.me       { border-color: rgba(255,215,0,0.35); color: var(--m-gold); }
+.m-day-player.silenced { opacity: 0.35; text-decoration: line-through; }
 .m-day-chat {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-top: 4px;
+    gap: 5px;
 }
 .m-day-chat-log {
     width: 100%;
-    min-height: 120px;
-    max-height: 200px;
-    overflow-y: auto;
-    background: rgba(0,0,0,0.35);
-    border: 1px solid var(--m-border);
-    border-radius: 10px;
-    padding: 8px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-.m-day-chat-msg {
-    font-size: 13px;
-    color: rgba(255,255,255,0.8);
-    line-height: 1.45;
-    padding: 2px 0;
-}
-.m-day-chat-msg.me { color: #ffd700; }
-.m-day-chat-name {
-    font-weight: 700;
-    color: var(--m-text);
-}
-.m-day-chat-msg.me .m-day-chat-name { color: var(--m-gold); }
-.m-day-chat-muted {
-    font-size: 12px;
-    color: var(--m-sub);
-    text-align: center;
-    padding: 6px 0;
-    font-style: italic;
-}
-
-/* Роздільник раундів у чаті */
-.m-chat-round-sep {
-    text-align: center;
-    font-size: 10px;
-    color: rgba(255,255,255,0.2);
-    letter-spacing: 2px;
-    padding: 6px 0 4px;
-    font-style: italic;
-    font-family: sans-serif;
-}
-
-/* Кнопки голосування — більші на мобайлі */
-@media (max-width: 500px) {
-    .m-candidate-btn { min-height: 48px; font-size: 15px; }
-    .m-vote-confirm  { min-height: 48px; font-size: 15px; }
-    .m-day-ui, .m-vote-ui { gap: 10px; }
-}
-
-/* ── Чат мертвих ── */
-.m-dead-chat-wrap {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: 16px;
-    padding-top: 14px;
-    border-top: 1px dashed rgba(255,255,255,0.1);
-}
-.m-dead-chat-title {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: rgba(255,255,255,0.3);
-    text-align: center;
-}
-.m-dead-chat-log {
-    width: 100%;
     min-height: 80px;
-    max-height: 140px;
+    max-height: 160px;
     overflow-y: auto;
-    background: rgba(0,0,0,0.25);
-    border: 1px dashed rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--m-border);
     border-radius: 8px;
-    padding: 6px 10px;
+    padding: 7px 10px;
     display: flex;
     flex-direction: column;
     gap: 3px;
 }
-.m-dead-chat-msg {
-    font-size: 12px;
-    color: rgba(255,255,255,0.45);
-    font-style: italic;
-    line-height: 1.4;
-}
-.m-dead-input  { border-color: rgba(255,255,255,0.1) !important; }
-.m-dead-send   { background: rgba(255,255,255,0.12) !important; }
-
-/* ── Голосування ── */
-.m-vote-count {
-    font-size: 13px;
-    color: var(--m-sub);
-    background: var(--m-surface);
-    padding: 4px 14px;
-    border-radius: 20px;
-}
-.m-vote-targets {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-}
+.m-day-chat-msg { font-size: 12px; color: rgba(255,255,255,0.78); line-height: 1.4; }
+.m-day-chat-msg.me { color: var(--m-gold); }
+.m-day-chat-name { font-weight: 700; color: var(--m-text); }
+.m-day-chat-msg.me .m-day-chat-name { color: var(--m-gold); }
+.m-day-chat-muted { font-size: 11px; color: var(--m-sub); text-align: center; font-style: italic; }
+.m-vote-count { font-size: 12px; color: var(--m-sub); background: rgba(24,24,27,0.4); padding: 3px 12px; border-radius: 20px; }
+.m-vote-targets { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .m-vote-target-btn {
-    padding: 12px 22px;
-    background: rgba(198,40,40,0.12);
-    border: 1.5px solid rgba(198,40,40,0.35);
+    padding: 10px 18px;
+    background: rgba(185,28,28,0.07);
+    border: 1.5px solid rgba(220,38,38,0.22);
     border-radius: 10px;
-    color: #ef9a9a;
-    font-size: 14px;
+    color: #fca5a5;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.15s;
 }
-.m-vote-target-btn:hover {
-    background: rgba(198,40,40,0.25);
-    border-color: var(--m-red);
-    color: white;
-    transform: translateY(-2px);
-}
+.m-vote-target-btn:hover { background: rgba(185,28,28,0.18); color: white; }
 .m-vote-skip-btn {
-    padding: 12px 22px;
-    background: var(--m-surface);
+    padding: 10px 18px;
+    background: rgba(24,24,27,0.4);
     border: 1.5px solid var(--m-border);
     border-radius: 10px;
     color: var(--m-sub);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.15s;
 }
-.m-vote-skip-btn:hover { background: rgba(255,255,255,0.1); color: white; }
-.m-vote-log {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    justify-content: center;
-    padding: 6px 0;
-}
+.m-vote-skip-btn:hover { background: rgba(255,255,255,0.07); color: white; }
+.m-vote-log { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; padding: 3px 0; }
 .m-vote-log-item {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--m-sub);
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(39,39,42,0.5);
     border-radius: 20px;
-    padding: 2px 10px;
+    padding: 2px 8px;
 }
 .m-vote-badge {
     display: inline-block;
-    background: rgba(198,40,40,0.6);
+    background: rgba(220,38,38,0.6);
     color: white;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     border-radius: 10px;
-    padding: 0 5px;
-    margin-left: 4px;
+    padding: 0 4px;
+    margin-left: 3px;
     vertical-align: middle;
 }
 .m-voted-info {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 14px;
-    color: #a5d6a7;
-    background: rgba(46,125,50,0.15);
-    border: 1px solid rgba(46,125,50,0.3);
+    gap: 8px;
+    font-size: 13px;
+    color: #6ee7b7;
+    background: rgba(16,185,129,0.07);
+    border: 1px solid rgba(16,185,129,0.22);
     border-radius: 10px;
-    padding: 10px 18px;
+    padding: 9px 14px;
 }
 .m-btn-small {
     background: none;
     border: 1px solid var(--m-border);
     color: var(--m-sub);
     border-radius: 6px;
-    padding: 3px 10px;
-    font-size: 12px;
+    padding: 3px 8px;
+    font-size: 11px;
     cursor: pointer;
     transition: all 0.15s;
 }
 .m-btn-small:hover { border-color: rgba(255,255,255,0.3); color: white; }
 
-/* ── Приватний чат мафії ── */
-.m-chat-box {
-    width: 100%;
-    max-height: 110px;
-    overflow-y: auto;
-    background: rgba(0,0,0,0.4);
-    border: 1px solid rgba(198,40,40,0.25);
-    border-radius: 8px;
-    padding: 6px 10px;
+/* Night atmosphere (citizen) */
+.m-night-atmosphere {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
+    text-align: center;
 }
-.m-chat-msg {
-    font-size: 12px;
-    color: rgba(255,255,255,0.75);
-    line-height: 1.4;
+.m-night-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: rgba(232,237,245,0.3);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-family: 'Cinzel', serif;
 }
-.m-chat-input-row {
-    display: flex;
-    gap: 6px;
-    width: 100%;
-}
-.m-chat-input {
-    flex: 1;
-    padding: 6px 10px;
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(198,40,40,0.3);
-    border-radius: 6px;
-    color: white;
-    font-size: 12px;
-    outline: none;
-}
-.m-chat-input:focus { border-color: var(--m-red); }
-.m-chat-send {
-    background: var(--m-red);
-    color: white;
+.m-night-timer-row { font-size: 12px; color: var(--m-sub); }
+.m-night-timer-row b { font-size: 15px; color: rgba(255,255,255,0.5); font-variant-numeric: tabular-nums; }
+.m-night-timer-active { font-size: 11px; color: var(--m-muted); text-align: center; padding: 4px 0 10px; }
+.m-night-timer-active b { color: rgba(255,255,255,0.5); font-variant-numeric: tabular-nums; }
+
+/* Dead UI */
+.m-dead-chat-wrap { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+.m-dead-chat-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.22); text-align: center; font-family: 'Share Tech Mono', monospace; }
+
+/* Wait */
+.m-wait { font-size: 13px; color: var(--m-sub); font-style: italic; text-align: center; margin-top: 8px; }
+
+/* Generic buttons */
+.m-btn {
+    padding: 10px 20px;
     border: none;
-    border-radius: 6px;
-    padding: 6px 12px;
-    cursor: pointer;
+    border-radius: 10px;
     font-size: 13px;
-    transition: background 0.15s;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Inter', sans-serif;
 }
-.m-chat-send:hover { background: #e53935; }
-
-/* ══════════════════════════════════════════
-   BOTTOM TABS (мобільна навігація)
-   ══════════════════════════════════════════ */
-.m-bottom-tabs {
-    display: none; /* visible only on mobile via media query */
+.m-btn.primary {
+    background: linear-gradient(135deg, var(--m-gold), #f59e0b);
+    color: #1a0a00;
 }
+.m-btn.primary:hover { filter: brightness(1.08); }
+.m-btn-wide { width: 100%; max-width: 300px; padding: 12px 0; }
 
-/* ══════════════════════════════════════════
-   MOBILE BREAKPOINT  ≤ 768px
-   ══════════════════════════════════════════ */
-@media (max-width: 768px) {
+/* ═══════════════════════════════════════════════
+   MOBILE ≤ 900px
+   ═══════════════════════════════════════════════ */
+@media (max-width: 900px) {
 
-    /* Таб-бар */
+    /* Hide side columns; show only center by default */
+    .m-col-chat    { display: none; }
+    .m-col-passport { display: none; }
+    .m-col-players { border-right: none; }
+
+    /* Tab-driven visibility */
+    .m-body.tab-chat    .m-col-chat     { display: flex !important; }
+    .m-body.tab-chat    .m-col-players  { display: none  !important; }
+    .m-body.tab-players .m-col-players  { display: flex  !important; }
+    .m-body.tab-players .m-col-chat     { display: none  !important; }
+    .m-body.tab-players .m-col-passport { display: none  !important; }
+    .m-body.tab-passport .m-col-passport{ display: flex  !important; }
+    .m-body.tab-passport .m-col-players { display: none  !important; }
+
+    /* Full-width columns */
+    .m-col-chat, .m-col-players, .m-col-passport { width: 100%; }
+
+    /* Bottom tabs */
     .m-bottom-tabs {
-        display: flex;
-        flex-shrink: 0;
-        background: rgba(0,0,0,0.75);
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        background: rgba(9,9,11,0.96);
         border-top: 1px solid var(--m-border);
-        backdrop-filter: blur(8px);
+        backdrop-filter: blur(10px);
+        flex-shrink: 0;
+        z-index: 40;
     }
     .m-tab-btn {
-        flex: 1;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -856,137 +1256,53 @@
         padding: 8px 4px 10px;
         background: none;
         border: none;
-        color: rgba(232,237,245,0.4);
-        font-size: 10px;
+        color: var(--m-muted);
+        font-size: 8px;
         font-weight: 700;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
         cursor: pointer;
         position: relative;
         transition: color 0.15s;
+        font-family: 'Share Tech Mono', monospace;
     }
-    .m-tab-btn.active { color: var(--m-gold); }
-    .m-tab-icon { font-size: 18px; line-height: 1; }
-    .m-tab-label { font-size: 9px; letter-spacing: 0.06em; }
+    .m-tab-btn.active { color: var(--m-red-l); }
+    .m-tab-icon  { font-size: 18px; line-height: 1; }
+    .m-tab-label { font-size: 8px; }
     .m-tab-badge {
         position: absolute;
-        top: 6px; right: calc(50% - 18px);
+        top: 5px; right: calc(50% - 18px);
         background: var(--m-red);
         color: white;
-        font-size: 9px;
+        font-size: 8px;
         font-weight: 800;
         border-radius: 99px;
-        padding: 1px 5px;
-        min-width: 16px;
+        padding: 1px 4px;
+        min-width: 14px;
         text-align: center;
     }
 
-    /* Тіло — контент + таби */
-    .m-body {
-        flex-direction: column;
-        overflow: hidden;
-    }
+    /* Player grid: 1 col on mobile */
+    .m-players-grid { grid-template-columns: 1fr; }
 
-    /* Sidebar — стає панеллю Players або Log */
-    .m-sidebar {
-        width: 100%;
-        border-right: none;
-        border-bottom: 1px solid var(--m-border);
-        padding: 12px 14px;
-        overflow-y: auto;
-        flex: 1;
-        display: none; /* hidden on action tab */
-    }
-    #m-actions {
-        flex: 1;
-        overflow-y: auto;
-        padding: 16px 14px;
-        display: flex;
-        justify-content: flex-start;
-        align-items: flex-start;
-    }
+    /* Compact topbar */
+    .m-topbar  { padding: 6px 12px; gap: 8px; }
+    .m-title   { font-size: 11px; }
 
-    /* Tab: action (default) */
-    .m-body.tab-action .m-sidebar  { display: none; }
-    .m-body.tab-action #m-actions  { display: flex; }
+    /* Role reveal smaller */
+    .m-role-reveal       { padding: 20px 16px 16px; }
+    .m-role-reveal-icon  { font-size: 52px; }
+    .m-role-reveal-name  { font-size: 18px; }
 
-    /* Tab: players */
-    .m-body.tab-players .m-sidebar  { display: flex; flex-direction: column; }
-    .m-body.tab-players #m-log      { display: none; }
-    .m-body.tab-players #m-actions  { display: none; }
-
-    /* Tab: log */
-    .m-body.tab-log .m-sidebar      { display: flex; flex-direction: column; }
-    .m-body.tab-log #m-players      { display: none; }
-    .m-body.tab-log .m-sidebar-label { display: none; }
-    .m-body.tab-log #m-actions      { display: none; }
-
-    /* Нічні кнопки — вертикальний список, великі */
-    .m-target-list {
-        flex-direction: column;
-        gap: 8px;
-    }
-    .m-target-btn {
-        width: 100%;
-        min-height: 52px;
-        padding: 13px 16px;
-        font-size: 15px;
-        text-align: left;
-        border-radius: 12px;
-    }
-    .m-night-action { max-width: 100%; }
-
-    /* Голосування — великі картки */
-    .m-vote-targets {
-        flex-direction: column;
-        gap: 10px;
-        width: 100%;
-    }
-    .m-vote-target-btn,
-    .m-vote-skip-btn {
-        width: 100%;
-        min-height: 56px;
-        font-size: 15px;
-        border-radius: 12px;
-        text-align: left;
-        padding: 14px 18px;
-    }
-    .m-vote-ui,
-    .m-day-ui { max-width: 100%; width: 100%; }
-
-    /* День — чат росте, input фіксований знизу */
-    .m-day-ui {
-        flex: 1;
-        height: 100%;
-        justify-content: flex-start;
-        overflow: hidden;
-    }
-    .m-day-chat {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        min-height: 0;
-    }
-    .m-day-chat-log {
-        flex: 1;
-        min-height: 0;
-        max-height: none;
-    }
-
-    /* Топбар — компактніший */
-    .m-topbar { padding: 8px 12px; gap: 8px; }
-    .m-title   { font-size: 14px; }
-    #m-phase-info { font-size: 11px; }
-
-    /* Ролі розкриття */
-    .m-role-reveal { padding: 20px 16px 16px; }
-    .m-role-reveal-icon { font-size: 56px; }
-    .m-role-reveal-name { font-size: 22px; }
-
-    /* Результати кінця гри */
-    .m-result-row { grid-template-columns: 22px 1fr 1fr; }
+    /* Gameover results: hide status col */
+    .m-result-row    { grid-template-columns: 20px 1fr 1fr; }
     .m-result-status { display: none; }
-    .m-gameover-banner { padding: 16px; }
-    .m-gameover-headline { font-size: 20px; }
+    .m-gameover-banner { padding: 14px; }
+    .m-gameover-headline { font-size: 17px; }
+
+    /* Day/vote UI full width */
+    .m-day-ui, .m-vote-ui { max-width: 100%; }
+    .m-vote-targets { flex-direction: column; gap: 8px; }
+    .m-vote-target-btn, .m-vote-skip-btn { width: 100%; text-align: left; min-height: 48px; }
+    .m-day-chat-log { max-height: 120px; }
 }
