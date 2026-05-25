@@ -208,17 +208,17 @@ function generateCode() {
 // ── Очищення неактивних кімнат ────────────────
 setInterval(() => {
     const now = Date.now();
-    const IDLE_MS = 30 * 60 * 1000;
+    const IDLE_MS = 10 * 60 * 1000; // 10 хвилин без активності
     roomStore.keys().forEach(code => {
         const room = roomStore.get(code);
         if (now - (room.lastActivityAt || room.createdAt) > IDLE_MS) {
             clearTurnTimer(room);
             clearTradeTimer(room);
-            roomStore.delete(code);
-            console.log(`🗑️ Кімнату ${code} видалено (неактивна 30+ хв)`);
+            cleanupRoom(code);
+            console.log(`🗑️ Кімнату ${code} видалено (неактивна 10+ хв)`);
         }
     });
-}, 5 * 60 * 1000);
+}, 2 * 60 * 1000); // перевіряємо кожні 2 хвилини
 
 // Чистимо кімнату після завершення гри: від'єднуємо сокети і видаляємо з пам'яті
 function cleanupRoom(code) {
