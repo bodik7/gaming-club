@@ -70,6 +70,15 @@ async function addStat(username, gameType, won) {
     } catch (e) { console.error('[db] addStat:', e.message); }
 }
 
+function saveGameStats(room, winnerFn) {
+    if (!room?.players) return;
+    const gameType = room.state?.gameType || room.gameType || 'monopoly';
+    room.players.forEach(rp => {
+        if (!rp.username) return;
+        addStat(rp.username, gameType, winnerFn(rp));
+    });
+}
+
 async function getStats(username) {
     const result = await getClient().execute({
         sql:  `SELECT game_type, COUNT(*) AS games, SUM(won) AS wins
@@ -175,7 +184,7 @@ async function cleanGhostUsers() {
 module.exports = {
     init,
     getUser, createUser,
-    addStat, getStats, getLeaderboard,
+    addStat, getStats, getLeaderboard, saveGameStats,
     saveRoom, getRoom, deleteRoom, getAllRooms, cleanOldRooms,
     cleanOldStats, cleanGhostUsers,
 };

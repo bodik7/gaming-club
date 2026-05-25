@@ -22,15 +22,11 @@ try {
     }
 } catch {}
 
+const SW_VERSION = Date.now().toString(36);
+
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server);
-
-// Ініціалізуємо ігрові модулі після створення io
-// (робимо тут щоб уникнути circular-require; rooms ще не існує)
-// saveGameStats та rooms передаємо пізніше через другий init-виклик
-// Але для io-залежних функцій — відразу.
-// Фактичний виклик — після оголошення rooms та saveGameStats.
 
 const JWT_SECRET = process.env.JWT_SECRET || 'igclub-dev-secret-change-in-prod';
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
@@ -64,6 +60,16 @@ function apiLimiter(max, windowMs) {
 }
 
 app.use(express.json());
+
+// Динамічно підставляємо версію кешу — браузери отримають нову SW при кожному деплої
+app.get('/sw.js', (req, res) => {
+    const content = fs.readFileSync(path.join(__dirname, 'public/sw.js'), 'utf8')
+        .replace("'igclub-v1'", `'igclub-${SW_VERSION}'`);
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(content);
+});
+
 app.use(express.static(path.join(__dirname, 'public'), {
     setHeaders(res, filePath) {
         // HTML-файли ніколи не кешуємо — браузер завжди отримає актуальну версію
@@ -131,7 +137,7 @@ app.post('/api/login', apiLimiter(10, 10 * 60_000), async (req, res) => {
 
 app.get('/api/rooms/count', (req, res) => {
     const counts = {};
-    Object.values(rooms).forEach(r => {
+    roomStore.all().forEach(r => {
         const t = r.gameType || 'monopoly';
         counts[t] = (counts[t] || 0) + 1;
     });
@@ -165,6 +171,14 @@ app.get('/api/leaderboard/:gameType', async (req, res) => {
 
 // ── Кімнати: { [code]: Room } ───────────────
 const rooms = {};
+const roomStore = {
+    get:    code => rooms[code],
+    set:    (code, room) => { rooms[code] = room; },
+    delete: code => { delete rooms[code]; },
+    all:    () => Object.values(rooms),
+    has:    code => code in rooms,
+    keys:   () => Object.keys(rooms),
+};
 
 // ── Дані дошки та фішок — єдине джерело правди ──
 const { BOARD, TOKEN_COLORS, TOKEN_ICONS } = require('./public/games/monopoly/board.js');
@@ -187,7 +201,7 @@ function generateCode() {
     let code;
     do {
         code = cities[Math.floor(Math.random() * cities.length)] + '-' + (Math.floor(Math.random() * 9000) + 1000);
-    } while (rooms[code]);
+    } while (roomStore.has(code));
     return code;
 }
 
@@ -195,34 +209,23 @@ function generateCode() {
 setInterval(() => {
     const now = Date.now();
     const IDLE_MS = 30 * 60 * 1000;
-    Object.keys(rooms).forEach(code => {
-        const room = rooms[code];
+    roomStore.keys().forEach(code => {
+        const room = roomStore.get(code);
         if (now - (room.lastActivityAt || room.createdAt) > IDLE_MS) {
             clearTurnTimer(room);
             clearTradeTimer(room);
-            delete rooms[code];
+            roomStore.delete(code);
             console.log(`🗑️ Кімнату ${code} видалено (неактивна 30+ хв)`);
         }
     });
 }, 5 * 60 * 1000);
 
-// ── Socket.io ─────────────────────────────────
-// ── Helper: зберегти результат гри для всіх гравців ──
-function saveGameStats(room, winnerFn) {
-    if (!room?.players) return;
-    room.players.forEach(rp => {
-        if (!rp.username) return;
-        const gameType = room.state?.gameType || room.gameType || 'monopoly';
-        db.addStat(rp.username, gameType, winnerFn(rp));
-    });
-}
-
-// Ініціалізуємо ігрові модулі (після оголошення rooms та saveGameStats)
+// Ініціалізуємо ігрові модулі
 monopolyMod.init(io);
 tysyachaMod.init(io);
 durakMod.init(io);
-bunkerMod.init(io, db, saveGameStats);
-mafiaMod.init(io, saveGameStats, rooms);
+bunkerMod.init(io, db);
+mafiaMod.init(io, db, roomStore);
 
 // Деструктуруємо модульні функції для зручності у socket-хендлері
 const { createGameState, processAction, sanitize, addLog, nextPlayer, awardAuction,
@@ -235,10 +238,13 @@ const { createBunkerState, sanitizeBunker, emitBunkerUpdate, processBunkerAction
         startBunkerPhase, startBunkerRound, clearBunkerTimer, resolveBunkerVoting,
         addBunkerLog, BUNKER_ATTR_LABELS, BOT_NAMES } = bunkerMod;
 const { createMafiaState, sanitizeMafia, emitMafiaUpdate, processMafiaAction,
-        startNightPhase, startVotingPhase, resolveVoting, MAFIA_ROLE_LABELS } = mafiaMod;
+        startNightPhase, startVotingPhase, resolveVoting, MAFIA_ROLE_LABELS,
+        MAFIA_BALANCE, getMafiaBotDecisions } = mafiaMod;
 
 // Захист від дублювання сесій: username → socketId
-const _activeSessions = new Map(); // username → socketId
+const _activeSessions = new Map();
+
+function isStr(v, max = 100) { return typeof v === 'string' && v.trim().length > 0 && v.length <= max; }
 
 io.on('connection', (socket) => {
     console.log('+ підключення:', socket.id);
@@ -263,27 +269,31 @@ io.on('connection', (socket) => {
 
     // Створити кімнату
     socket.on('createRoom', ({ playerName, gameType = 'monopoly' }, cb) => {
+        if (!isStr(playerName, 30)) return;
         const code = generateCode();
-        rooms[code] = {
+        const gtype = gameType === 'tysyacha' ? 'tysyacha' : gameType === 'mafia' ? 'mafia' : gameType === 'durak' ? 'durak' : gameType === 'bunker' ? 'bunker' : 'monopoly';
+        const room = {
             code,
             players: [{ socketId: socket.id, name: playerName, index: 0, username: socket.username || null }],
             started: false,
             state: null,
-            gameType: gameType === 'tysyacha' ? 'tysyacha' : gameType === 'mafia' ? 'mafia' : gameType === 'durak' ? 'durak' : gameType === 'bunker' ? 'bunker' : 'monopoly',
+            gameType: gtype,
             createdAt: Date.now(),
             lastActivityAt: Date.now(),
         };
+        roomStore.set(code, room);
         socket.join(code);
         socket.roomCode = code;
         socket.playerIndex = 0;
         console.log(`Кімната ${code} створена`);
-        cb({ code, playerIndex: 0, gameType: rooms[code].gameType });
-        io.to(code).emit('lobbyUpdate', { players: rooms[code].players.map(p => p.name), bots: rooms[code].players.map(p => !!p.isBot), gameType: rooms[code].gameType });
+        cb({ code, playerIndex: 0, gameType: gtype });
+        io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name), bots: room.players.map(p => !!p.isBot), gameType: gtype });
     });
 
     // Перегляд кімнати без входу
     socket.on('peekRoom', ({ code }, cb) => {
-        const room = rooms[code?.toUpperCase()];
+        if (!isStr(code, 20)) return cb({ error: 'not_found' });
+        const room = roomStore.get(code.toUpperCase());
         if (!room) return cb({ error: 'not_found' });
         const maxPlayers = room.gameType === 'tysyacha' ? 3 : room.gameType === 'mafia' ? 15 : room.gameType === 'durak' ? 6 : room.gameType === 'bunker' ? 15 : 6;
         cb({ players: room.players.length, max: maxPlayers, gameType: room.gameType, started: room.started });
@@ -291,7 +301,8 @@ io.on('connection', (socket) => {
 
     // Приєднатись до кімнати
     socket.on('joinRoom', ({ code, playerName }, cb) => {
-        const room = rooms[code];
+        if (!isStr(code, 20) || !isStr(playerName, 30)) return cb({ error: 'Невірні дані' });
+        const room = roomStore.get(code);
         if (!room)        return cb({ error: 'Кімнату не знайдено' });
         if (room.started) return cb({ error: 'Гра вже почалась' });
         const maxPlayers = room.gameType === 'tysyacha' ? 3 : room.gameType === 'mafia' ? 15 : room.gameType === 'durak' ? 6 : room.gameType === 'bunker' ? 15 : 6;
@@ -309,7 +320,7 @@ io.on('connection', (socket) => {
 
     // Вийти з кімнати (до початку гри)
     socket.on('leaveRoom', () => {
-        const room = rooms[socket.roomCode];
+        const room = roomStore.get(socket.roomCode);
         if (!room) return;
 
         // Bunker under active game: special logic
@@ -318,7 +329,7 @@ io.on('connection', (socket) => {
             if (remainingHumans.length === 0) {
                 clearBunkerTimer(room);
                 io.to(socket.roomCode).emit('roomClosed', { reason: 'Усі гравці покинули гру' });
-                delete rooms[socket.roomCode];
+                roomStore.delete(socket.roomCode);
             }
             socket.leave(socket.roomCode);
             socket.roomCode = null;
@@ -335,7 +346,7 @@ io.on('connection', (socket) => {
                 const s = io.sockets.sockets.get(p.socketId);
                 if (s) { s.leave(socket.roomCode); s.roomCode = null; s.playerIndex = null; }
             });
-            delete rooms[socket.roomCode];
+            roomStore.delete(socket.roomCode);
         } else {
             // Звичайний гравець — прибираємо і переіндексуємо
             room.players = room.players.filter(p => p.index !== socket.playerIndex);
@@ -354,7 +365,7 @@ io.on('connection', (socket) => {
     // Дострокове завершення гри
     socket.on('abandonGame', () => {
         const code = socket.roomCode;
-        const room = rooms[code];
+        const room = roomStore.get(code);
         if (!room) return;
         const name = room.players[socket.playerIndex]?.name || 'Гравець';
         io.to(code).emit('gameAbandoned', { reason: `${name} достроково завершив(ла) гру` });
@@ -362,13 +373,13 @@ io.on('connection', (socket) => {
             const s = io.sockets.sockets.get(p.socketId);
             if (s) { s.leave(code); s.roomCode = null; s.playerIndex = null; }
         });
-        delete rooms[code];
+        roomStore.delete(code);
     });
 
     // Здатись у Монополії: банкрутство гравця, решта продовжує
     socket.on('surrenderMonopoly', () => {
         const code = socket.roomCode;
-        const room = rooms[code];
+        const room = roomStore.get(code);
         if (!room || !room.started) return;
         const state = room.state;
         if (!state || state.gameType === 'tysyacha') return;
@@ -424,7 +435,7 @@ io.on('connection', (socket) => {
 
     // Денний чат (day_discussion фаза)
     socket.on('dayChatMsg', ({ text }) => {
-        const room = rooms[socket.roomCode];
+        const room = roomStore.get(socket.roomCode);
         if (!room?.state || room.state.gameType !== 'mafia') return;
         if (room.state.phase !== 'day_discussion') return;
         const player = room.state.players[socket.playerIndex];
@@ -441,7 +452,7 @@ io.on('connection', (socket) => {
 
     // Чат мертвих (видно тільки мертвим)
     socket.on('deadChat', ({ text }) => {
-        const room = rooms[socket.roomCode];
+        const room = roomStore.get(socket.roomCode);
         if (!room?.state || room.state.gameType !== 'mafia') return;
         const player = room.state.players[socket.playerIndex];
         if (!player || player.isAlive) return;
@@ -455,7 +466,7 @@ io.on('connection', (socket) => {
 
     // Приватний чат мафії
     socket.on('mafiaChat', ({ text }) => {
-        const room = rooms[socket.roomCode];
+        const room = roomStore.get(socket.roomCode);
         if (!room?.state || room.state.gameType !== 'mafia') return;
         const player = room.state.players[socket.playerIndex];
         if (!player || MAFIA_ROLE_LABELS[player.role]?.faction !== 'mafia') return;
@@ -471,7 +482,7 @@ io.on('connection', (socket) => {
     // Отримати список вільних кімнат
     socket.on('getRooms', (cb) => {
         const _maxP = { tysyacha: 3, mafia: 15, durak: 6, bunker: 15, monopoly: 6 };
-        const available = Object.values(rooms)
+        const available = roomStore.all()
             .filter(r => !r.started && r.players.length > 0 && r.players.length < (_maxP[r.gameType] || 6))
             .map(r => ({
                 code: r.code,
@@ -484,7 +495,8 @@ io.on('connection', (socket) => {
 
     // Видалити гравця з кімнати (тільки хост, до початку гри)
     socket.on('kickPlayer', ({ kickIndex }) => {
-        const room = rooms[socket.roomCode];
+        if (typeof kickIndex !== 'number') return;
+        const room = roomStore.get(socket.roomCode);
         if (!room || room.started || socket.playerIndex !== 0) return;
 
         const kicked = room.players.find(p => p.index === kickIndex);
@@ -514,7 +526,7 @@ io.on('connection', (socket) => {
 
     // Додати / прибрати бота (тільки хост, тільки в залі очікування)
     socket.on('addBot', () => {
-        const room = rooms[socket.roomCode];
+        const room = roomStore.get(socket.roomCode);
         if (!room || socket.playerIndex !== 0 || room.started) return;
         if (room.gameType !== 'bunker' && room.gameType !== 'mafia') return;
         if (room.players.length >= 15) return;
@@ -530,7 +542,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('removeBot', () => {
-        const room = rooms[socket.roomCode];
+        const room = roomStore.get(socket.roomCode);
         if (!room || socket.playerIndex !== 0 || room.started) return;
         const last = room.players[room.players.length - 1];
         if (!last?.isBot) return;
@@ -545,13 +557,13 @@ io.on('connection', (socket) => {
     // Почати гру (тільки хост — index 0)
     // Хост оновлює налаштування до старту
     socket.on('updateSettings', (newSettings) => {
-        const room = rooms[socket.roomCode];
+        const room = roomStore.get(socket.roomCode);
         if (!room || socket.playerIndex !== 0) return;
         room.settings = { ...(room.settings || {}), ...newSettings };
     });
 
     socket.on('startGame', ({ settings } = {}) => {
-        const room = rooms[socket.roomCode];
+        const room = roomStore.get(socket.roomCode);
         if (!room || socket.playerIndex !== 0) return;
 
         if (room.gameType === 'mafia') {
@@ -629,7 +641,7 @@ io.on('connection', (socket) => {
 
     // Реванш — хост перезапускає гру з тими ж гравцями
     socket.on('restartGame', () => {
-        const room = rooms[socket.roomCode];
+        const room = roomStore.get(socket.roomCode);
         if (!room || socket.playerIndex !== 0) return;
         const gameType = room.state?.gameType || room.gameType;
         if (gameType === 'durak') {
@@ -697,7 +709,8 @@ io.on('connection', (socket) => {
 
     // Дія від гравця
     socket.on('action', ({ type, data }) => {
-        const room = rooms[socket.roomCode];
+        if (!isStr(type, 50)) return;
+        const room = roomStore.get(socket.roomCode);
         if (!room?.state) return;
         const state = room.state;
 
@@ -741,6 +754,11 @@ io.on('connection', (socket) => {
                 return;
             }
             if (state.phase === 'gameover') {
+                db.saveGameStats(room, rp => {
+                    const p = state.players[rp.index];
+                    return p ? MAFIA_ROLE_LABELS[p.role]?.faction === state.winner : false;
+                });
+                db.deleteRoom(room.code);
                 room.players.forEach(rp => {
                     io.to(rp.socketId).emit('gameOver', {
                         state: sanitizeMafia(state, rp.index),
@@ -822,7 +840,9 @@ io.on('connection', (socket) => {
 
     // Перепідключення після оновлення сторінки
     socket.on('rejoin', ({ code, playerIndex, playerName }, cb) => {
-        const room = rooms[code];
+        if (!isStr(code, 20) || typeof playerIndex !== 'number' || !isStr(playerName, 30))
+            return cb({ error: 'Невірні дані' });
+        const room = roomStore.get(code);
         if (!room) return cb({ error: 'Кімнату не знайдено (можливо сервер перезапускався)' });
 
         const rp = room.players.find(p => p.index === playerIndex && p.name === playerName);
@@ -888,7 +908,7 @@ io.on('connection', (socket) => {
         console.log('- відключення:', socket.id);
         if (socket.username && _activeSessions.get(socket.username) === socket.id)
             _activeSessions.delete(socket.username);
-        const room = rooms[socket.roomCode];
+        const room = roomStore.get(socket.roomCode);
         if (!room) return;
         // Прибираємо гравця з активного аукціону щоб не зависав
         if (room.state?.auctionState) {
@@ -919,7 +939,7 @@ io.on('connection', (socket) => {
         const _emptyCheckCode = socket.roomCode;
         const _emptyDelay = room.started ? 60_000 : 0;
         setTimeout(() => {
-            const r = rooms[_emptyCheckCode];
+            const r = roomStore.get(_emptyCheckCode);
             if (!r) return;
             if (r.started && r.state?.gameType === 'bunker') return; // бункер має власну логіку
             const connectedHumans = r.players.filter(p => {
@@ -935,7 +955,7 @@ io.on('connection', (socket) => {
                     clearTimeout(r.voteTimer);
                     db.deleteRoom(r.code);
                 }
-                delete rooms[_emptyCheckCode];
+                roomStore.delete(_emptyCheckCode);
                 console.log(`🗑️  Кімната ${_emptyCheckCode} видалена (порожня)`);
             }
         }, _emptyDelay);
@@ -951,7 +971,7 @@ io.on('connection', (socket) => {
             room.afkTimers = room.afkTimers || {};
             clearTimeout(room.afkTimers[pidx]);
             room.afkTimers[pidx] = setTimeout(() => {
-                const r = rooms[roomCode];
+                const r = roomStore.get(roomCode);
                 if (!r?.state) return;
                 const st  = r.state;
                 const rp2 = r.players.find(p => p.index === pidx);
@@ -998,14 +1018,14 @@ io.on('connection', (socket) => {
 
             // Закриваємо кімнату якщо всі люди офлайн після 60с
             setTimeout(() => {
-                const r = rooms[roomCode];
+                const r = roomStore.get(roomCode);
                 if (!r) return;
                 const connectedHumans = r.players.filter(
                     p => !p.isBot && p.socketId && io.sockets.sockets.get(p.socketId)
                 );
                 if (connectedHumans.length === 0) {
                     clearBunkerTimer(r);
-                    delete rooms[roomCode];
+                    roomStore.delete(roomCode);
                 }
             }, 60_000);
         }
@@ -1019,9 +1039,8 @@ async function restoreRoomsFromDB() {
     const saved = await db.getAllRooms();
     let restored = 0;
     for (const { code, gameType, state } of saved) {
-        if (rooms[code]) continue; // вже є
-        // Відновлюємо кімнату без гравців (вони підключаться через rejoin)
-        rooms[code] = {
+        if (roomStore.has(code)) continue;
+        roomStore.set(code, {
             code,
             players: [],
             started: true,
@@ -1029,7 +1048,7 @@ async function restoreRoomsFromDB() {
             gameType,
             createdAt: Date.now(),
             lastActivityAt: Date.now(),
-        };
+        });
         restored++;
     }
     if (restored > 0) console.log(`♻️  Відновлено ${restored} кімнат з БД`);
@@ -1037,7 +1056,7 @@ async function restoreRoomsFromDB() {
 
 // Автозбереження активних кімнат кожні 30 секунд
 async function autoSaveRooms() {
-    for (const room of Object.values(rooms)) {
+    for (const room of roomStore.all()) {
         if (room.started && room.state) {
             await db.saveRoom(room.code, room.gameType || room.state.gameType || 'monopoly', room.state);
         }

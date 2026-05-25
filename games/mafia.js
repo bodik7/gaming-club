@@ -1,12 +1,12 @@
 const { shuffle, addLog } = require('./utils.js');
 
 let _io;
-let _saveGameStats;
+let _db;
 let _rooms;
 
-function init(io, saveGameStats, rooms) {
+function init(io, db, rooms) {
     _io = io;
-    _saveGameStats = saveGameStats;
+    _db = db;
     _rooms = rooms;
 }
 
@@ -423,7 +423,7 @@ function getMafiaBotDecisions(room) {
     bots.forEach(bp => {
         const delay = 800 + Math.random() * 1800;
         setTimeout(() => {
-            const r = _rooms[room.code];
+            const r = _rooms.get(room.code);
             if (!r?.state) return;
             const st = r.state;
             const p  = st.players[bp.index];
@@ -500,4 +500,6 @@ module.exports = {
     startVotingPhase,
     resolveVoting,
     MAFIA_ROLE_LABELS,
+    MAFIA_BALANCE,
+    getMafiaBotDecisions,
 };

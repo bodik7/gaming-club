@@ -7,12 +7,10 @@ const { BUNKER_SCENARIOS } = require('../public/games/bunker/scenarios.js');
 
 let _io;
 let _db;
-let _saveGameStats;
 
-function init(io, db, saveGameStats) {
+function init(io, db) {
     _io = io;
     _db = db;
-    _saveGameStats = saveGameStats;
 }
 
 const BUNKER_ATTR_LABELS = {
@@ -273,6 +271,7 @@ ${playersDesc}
                     contents: [{ parts: [{ text: prompt }] }],
                     generationConfig: { temperature: 0.85, maxOutputTokens: 600 },
                 }),
+                signal: AbortSignal.timeout(8_000),
             }
         );
         const json = await res.json();
@@ -484,7 +483,7 @@ function eliminatePlayers(room, toEliminate) {
             Object.keys(p.attributes).forEach(k => { p.attributes[k].isRevealed = true; });
         });
         addBunkerLog(s, `🏆 Бункер зачиняється! Виживають: ${remaining.map(p => p.name).join(', ')}`);
-        _saveGameStats(room, rp => s.winner.includes(rp.index));
+        _db.saveGameStats(room, rp => s.winner.includes(rp.index));
         _db.deleteRoom(room.code);
         emitBunkerUpdate(room);
         generateBunkerEpilogue(s).then(text => {
