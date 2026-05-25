@@ -2543,10 +2543,11 @@ function createMafiaState(roomPlayers, settings = {}) {
         id:         i,
         socketId:   rp.socketId,
         name:       rp.name,
+        isBot:      rp.isBot || false,
         role:       shuffled[i],
         isAlive:    true,
         isSilenced: false,
-        skippedVotes: 0, // лічильник AFK-голосувань
+        skippedVotes: 0,
     }));
 
     const mafiaIds = players.filter(p => p.role === 'mafia' || p.role === 'don').map(p => p.id);
@@ -2674,6 +2675,7 @@ function startNightPhase(room) {
     emitMafiaUpdate(room, { event: 'nightStart', deadline: state.nightDeadline });
     clearTimeout(room.nightTimer);
     room.nightTimer = setTimeout(() => resolveNight(room), state.nightDuration * 1000);
+    getMafiaBotDecisions(room);
 }
 
 function resolveNight(room) {
@@ -2828,6 +2830,7 @@ function startVotingPhase(room) {
     emitMafiaUpdate(room, { event: 'votingStart', deadline: state.voteDeadline });
     clearTimeout(room.voteTimer);
     room.voteTimer = setTimeout(() => resolveVoting(room), VOTE_MS);
+    getMafiaBotDecisions(room);
 }
 
 function resolveVoting(room) {
@@ -2962,6 +2965,88 @@ function processMafiaAction(state, type, data, pidx) {
             break;
         }
     }
+}
+
+// ── Боти для Мафії ───────────────────────────
+function getMafiaBotDecisions(room) {
+    const bots = room.players.filter(p => p.isBot);
+    if (!bots.length) return;
+
+    bots.forEach(bp => {
+        const delay = 800 + Math.random() * 1800;
+        setTimeout(() => {
+            const r = rooms[room.code];
+            if (!r?.state) return;
+            const st = r.state;
+            const p  = st.players[bp.index];
+            if (!p?.isAlive) return;
+
+            const rnd  = arr => arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
+            const alive = st.players.filter(pl => pl.isAlive);
+            const others = alive.filter(pl => pl.id !== bp.index);
+            const town   = others.filter(pl => MAFIA_ROLE_LABELS[pl.role]?.faction === 'town');
+            const nonMaf = others.filter(pl => MAFIA_ROLE_LABELS[pl.role]?.faction !== 'mafia');
+
+            // ── role_reveal → авто-готовність ──
+            if (st.phase === 'role_reveal') {
+                processMafiaAction(st, 'mafiaReady', {}, bp.index);
+                if (st._shouldStartNight) {
+                    delete st._shouldStartNight;
+                    startNightPhase(r);
+                } else {
+                    emitMafiaUpdate(r, null);
+                }
+                return;
+            }
+
+            // ── night → нічні дії по ролі ──
+            if (st.phase === 'night') {
+                if (p.role === 'mafia' || p.role === 'don') {
+                    const t = rnd(town.length ? town : nonMaf);
+                    if (t) processMafiaAction(st, 'mafiaVote', { targetId: t.id }, bp.index);
+                    if (p.role === 'don') {
+                        const tc = rnd(nonMaf.filter(pl => pl.id !== t?.id));
+                        if (tc) processMafiaAction(st, 'donCheck', { targetId: tc.id }, bp.index);
+                    }
+                } else if (p.role === 'sheriff' || p.role === 'deputy') {
+                    const t = rnd(others);
+                    if (t) processMafiaAction(st, 'sheriffCheck', { targetId: t.id }, bp.index);
+                } else if (p.role === 'doctor') {
+                    const t = Math.random() < 0.3 ? p : rnd(others);
+                    if (t) processMafiaAction(st, 'doctorHeal', { targetId: t.id }, bp.index);
+                } else if (p.role === 'roleblocker') {
+                    const t = rnd(others);
+                    if (t) processMafiaAction(st, 'roleblockerBlock', { targetId: t.id }, bp.index);
+                } else if (p.role === 'maniac') {
+                    const t = rnd(others);
+                    if (t) processMafiaAction(st, 'maniacKill', { targetId: t.id }, bp.index);
+                }
+                emitMafiaUpdate(r, null);
+                return;
+            }
+
+            // ── day_voting → голосування ──
+            if (st.phase === 'day_voting') {
+                if (st.votes[bp.index] !== undefined) return;
+                const faction = MAFIA_ROLE_LABELS[p.role]?.faction;
+                let t;
+                if (faction === 'mafia') {
+                    t = rnd(town.length ? town : nonMaf);
+                } else {
+                    t = Math.random() < 0.12 ? { id: 'skip' } : rnd(others);
+                }
+                if (t) {
+                    processMafiaAction(st, 'dayVote', { targetId: t.id }, bp.index);
+                    if (st._resolveVoting) {
+                        delete st._resolveVoting;
+                        resolveVoting(r);
+                        return;
+                    }
+                }
+                emitMafiaUpdate(r, null);
+            }
+        }, delay);
+    });
 }
 
 // ── Таймер ходу ──────────────────────────────
@@ -3334,7 +3419,8 @@ io.on('connection', (socket) => {
     // Додати / прибрати бота (тільки хост, тільки в залі очікування)
     socket.on('addBot', () => {
         const room = rooms[socket.roomCode];
-        if (!room || socket.playerIndex !== 0 || room.started || room.gameType !== 'bunker') return;
+        if (!room || socket.playerIndex !== 0 || room.started) return;
+        if (room.gameType !== 'bunker' && room.gameType !== 'mafia') return;
         if (room.players.length >= 15) return;
         const usedNames = new Set(room.players.map(p => p.name));
         const botName = BOT_NAMES.find(n => !usedNames.has(n)) || `Бот-АІ-${room.players.length}`;
@@ -3389,6 +3475,8 @@ io.on('connection', (socket) => {
                     gameType: 'mafia',
                 });
             });
+            // Боти авто-готуються на role_reveal
+            getMafiaBotDecisions(room);
             // Автоматичний старт ночі через 25с якщо не всі натиснули "Готовий"
             setTimeout(() => {
                 if (room.state?.phase === 'role_reveal') startNightPhase(room);
