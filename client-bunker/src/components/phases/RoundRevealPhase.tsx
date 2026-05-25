@@ -42,7 +42,7 @@ export function RoundRevealPhase() {
 
   // ── Вільний вибір: список атрибутів у скролі ──
   const attrPicker = !forced && !alreadyRevealed && (
-    <div className="flex flex-col gap-2 animate-fade-up" style={{ paddingBottom: 220 }}>
+    <div className="flex flex-col gap-2 animate-fade-up" style={{ paddingBottom: 8 }}>
       <div className="text-xs font-black uppercase tracking-widest px-1 mb-1"
            style={{ color: 'var(--bunker-yellow)' }}>
         Раунд {round} · Оберіть що розкрити

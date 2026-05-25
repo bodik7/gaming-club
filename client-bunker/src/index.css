@@ -151,25 +151,13 @@ body {
 /* Кнопка надіслати в чаті */
 .chat-send-btn { padding: 4px 10px; font-size: 12px; }
 
-/* ── Фіксована панель фаз (mobile=fixed, desktop=inline) ── */
+/* ── Панель фаз — завжди inline (і на мобільному, і на десктопі) ── */
 .phase-fixed-panel {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 40;
-  padding: 0 16px;
-  padding-bottom: max(12px, env(safe-area-inset-bottom));
-  background: linear-gradient(to top, #0b0d0c 70%, transparent);
+  padding: 0 16px 12px;
 }
 
 @media (min-width: 769px) {
-  .phase-fixed-panel {
-    position: static;
-    background: none;
-    padding: 0;
-    z-index: auto;
-  }
+  .phase-fixed-panel { padding: 0; }
 }
 
 /* ── Мобільний лейаут (tabs) ── */
@@ -211,12 +199,7 @@ body {
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Фіксовані панелі фаз — піднімаємо над нав-баром */
-  .phase-fixed-panel {
-    bottom: calc(56px + env(safe-area-inset-bottom)) !important;
-  }
-
-  /* Блок сценарію у фіксованих панелях — прибираємо, є окрема вкладка */
+  /* Блок сценарію у панелях фаз — прибираємо на мобільному, є окрема вкладка */
   .phase-scenario-block { display: none; }
 
   /* Кнопка надіслати — більша на мобільному */
