@@ -97,7 +97,9 @@ function sanitizeMafia(state, forIdx) {
             isAlive:    p.isAlive,
             isSilenced: p.isSilenced,
             role: (p.id === forIdx || state.phase === 'gameover' ||
-                   (myFaction === 'mafia' && MAFIA_ROLE_LABELS[p.role]?.faction === 'mafia'))
+                   (myFaction === 'mafia' && MAFIA_ROLE_LABELS[p.role]?.faction === 'mafia') ||
+                   (myRole === 'sheriff' && p.role === 'deputy') ||
+                   (myRole === 'deputy'  && p.role === 'sheriff'))
                 ? p.role : null,
         })),
         myId:        forIdx,
