@@ -65,8 +65,9 @@ function PlayerCard({
   marker: '🟢' | '🔴' | null
   onMarker: (m: '🟢' | '🔴' | null) => void
 }) {
-  const isDead = !player.isAlive
-  const isBot  = player.isBot
+  const isDead    = !player.isAlive
+  const isBot     = player.isBot
+  const isOffline = !player.isOnline && !isBot && !isDead
 
   const revealedAttrs = Object.entries(player.attributes).filter(([, a]) => a.isRevealed)
   const hiddenKeys    = ATTR_ORDER.filter(k => !player.attributes[k as keyof typeof player.attributes]?.isRevealed)
@@ -88,7 +89,7 @@ function PlayerCard({
       layout
       initial={{ opacity: 0, y: 24, scale: 0.92 }}
       animate={{
-        opacity: isDead ? 0.28 : 1,
+        opacity: isDead ? 0.28 : isOffline ? 0.55 : 1,
         y: 0,
         scale: isDead ? 0.98 : 1,
       }}
@@ -136,6 +137,12 @@ function PlayerCard({
               <span className="px-1 py-px rounded font-black flex-shrink-0"
                     style={{ background: 'rgba(180,30,0,0.5)', color: '#ff6060', fontSize: 8, letterSpacing: '0.05em' }}>
                 ВИБУВ
+              </span>
+            )}
+            {isOffline && (
+              <span className="px-1 py-px rounded font-black flex-shrink-0"
+                    style={{ background: 'rgba(80,80,80,0.5)', color: '#aaa', fontSize: 8, letterSpacing: '0.05em' }}>
+                ОФЛАЙН
               </span>
             )}
             {!isDead && player.hasRevealed && (

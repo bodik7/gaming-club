@@ -1696,6 +1696,7 @@ function createBunkerState(roomPlayers, settings = {}) {
             isSilenced:     false,
             immunityRounds: 0,
             hasRevealed:    false, // чи вже розкрив атрибут у поточному раунді
+            isOnline:       true,
             attributes: {
                 profession: { value: profs.pop(),   isRevealed: false },
                 biology:    { value: `${gender}, ${age} років, ${repro}`, isRevealed: false },
@@ -1749,6 +1750,7 @@ function sanitizeBunker(state, forIdx) {
             name:       p.name,
             isBot:      p.isBot || false,
             isAlive:    p.isAlive,
+            isOnline:   p.isOnline !== false,
             isSilenced: p.isSilenced,
             immunityRounds: p.immunityRounds,
             hasRevealed:    p.hasRevealed,
@@ -3620,8 +3622,18 @@ io.on('connection', (socket) => {
         // Оновлюємо socket ID
         rp.socketId = socket.id;
         socket.join(code);
-        socket.roomCode  = code;
+        socket.roomCode    = code;
         socket.playerIndex = playerIndex;
+
+        // Скидаємо AFK таймер і відновлюємо isOnline
+        if (room.afkTimers?.[playerIndex] !== undefined) {
+            clearTimeout(room.afkTimers[playerIndex]);
+            delete room.afkTimers[playerIndex];
+        }
+        if (room.state?.gameType === 'bunker') {
+            const sp = room.state.players[playerIndex];
+            if (sp) sp.isOnline = true;
+        }
 
         if (room.started && room.state) {
             // Для мафії — повертаємо в приватну sub-room якщо мафіозі
@@ -3639,6 +3651,8 @@ io.on('connection', (socket) => {
                 ? sanitizeBunker(room.state, playerIndex)
                 : sanitize(room.state);
             cb({ success: true, started: true, state: st, gameType: room.gameType });
+            // Для Бункера — сповіщаємо інших про повернення гравця
+            if (room.state.gameType === 'bunker') emitBunkerUpdate(room);
         } else {
             cb({ success: true, started: false, players: room.players.map(p => p.name), bots: room.players.map(p => p.isBot || false) });
             io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name), bots: room.players.map(p => p.isBot || false), gameType: room.gameType });
@@ -3689,9 +3703,63 @@ io.on('connection', (socket) => {
         }
         io.to(socket.roomCode).emit('playerDisconnected', { playerIndex: socket.playerIndex });
 
-        // Bunker: close room if all humans disconnected (60s grace for reconnect)
-        if (room.started && room.state?.gameType === 'bunker') {
+        // Bunker: reconnect grace + AFK auto-action
+        if (room.started && room.state?.gameType === 'bunker' && !rp?.isBot) {
+            const pidx     = socket.playerIndex;
             const roomCode = socket.roomCode;
+            const sp = room.state.players[pidx];
+            if (sp) sp.isOnline = false;
+            emitBunkerUpdate(room);
+
+            room.afkTimers = room.afkTimers || {};
+            clearTimeout(room.afkTimers[pidx]);
+            room.afkTimers[pidx] = setTimeout(() => {
+                const r = rooms[roomCode];
+                if (!r?.state) return;
+                const st  = r.state;
+                const rp2 = r.players.find(p => p.index === pidx);
+                // Гравець повернувся — нічого не робимо
+                if (rp2?.socketId && io.sockets.sockets.get(rp2.socketId)) return;
+
+                const player = st.players[pidx];
+                if (!player?.isAlive) return;
+
+                if (st.phase === 'round_reveal' && !player.hasRevealed) {
+                    const attr = Object.keys(player.attributes).find(k => !player.attributes[k].isRevealed);
+                    if (attr) {
+                        player.attributes[attr].isRevealed = true;
+                        player.hasRevealed = true;
+                        addBunkerLog(st, `⏱️ ${player.name} розкриває ${BUNKER_ATTR_LABELS[attr]} (AFK)`);
+                        const allRevealed = st.players.filter(pl => pl.isAlive).every(pl => pl.hasRevealed);
+                        if (allRevealed) { clearBunkerTimer(r); startBunkerPhase(r, 'discussion'); }
+                        else emitBunkerUpdate(r);
+                    }
+                } else if (st.phase === 'game_start' && !player.hasRevealed) {
+                    player.hasRevealed = true;
+                    addBunkerLog(st, `✅ ${player.name} готовий (AFK)`);
+                    const allReady = st.players.every(pl => pl.hasRevealed);
+                    if (allReady) {
+                        st.players.forEach(pl => { pl.hasRevealed = false; });
+                        clearBunkerTimer(r);
+                        startBunkerRound(r);
+                    } else emitBunkerUpdate(r);
+                } else if (st.phase === 'voting' && st.votes[pidx] === undefined && !st.quarantined?.includes(pidx)) {
+                    const candidates = st.players.filter(pl =>
+                        pl.isAlive && pl.id !== pidx && (!st.tiebreaker || st.tiebreaker.includes(pl.id))
+                    );
+                    if (candidates.length > 0) {
+                        const target = candidates[Math.floor(Math.random() * candidates.length)];
+                        st.votes[pidx] = target.id;
+                        addBunkerLog(st, `⏱️ ${player.name} голосує (AFK)`);
+                        const aliveIds = st.players.filter(pl => pl.isAlive && !st.quarantined?.includes(pl.id)).map(pl => pl.id);
+                        const allVoted = aliveIds.every(id => st.votes[id] !== undefined);
+                        if (allVoted) { clearBunkerTimer(r); resolveBunkerVoting(r); }
+                        else emitBunkerUpdate(r);
+                    }
+                }
+            }, 30_000);
+
+            // Закриваємо кімнату якщо всі люди офлайн після 60с
             setTimeout(() => {
                 const r = rooms[roomCode];
                 if (!r) return;

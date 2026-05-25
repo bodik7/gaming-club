@@ -35,6 +35,7 @@ export interface BunkerPlayer {
   name:           string
   isBot?:         boolean
   isAlive:        boolean
+  isOnline:       boolean
   isSilenced:     boolean
   immunityRounds: number
   hasRevealed:    boolean
