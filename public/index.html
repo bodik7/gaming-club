@@ -50,10 +50,17 @@
                     <label class="lobby-label">Пароль</label>
                     <input id="auth-password" class="lobby-input" type="password"
                            placeholder="••••••"
+                           onkeydown="if(event.key==='Enter' && document.getElementById('auth-confirm-wrap').style.display==='none')doAuth()">
+                </div>
+
+                <div id="auth-confirm-wrap" style="display:none">
+                    <label class="lobby-label">Підтвердити пароль</label>
+                    <input id="auth-confirm" class="lobby-input" type="password"
+                           placeholder="Повторіть пароль"
                            onkeydown="if(event.key==='Enter')doAuth()">
                 </div>
 
-                <div id="auth-error"></div>
+                <div id="auth-error" class="auth-error-msg"></div>
 
                 <button id="auth-submit-btn" class="lobby-btn lobby-btn-primary" onclick="doAuth()">
                     Увійти
@@ -82,8 +89,11 @@
                         <div class="lobby-header-compact-sub">Онлайн мультиплеєр</div>
                     </div>
                     <div id="account-bar" class="lobby-account-bar hidden" style="margin-left:auto">
-                        <span>👤 <b id="account-name"></b></span>
-                        <button onclick="logOut()">Вийти</button>
+                        <button class="account-profile-btn" onclick="openCabinet()" title="Особистий кабінет">
+                            <span id="account-avatar" class="account-avatar"></span>
+                            <b id="account-name"></b>
+                        </button>
+                        <button class="account-logout-btn" onclick="logOut()" title="Вийти">↩</button>
                     </div>
                 </div>
 
@@ -576,6 +586,31 @@
             </div>
             <div id="t-action-bar"></div>
             <div id="t-hand"></div>
+        </div>
+    </div>
+
+    <!-- ===== ОСОБИСТИЙ КАБІНЕТ ===== -->
+    <div id="cabinet-modal" class="cabinet-overlay" onclick="if(event.target===this)closeCabinet()">
+        <div class="cabinet-card">
+            <button class="cabinet-close" onclick="closeCabinet()">✕</button>
+
+            <div class="cabinet-header">
+                <div class="cabinet-avatar" id="cabinet-avatar-letter"></div>
+                <div>
+                    <div class="cabinet-username" id="cabinet-username-display"></div>
+                    <div class="cabinet-subtitle">Зареєстрований гравець</div>
+                </div>
+            </div>
+
+            <div class="cabinet-stats-list" id="cabinet-stats-list">
+                <div class="cabinet-loading">Завантаження…</div>
+            </div>
+
+            <div class="cabinet-total" id="cabinet-total"></div>
+
+            <button class="lobby-btn lobby-btn-outline cabinet-logout-btn" onclick="logOut()">
+                ↩ Вийти з акаунту
+            </button>
         </div>
     </div>
 
