@@ -148,6 +148,9 @@ body {
 /* Топбар: десктоп показує окремо фазу+таймер, мобільний — компактний блок */
 .topbar-phase-mobile { display: none; }
 
+/* Кнопка надіслати в чаті */
+.chat-send-btn { padding: 4px 10px; font-size: 12px; }
+
 /* ── Мобільний лейаут (tabs) ── */
 .mobile-game-body { display: none; }
 
@@ -191,4 +194,7 @@ body {
   .game-start-fixed-btn {
     bottom: calc(56px + env(safe-area-inset-bottom)) !important;
   }
+
+  /* Кнопка надіслати — більша на мобільному */
+  .chat-send-btn { padding: 10px 18px; font-size: 18px; }
 }

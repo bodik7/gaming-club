@@ -108,7 +108,7 @@ export function ChatPanel() {
           whileTap={{ scale: 0.88 }}
           onClick={send}
           disabled={silenced}
-          className="px-2.5 py-1 rounded-lg text-xs font-black disabled:opacity-30"
+          className="chat-send-btn rounded-lg font-black disabled:opacity-30"
           style={{ background: 'var(--bunker-red)', color: 'white' }}
         >
           ➤
