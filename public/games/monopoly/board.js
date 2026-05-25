@@ -92,6 +92,9 @@ const EXCURSION_CARDS = [
 const TOKEN_COLORS = ['#FF4136', '#0074D9', '#2ECC40', '#FFDC00', '#B10DC9', '#FF851B', '#39CFFF', '#85144b'];
 const TOKEN_ICONS = ['🎩', '🚗', '🐕', '🚀', '🐎', '👑', '⚓', '🎯'];
 
+// Node.js: експортуємо константи щоб server.js не дублював їх
+if (typeof module !== 'undefined') module.exports = { BOARD, TOKEN_COLORS, TOKEN_ICONS };
+
 // ----- ГЛОБАЛЬНИЙ СТАН ГРИ (заповнюється у script.js при старті) -----
 let players = [];
 let currentPlayerIndex = 0;

@@ -67,7 +67,7 @@ async function addStat(username, gameType, won) {
             sql:  'INSERT INTO game_stats (username, game_type, won) VALUES (?, ?, ?)',
             args: [username, gameType, won ? 1 : 0],
         });
-    } catch {}
+    } catch (e) { console.error('[db] addStat:', e.message); }
 }
 
 async function getStats(username) {
@@ -111,7 +111,7 @@ async function saveRoom(code, gameType, state) {
                       updated_at = excluded.updated_at`,
             args: [code, gameType, JSON.stringify(state)],
         });
-    } catch {}
+    } catch (e) { console.error('[db] saveRoom:', e.message); }
 }
 
 async function getRoom(code) {
@@ -131,7 +131,7 @@ async function deleteRoom(code) {
             sql:  'DELETE FROM rooms_backup WHERE code = ?',
             args: [code],
         });
-    } catch {}
+    } catch (e) { console.error('[db] deleteRoom:', e.message); }
 }
 
 async function getAllRooms() {
@@ -147,7 +147,7 @@ async function cleanOldRooms() {
         await getClient().execute(
             `DELETE FROM rooms_backup WHERE updated_at < datetime('now', '-6 hours')`
         );
-    } catch {}
+    } catch (e) { console.error('[db] cleanOldRooms:', e.message); }
 }
 
 // Видаляє game_stats старші за 12 місяців
@@ -157,7 +157,7 @@ async function cleanOldStats() {
         await getClient().execute(
             `DELETE FROM game_stats WHERE played_at < datetime('now', '-12 months')`
         );
-    } catch {}
+    } catch (e) { console.error('[db] cleanOldStats:', e.message); }
 }
 
 // Видаляє акаунти без жодної гри старші за 90 днів (сміттєві реєстрації)
@@ -169,7 +169,7 @@ async function cleanGhostUsers() {
             AND username NOT IN (SELECT DISTINCT username FROM game_stats)
             AND created_at < datetime('now', '-90 days')
         `);
-    } catch {}
+    } catch (e) { console.error('[db] cleanGhostUsers:', e.message); }
 }
 
 module.exports = {

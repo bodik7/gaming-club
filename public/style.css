@@ -1213,3 +1213,573 @@ body {
     /* Токени */
     .token { width: 18px; height: 18px; font-size: 10px; }
 }
+
+
+/* ═══════════════════════════════════════════════
+   ЛОБІ — стилі (перенесено з index.html)
+═══════════════════════════════════════════════ */
+
+    /* ═══════════════════════════════════════════════
+       ЛОБІ — повний редизайн
+       Темний фон, CSS-generated, картки ігор
+    ═══════════════════════════════════════════════ */
+
+    /* ── Фон лобі (CSS-only, без зображень) ── */
+    .lobby-screen, .waiting-screen {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 16px;
+        /* Темно-синя база + 3 радіальних орби в українських кольорах + dot-grid */
+        background-color: #060c1a;
+        background-image:
+            radial-gradient(ellipse 85% 65% at 5% 5%,   rgba(0,87,183,0.55)  0%, transparent 55%),
+            radial-gradient(ellipse 65% 55% at 95% 95%,  rgba(255,215,0,0.28) 0%, transparent 55%),
+            radial-gradient(ellipse 45% 40% at 95% 5%,   rgba(0,87,183,0.30)  0%, transparent 50%),
+            radial-gradient(ellipse 40% 35% at 5%  95%,  rgba(255,215,0,0.12) 0%, transparent 50%),
+            radial-gradient(circle, rgba(255,255,255,0.055) 1px, transparent 1px);
+        background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 32px 32px;
+    }
+
+    /* ── Головна обгортка ── */
+    .lobby-wrapper {
+        width: 100%;
+        max-width: 520px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    /* ── Хедер ── */
+    .lobby-header {
+        text-align: center;
+        padding-bottom: 4px;
+    }
+    .lobby-header-logo {
+        font-size: 52px;
+        line-height: 1;
+        margin-bottom: 10px;
+        filter: drop-shadow(0 4px 16px rgba(0,87,183,0.5));
+    }
+    .lobby-header-title {
+        font-size: 30px;
+        font-weight: 900;
+        color: #ffffff;
+        letter-spacing: 1px;
+        margin: 0 0 6px;
+        text-shadow: 0 2px 12px rgba(0,87,183,0.5);
+    }
+    .lobby-header-sub {
+        font-size: 13px;
+        color: rgba(255,255,255,0.45);
+        font-style: italic;
+        margin: 0;
+    }
+
+    /* ── Скло-картка ── */
+    .lobby-glass {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 24px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+
+    /* ── Картки ігор ── */
+    .game-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+        gap: 12px;
+    }
+
+    .game-card {
+        position: relative;
+        background: rgba(255,255,255,0.05);
+        border: 2px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        padding: 20px 16px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.22s;
+        color: rgba(255,255,255,0.75);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+    }
+    .game-card:hover {
+        background: rgba(255,255,255,0.09);
+        transform: translateY(-3px);
+        border-color: rgba(255,255,255,0.22);
+    }
+    .game-card.active {
+        border-color: #ffd700;
+        background: rgba(255,215,0,0.08);
+        box-shadow: 0 0 0 1px rgba(255,215,0,0.3), 0 8px 24px rgba(255,215,0,0.15);
+        color: #ffffff;
+    }
+    .game-card-icon  { font-size: 44px; line-height: 1; }
+    .game-card-name  { font-size: 15px; font-weight: 800; margin: 2px 0; }
+    .game-card-desc  { font-size: 11px; color: rgba(255,255,255,0.45); line-height: 1.4; }
+    .game-card-badge {
+        margin-top: 4px;
+        display: inline-block;
+        background: rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 2px 10px;
+        font-size: 11px;
+        color: rgba(255,255,255,0.6);
+    }
+    .game-card.active .game-card-badge {
+        background: rgba(255,215,0,0.18);
+        color: #ffd700;
+    }
+    /* Галочка обраної гри */
+    .game-card.active::after {
+        content: '✓';
+        position: absolute;
+        top: 8px; right: 12px;
+        font-size: 14px;
+        font-weight: 900;
+        color: #ffd700;
+    }
+
+    /* ── Форма ── */
+    .lobby-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: rgba(255,255,255,0.5);
+        margin-bottom: 6px;
+    }
+    .lobby-input {
+        width: 100%;
+        padding: 13px 16px;
+        font-size: 15px;
+        background: rgba(255,255,255,0.07);
+        border: 1.5px solid rgba(255,255,255,0.15);
+        border-radius: 10px;
+        color: #ffffff;
+        box-sizing: border-box;
+        outline: none;
+        transition: border-color 0.2s, background 0.2s;
+        font-family: 'Segoe UI', sans-serif;
+    }
+    .lobby-input::placeholder { color: rgba(255,255,255,0.3); }
+    .lobby-input:focus {
+        border-color: #ffd700;
+        background: rgba(255,255,255,0.1);
+    }
+
+    /* ── Кнопки ── */
+    .lobby-btn {
+        width: 100%;
+        padding: 14px;
+        font-size: 15px;
+        font-weight: 700;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: 'Segoe UI', sans-serif;
+    }
+    .lobby-btn-primary {
+        background: linear-gradient(135deg, #ffd700, #ffaa00);
+        color: #002a70;
+        box-shadow: 0 4px 18px rgba(255,170,0,0.35);
+    }
+    .lobby-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(255,170,0,0.5);
+        filter: brightness(1.05);
+    }
+    .lobby-btn-outline {
+        background: transparent;
+        color: rgba(255,255,255,0.8);
+        border: 1.5px solid rgba(255,255,255,0.2);
+    }
+    .lobby-btn-outline:hover {
+        background: rgba(255,255,255,0.07);
+        border-color: rgba(255,255,255,0.4);
+        transform: translateY(-1px);
+    }
+    .lobby-btn-blue {
+        background: #0057b7;
+        color: #ffffff;
+        box-shadow: 0 4px 14px rgba(0,87,183,0.3);
+    }
+    .lobby-btn-blue:hover {
+        background: #004494;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,87,183,0.4);
+    }
+    .lobby-btn:active { transform: translateY(0) !important; }
+
+    /* ── Роздільник ── */
+    .lobby-divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: rgba(255,255,255,0.25);
+        font-size: 12px;
+    }
+    .lobby-divider::before, .lobby-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: rgba(255,255,255,0.1);
+    }
+
+    /* ── Поле + кнопка в рядок ── */
+    .lobby-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .lobby-row .lobby-input { margin: 0; }
+    .lobby-row .lobby-btn  { width: auto; padding: 13px 18px; flex-shrink: 0; }
+
+    /* ── Помилка ── */
+    #rejoin-error {
+        background: rgba(198,40,40,0.15);
+        border: 1px solid rgba(198,40,40,0.4);
+        border-radius: 8px;
+        padding: 8px 14px;
+        font-size: 13px;
+        color: #ef9a9a;
+        display: none;
+    }
+
+    /* ══ ЗАЛА ОЧІКУВАННЯ ══ */
+    .wait-code-box {
+        background: rgba(0,87,183,0.12);
+        border: 2px solid rgba(0,87,183,0.35);
+        border-radius: 14px;
+        padding: 18px;
+        text-align: center;
+    }
+    .wait-code-label { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 8px; }
+    .wait-link-value {
+        font-size: 13px;
+        font-weight: 600;
+        color: rgba(255,255,255,0.7);
+        word-break: break-all;
+        margin-bottom: 12px;
+        font-family: monospace;
+        letter-spacing: 0.3px;
+    }
+    .wait-code-hint  { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 6px; }
+
+    .wait-players-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: rgba(255,255,255,0.45);
+    }
+    #lobby-player-count {
+        background: rgba(0,87,183,0.5);
+        color: #90caf9;
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+    }
+    #lobby-players-list {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 10px;
+        padding: 8px 12px;
+        min-height: 44px;
+        font-size: 13px;
+        color: rgba(255,255,255,0.8);
+    }
+    #lobby-players-list div {
+        padding: 5px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    #lobby-players-list div:last-child { border-bottom: none; }
+
+    /* Приховуємо старий .lobby-card якщо де залишився */
+    .lobby-card { display: none; }
+
+    /* ── Split-лейаут лобі ── */
+    .lobby-split {
+        display: flex;
+        width: 100%;
+        max-width: 960px;
+        align-items: stretch; /* обидві колонки однакової висоти */
+        gap: 0;
+    }
+
+    /* Ліва колонка: ігри (скролиться всередині) */
+    .lobby-left {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 28px 24px 24px;
+        overflow-y: auto;
+        border-right: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .lobby-header-compact {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+        flex-shrink: 0;
+    }
+    .lobby-header-compact-logo { font-size: 36px; line-height: 1; }
+    .lobby-header-compact-title {
+        font-size: 20px;
+        font-weight: 900;
+        color: #fff;
+        letter-spacing: 0.5px;
+    }
+    .lobby-header-compact-sub {
+        font-size: 11px;
+        color: rgba(255,255,255,0.35);
+        margin-top: 1px;
+    }
+
+    .lobby-left-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: rgba(255,255,255,0.35);
+        margin-bottom: 12px;
+        flex-shrink: 0;
+    }
+
+    /* Перевизначаємо grid для лівої колонки */
+    .lobby-left .game-grid {
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 10px;
+    }
+
+    /* Права колонка: форма — тягнеться до висоти лівої */
+    .lobby-right {
+        width: 280px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 28px 20px 24px;
+    }
+    .lobby-right .lobby-glass {
+        flex: 1;
+        justify-content: center;
+    }
+
+    /* Мобільний: стек вертикально */
+    @media (max-width: 680px) {
+        .lobby-split {
+            flex-direction: column;
+            height: auto;
+            min-height: 100vh;
+            overflow-y: auto;
+        }
+        .lobby-left {
+            border-right: none;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            padding: 20px 16px 16px;
+            overflow-y: visible;
+        }
+        .lobby-left .game-grid {
+            /* Горизонтальний скрол на мобільному */
+            grid-template-columns: repeat(3, minmax(150px, 1fr));
+            overflow-x: auto;
+        }
+        .lobby-right {
+            width: auto;
+            padding: 20px 16px 24px;
+        }
+    }
+
+
+    /* ── Налаштування у залі очікування ── */
+    .wait-settings-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: rgba(255,255,255,0.35);
+        margin-bottom: 10px;
+    }
+    .wait-setting-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    .wait-setting-label {
+        font-size: 13px;
+        color: rgba(255,255,255,0.65);
+        white-space: nowrap;
+    }
+    .wait-setting-options {
+        display: flex;
+        gap: 4px;
+    }
+    .wait-setting-btn {
+        padding: 5px 12px;
+        border: 1.5px solid rgba(255,255,255,0.15);
+        background: transparent;
+        color: rgba(255,255,255,0.45);
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-family: 'Segoe UI', sans-serif;
+    }
+    .wait-setting-btn:hover { border-color: rgba(255,255,255,0.35); color: rgba(255,255,255,0.8); }
+    .wait-setting-btn.active {
+        border-color: #ffd700;
+        background: rgba(255,215,0,0.12);
+        color: #ffd700;
+    }
+
+    /* ── Лічильник кімнат на картці гри ── */
+    .game-rooms-badge {
+        display: none;
+        align-items: center;
+        gap: 4px;
+        margin-top: 2px;
+        font-size: 11px;
+        color: rgba(255,255,255,0.45);
+        font-family: sans-serif;
+    }
+    .game-rooms-badge.has-rooms {
+        display: inline-flex;
+        color: #81c784;
+    }
+
+    /* ── Статистика на картці гри ── */
+    .game-stat-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 2px;
+        background: rgba(255,255,255,0.07);
+        border-radius: 20px;
+        padding: 2px 10px;
+        font-size: 11px;
+        color: rgba(255,255,255,0.5);
+        font-family: sans-serif;
+    }
+    .game-stat-badge.has-stats {
+        display: inline-flex;
+        color: #81c784;
+        background: rgba(129,199,132,0.1);
+    }
+
+    /* ── Картка «В розробці» ── */
+    .game-card.wip {
+        opacity: 0.6;
+        cursor: not-allowed;
+        border-style: dashed;
+    }
+    .game-card.wip:hover {
+        transform: none;
+        background: rgba(255,255,255,0.05);
+        border-color: rgba(255,255,255,0.1);
+    }
+    .game-card-wip-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 4px;
+        background: rgba(255,165,0,0.18);
+        border: 1px solid rgba(255,165,0,0.4);
+        border-radius: 20px;
+        padding: 2px 10px;
+        font-size: 11px;
+        color: #ffb74d;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+    }
+
+    /* ── Авторизація ── */
+    .auth-tabs {
+        display: flex;
+        background: rgba(255,255,255,0.05);
+        border-radius: 10px;
+        padding: 3px;
+        gap: 3px;
+    }
+    .auth-tab {
+        flex: 1;
+        padding: 9px;
+        border: none;
+        background: transparent;
+        color: rgba(255,255,255,0.45);
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 700;
+        transition: all 0.2s;
+        font-family: 'Segoe UI', sans-serif;
+    }
+    .auth-tab.active  { background: rgba(255,255,255,0.12); color: #fff; }
+    .auth-tab:hover:not(.active) { color: rgba(255,255,255,0.75); }
+
+    #auth-error {
+        display: none;
+        color: #ef9a9a;
+        font-size: 13px;
+        text-align: center;
+        background: rgba(198,40,40,0.12);
+        border: 1px solid rgba(198,40,40,0.3);
+        border-radius: 8px;
+        padding: 8px 12px;
+    }
+
+    /* Логін в шапці лобі */
+    .lobby-account-bar {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        color: rgba(255,255,255,0.5);
+    }
+    .lobby-account-bar b { color: rgba(255,255,255,0.85); }
+    .lobby-account-bar button {
+        background: none;
+        border: 1px solid rgba(255,255,255,0.18);
+        color: rgba(255,255,255,0.5);
+        border-radius: 6px;
+        padding: 3px 10px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .lobby-account-bar button:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+    
+/* ── Лідерборд: вкладки ігор ──────────────────── */
+.lb-game-tab {
+    padding: 5px 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    background: none;
+    color: rgba(255,255,255,0.4);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.lb-game-tab.active,
+.lb-game-tab:hover {
+    background: rgba(255,215,0,0.12);
+    border-color: rgba(255,215,0,0.35);
+    color: #ffd700;
+}

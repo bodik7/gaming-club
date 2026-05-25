@@ -1209,6 +1209,17 @@ socket.on('kicked', ({ reason }) => {
     showRejoinError(`❌ ${reason}`);
 });
 
+socket.on('duplicateSession', () => {
+    clearSession();
+    myPlayerIndex = null;
+    ['waiting-screen','game-screen','durak-screen'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
+    document.getElementById('lobby-screen').classList.remove('hidden');
+    showRejoinError('⚠️ Ваш акаунт відкрито в іншій вкладці. Підключення розірвано.');
+});
+
 socket.on('gameStarted', ({ state, gameType, myPlayerIndex: mpi }) => {
     if (mpi !== undefined) myPlayerIndex = mpi;
     // Бункер — React SPA на /bunker; редіректимо туди зі збереженою сесією
