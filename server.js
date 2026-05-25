@@ -3254,7 +3254,7 @@ io.on('connection', (socket) => {
             socket.leave(socket.roomCode);
             socket.roomCode = null;
             socket.playerIndex = null;
-            io.to(room.code).emit('lobbyUpdate', { players: room.players.map(p => p.name), gameType: room.gameType });
+            io.to(room.code).emit('lobbyUpdate', { players: room.players.map(p => p.name), bots: room.players.map(p => !!p.isBot), gameType: room.gameType });
         }
     });
 
@@ -3416,7 +3416,7 @@ io.on('connection', (socket) => {
             if (s) s.playerIndex = p.index;
         });
 
-        io.to(socket.roomCode).emit('lobbyUpdate', { players: room.players.map(p => p.name), gameType: room.gameType });
+        io.to(socket.roomCode).emit('lobbyUpdate', { players: room.players.map(p => p.name), bots: room.players.map(p => !!p.isBot), gameType: room.gameType });
     });
 
     // Додати / прибрати бота (тільки хост, тільки в залі очікування)

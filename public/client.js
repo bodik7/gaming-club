@@ -1115,16 +1115,17 @@ function startGame() {
 }
 
 // ── Отримання оновлень від сервера ───────────
-socket.on('lobbyUpdate', ({ players, gameType }) => {
+socket.on('lobbyUpdate', ({ players, bots, gameType }) => {
     if (gameType) _selectedGame = gameType; // синхронізуємо з типом кімнати
     const list = document.getElementById('lobby-players-list');
     if (!list) return;
     list.innerHTML = players.map((name, i) => {
         const isHost  = i === 0;
-        const canKick = myPlayerIndex === 0 && !isHost;
+        const isBot   = bots && bots[i];
+        const canKick = myPlayerIndex === 0 && !isHost && !isBot;
         return `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0">
-            <span>${isHost ? '👑 ' : '🎮 '}${name}</span>
+            <span>${isHost ? '👑 ' : isBot ? '🤖 ' : '🎮 '}${name}</span>
             ${canKick ? `<button onclick="kickPlayer(${i})"
                 style="background:none;border:1px solid #cc1f1f;color:#cc1f1f;
                        border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;
@@ -1151,6 +1152,41 @@ socket.on('lobbyUpdate', ({ players, gameType }) => {
         startBtn.classList.toggle('hidden', !isHost);
         startBtn.disabled = players.length < min;
         startBtn.style.opacity = players.length < min ? '0.4' : '1';
+    }
+    // Кнопки ботів (Мафія)
+    let botPanel = document.getElementById('bot-controls');
+    const showBots = isHost && _selectedGame === 'mafia';
+    if (showBots) {
+        const botCount = bots ? bots.filter(Boolean).length : 0;
+        const atMax = players.length >= (maxMap[_selectedGame] || 15);
+        if (!botPanel) {
+            botPanel = document.createElement('div');
+            botPanel.id = 'bot-controls';
+            botPanel.style.cssText = 'display:flex;gap:8px;align-items:center;margin-top:4px';
+            const startBtnEl = document.getElementById('start-btn');
+            if (startBtnEl) startBtnEl.parentNode.insertBefore(botPanel, startBtnEl);
+        }
+        botPanel.innerHTML = `
+            <button onclick="socket.emit('addBot')" ${atMax ? 'disabled' : ''}
+                style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(100,180,100,0.5);
+                       background:rgba(60,140,60,0.15);color:#6dc86d;font-size:13px;font-weight:700;
+                       cursor:${atMax ? 'not-allowed' : 'pointer'};opacity:${atMax ? 0.4 : 1};transition:all 0.15s"
+                onmouseover="if(!this.disabled)this.style.background='rgba(60,140,60,0.3)'"
+                onmouseout="this.style.background='rgba(60,140,60,0.15)'">
+                🤖 + Бот
+            </button>
+            ${botCount > 0 ? `<button onclick="socket.emit('removeBot')"
+                style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(180,80,80,0.5);
+                       background:rgba(140,40,40,0.15);color:#e07070;font-size:13px;font-weight:700;
+                       cursor:pointer;transition:all 0.15s"
+                onmouseover="this.style.background='rgba(140,40,40,0.3)'"
+                onmouseout="this.style.background='rgba(140,40,40,0.15)'">
+                🤖 − Бот
+            </button>` : ''}
+            <span style="font-size:12px;color:rgba(255,255,255,0.4);white-space:nowrap">Ботів: ${botCount}</span>
+        `;
+    } else if (botPanel) {
+        botPanel.remove();
     }
     // Показуємо панель налаштувань якщо хост і Мафія
     updateGameSettings(_selectedGame);
