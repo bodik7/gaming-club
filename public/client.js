@@ -124,6 +124,10 @@ async function checkAuth() {
     // document.getElementById('auth-screen').classList.remove('hidden');
     playAsGuest();
     if (joinCode) _pendingJoinCode = joinCode.toUpperCase();
+    // Якщо є збережена сесія — приховуємо лобі поки tryRejoin не завершиться
+    if (localStorage.getItem(SESSION_KEY)) {
+        document.getElementById('lobby-screen').classList.add('hidden');
+    }
 }
 
 function _enterLobby(username, joinCode) {
@@ -316,6 +320,7 @@ function tryRejoin() {
     socket.emit('rejoin', { code, playerIndex, playerName }, ({ success, error, started, state, players }) => {
         if (error) {
             clearSession();
+            document.getElementById('lobby-screen').classList.remove('hidden');
             showRejoinError(error);
             return;
         }

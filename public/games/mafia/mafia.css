@@ -14,7 +14,7 @@
 }
 
 #mafia-screen {
-    height: 100vh;
+    height: 100dvh;
     background: radial-gradient(ellipse at 30% 20%, rgba(198,40,40,0.18) 0%, transparent 55%),
                 radial-gradient(ellipse at 80% 80%, rgba(21,101,192,0.12) 0%, transparent 50%),
                 var(--m-bg);
@@ -170,12 +170,24 @@
 }
 .m-quit-btn:hover { background: var(--m-red); }
 
+/* ── Роль у топбарі ── */
+.m-role-topbar-badge {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 9px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.03em;
+}
+
 /* ── Layout ── */
-.m-layout {
+.m-body {
     flex: 1;
     display: flex;
     gap: 0;
     overflow: hidden;
+    min-height: 0;
 }
 
 /* ── Бокова панель: гравці + лог ── */
@@ -813,3 +825,168 @@
     transition: background 0.15s;
 }
 .m-chat-send:hover { background: #e53935; }
+
+/* ══════════════════════════════════════════
+   BOTTOM TABS (мобільна навігація)
+   ══════════════════════════════════════════ */
+.m-bottom-tabs {
+    display: none; /* visible only on mobile via media query */
+}
+
+/* ══════════════════════════════════════════
+   MOBILE BREAKPOINT  ≤ 768px
+   ══════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+    /* Таб-бар */
+    .m-bottom-tabs {
+        display: flex;
+        flex-shrink: 0;
+        background: rgba(0,0,0,0.75);
+        border-top: 1px solid var(--m-border);
+        backdrop-filter: blur(8px);
+    }
+    .m-tab-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        padding: 8px 4px 10px;
+        background: none;
+        border: none;
+        color: rgba(232,237,245,0.4);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        cursor: pointer;
+        position: relative;
+        transition: color 0.15s;
+    }
+    .m-tab-btn.active { color: var(--m-gold); }
+    .m-tab-icon { font-size: 18px; line-height: 1; }
+    .m-tab-label { font-size: 9px; letter-spacing: 0.06em; }
+    .m-tab-badge {
+        position: absolute;
+        top: 6px; right: calc(50% - 18px);
+        background: var(--m-red);
+        color: white;
+        font-size: 9px;
+        font-weight: 800;
+        border-radius: 99px;
+        padding: 1px 5px;
+        min-width: 16px;
+        text-align: center;
+    }
+
+    /* Тіло — контент + таби */
+    .m-body {
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    /* Sidebar — стає панеллю Players або Log */
+    .m-sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--m-border);
+        padding: 12px 14px;
+        overflow-y: auto;
+        flex: 1;
+        display: none; /* hidden on action tab */
+    }
+    #m-actions {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px 14px;
+        display: flex;
+        justify-content: flex-start;
+        align-items: flex-start;
+    }
+
+    /* Tab: action (default) */
+    .m-body.tab-action .m-sidebar  { display: none; }
+    .m-body.tab-action #m-actions  { display: flex; }
+
+    /* Tab: players */
+    .m-body.tab-players .m-sidebar  { display: flex; flex-direction: column; }
+    .m-body.tab-players #m-log      { display: none; }
+    .m-body.tab-players #m-actions  { display: none; }
+
+    /* Tab: log */
+    .m-body.tab-log .m-sidebar      { display: flex; flex-direction: column; }
+    .m-body.tab-log #m-players      { display: none; }
+    .m-body.tab-log .m-sidebar-label { display: none; }
+    .m-body.tab-log #m-actions      { display: none; }
+
+    /* Нічні кнопки — вертикальний список, великі */
+    .m-target-list {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .m-target-btn {
+        width: 100%;
+        min-height: 52px;
+        padding: 13px 16px;
+        font-size: 15px;
+        text-align: left;
+        border-radius: 12px;
+    }
+    .m-night-action { max-width: 100%; }
+
+    /* Голосування — великі картки */
+    .m-vote-targets {
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+    .m-vote-target-btn,
+    .m-vote-skip-btn {
+        width: 100%;
+        min-height: 56px;
+        font-size: 15px;
+        border-radius: 12px;
+        text-align: left;
+        padding: 14px 18px;
+    }
+    .m-vote-ui,
+    .m-day-ui { max-width: 100%; width: 100%; }
+
+    /* День — чат росте, input фіксований знизу */
+    .m-day-ui {
+        flex: 1;
+        height: 100%;
+        justify-content: flex-start;
+        overflow: hidden;
+    }
+    .m-day-chat {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        min-height: 0;
+    }
+    .m-day-chat-log {
+        flex: 1;
+        min-height: 0;
+        max-height: none;
+    }
+
+    /* Топбар — компактніший */
+    .m-topbar { padding: 8px 12px; gap: 8px; }
+    .m-title   { font-size: 14px; }
+    #m-phase-info { font-size: 11px; }
+
+    /* Ролі розкриття */
+    .m-role-reveal { padding: 20px 16px 16px; }
+    .m-role-reveal-icon { font-size: 56px; }
+    .m-role-reveal-name { font-size: 22px; }
+
+    /* Результати кінця гри */
+    .m-result-row { grid-template-columns: 22px 1fr 1fr; }
+    .m-result-status { display: none; }
+    .m-gameover-banner { padding: 16px; }
+    .m-gameover-headline { font-size: 20px; }
+}

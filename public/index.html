@@ -943,10 +943,11 @@
     <div id="mafia-screen" class="hidden">
         <div class="m-topbar">
             <div class="m-title">🔫 Мафія</div>
+            <div id="m-role-badge" class="m-role-topbar-badge"></div>
             <div id="m-phase-info"></div>
             <button id="quit-btn-mafia" class="hidden m-quit-btn" onclick="confirmAbandonGame()">← Лоббі</button>
         </div>
-        <div class="m-layout">
+        <div class="m-body">
             <div class="m-sidebar">
                 <div class="m-sidebar-label">Гравці</div>
                 <div id="m-players"></div>
@@ -954,6 +955,19 @@
             </div>
             <div id="m-actions" class="m-actions"></div>
         </div>
+        <nav class="m-bottom-tabs" aria-label="Навігація">
+            <button class="m-tab-btn active" data-tab="action" onclick="mSwitchTab('action')">
+                <span class="m-tab-icon">🎯</span><span class="m-tab-label">Дія</span>
+            </button>
+            <button class="m-tab-btn" data-tab="players" onclick="mSwitchTab('players')">
+                <span class="m-tab-icon">👥</span><span class="m-tab-label">Гравці</span>
+                <span class="m-tab-badge" id="m-tab-badge-players" style="display:none"></span>
+            </button>
+            <button class="m-tab-btn" data-tab="log" onclick="mSwitchTab('log')">
+                <span class="m-tab-icon">📋</span><span class="m-tab-label">Лог</span>
+                <span class="m-tab-badge" id="m-tab-badge-log" style="display:none"></span>
+            </button>
+        </nav>
     </div>
 
     <div id="tysyacha-screen" class="hidden">

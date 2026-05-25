@@ -9,6 +9,8 @@ let _mFlavorTimeouts  = [];
 let _mLastNightDL     = 0;
 let mGameoverProcessed = false;
 let _mNightSelections = {}; // { actionType: targetId }
+let _mActiveTab       = 'action';
+let _mLogBadge        = 0; // unread log entries while not on log tab
 
 function initMafia(state, myIdx) {
     mState             = state;
@@ -19,6 +21,9 @@ function initMafia(state, myIdx) {
     _mLastNightDL      = 0;
     mGameoverProcessed = false;
     _mNightSelections  = {};
+    _mActiveTab        = 'action';
+    _mLogBadge         = 0;
+    mSwitchTab('action', true);
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('mafia-screen').classList.remove('hidden');
     document.getElementById('mafia-screen').classList.add('visible');
@@ -32,6 +37,8 @@ function updateMafia(state, sideEffect) {
     if (state.phase === 'night' && prevPhase !== 'night') { mSideEffect = null; _mNightSelections = {}; }
     mState = state;
     if (sideEffect) mSideEffect = sideEffect;
+    // При зміні фази — повертаємось на вкладку Дія
+    if (state.phase !== prevPhase) mSwitchTab('action');
 
     // Звуки при зміні фази
     if (state.phase !== prevPhase) {
@@ -49,6 +56,33 @@ function updateMafia(state, sideEffect) {
     }
 
     renderMafia();
+}
+
+// ── Перемикання вкладок ───────────────────────
+function mSwitchTab(tab, silent) {
+    _mActiveTab = tab;
+    const body = document.querySelector('.m-body');
+    if (body) {
+        body.classList.remove('tab-action', 'tab-players', 'tab-log');
+        body.classList.add('tab-' + tab);
+    }
+    document.querySelectorAll('.m-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    // Скидаємо бейдж при переході на відповідну вкладку
+    if (tab === 'log') {
+        _mLogBadge = 0;
+        const b = document.getElementById('m-tab-badge-log');
+        if (b) b.style.display = 'none';
+    }
+}
+
+// ── Бейдж нових записів логу ─────────────────
+function mBumpLogBadge() {
+    if (_mActiveTab === 'log') return;
+    _mLogBadge++;
+    const b = document.getElementById('m-tab-badge-log');
+    if (b) { b.textContent = _mLogBadge > 9 ? '9+' : _mLogBadge; b.style.display = ''; }
 }
 
 // ── Головний рендер ───────────────────────────
@@ -81,6 +115,16 @@ function mRenderPhaseInfo() {
         if (['night','morning','resolving'].includes(mState.phase)) scr.classList.add('phase-night');
         else if (['day_discussion','day_voting'].includes(mState.phase)) scr.classList.add('phase-day');
     }
+    // Бейдж ролі в топбарі
+    const badge = document.getElementById('m-role-badge');
+    if (badge && mMyIdx !== null) {
+        const me = mState.players[mMyIdx];
+        if (me?.role) {
+            const rl = mRoleLabel(me.role);
+            badge.textContent = `${rl?.icon || ''} ${rl?.ua || me.role}`;
+            badge.style.cssText = `background:${mFactionColor(me.role)}33;color:${mFactionColor(me.role)};border:1px solid ${mFactionColor(me.role)}66`;
+        }
+    }
 }
 
 // ── Список гравців ─────────────────────────────
@@ -90,6 +134,14 @@ function mRenderPlayers() {
     const isGameover = mState.phase === 'gameover';
     const isMorning  = mState.phase === 'morning';
     const newlyDead  = isMorning ? (mState.lastDeaths || []) : [];
+    // Бейдж на вкладці Гравці якщо хтось помер і ми не там
+    if (newlyDead.length > 0 && _mActiveTab !== 'players') {
+        const b = document.getElementById('m-tab-badge-players');
+        if (b) { b.textContent = '💀'; b.style.display = ''; }
+    } else if (_mActiveTab === 'players') {
+        const b = document.getElementById('m-tab-badge-players');
+        if (b) b.style.display = 'none';
+    }
     // Живі гравці спочатку, мертві знизу (крім gameover де важливий порядок перемоги)
     const displayPlayers = isGameover
         ? mState.players
@@ -521,6 +573,7 @@ function mNightActions(s, me) {
 }
 
 // ── Лог ──────────────────────────────────────
+let _mLastLogLen = 0;
 function mRenderLog() {
     const el = document.getElementById('m-log');
     if (!el) return;
@@ -533,6 +586,10 @@ function mRenderLog() {
         const newest = i === 0 ? ' m-log-newest' : '';
         return `<div class="${cls}${newest}">${text}</div>`;
     }).join('');
+    // Бейдж нових записів
+    const newLen = (mState.log || []).length;
+    if (newLen > _mLastLogLen && _mLastLogLen > 0) mBumpLogBadge();
+    _mLastLogLen = newLen;
 }
 
 // ── Дії гравця ────────────────────────────────
