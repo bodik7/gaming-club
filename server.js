@@ -237,7 +237,14 @@ monopolyMod.init(io);
 tysyachaMod.init(io);
 durakMod.init(io);
 bunkerMod.init(io, db);
-mafiaMod.init(io, db, roomStore);
+mafiaMod.init(io, db, roomStore, (room) => {
+    db.saveGameStats(room, rp => {
+        const p = room.state?.players[rp.index];
+        return p ? MAFIA_ROLE_LABELS[p.role]?.faction === room.state.winner : false;
+    });
+    db.deleteRoom(room.code);
+    cleanupRoom(room.code);
+});
 
 // Деструктуруємо модульні функції для зручності у socket-хендлері
 const { createGameState, processAction, sanitize, addLog, nextPlayer, awardAuction,

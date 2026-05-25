@@ -3,11 +3,13 @@ const { shuffle, addLog } = require('./utils.js');
 let _io;
 let _db;
 let _rooms;
+let _onGameOver;
 
-function init(io, db, rooms) {
+function init(io, db, rooms, onGameOver) {
     _io = io;
     _db = db;
     _rooms = rooms;
+    _onGameOver = onGameOver || (() => {});
 }
 
 const MAFIA_BALANCE = {
@@ -260,6 +262,7 @@ function startMorningPhase(room, sheriffResult, newSheriffIdx = null) {
         room.players.forEach(rp => _io.to(rp.socketId).emit('gameOver', {
             state: sanitizeMafia(state, rp.index), gameType: 'mafia',
         }));
+        _onGameOver(room);
         return;
     }
 
@@ -338,6 +341,7 @@ function resolveVoting(room) {
         room.players.forEach(rp => _io.to(rp.socketId).emit('gameOver', {
             state: sanitizeMafia(state, rp.index), gameType: 'mafia',
         }));
+        _onGameOver(room);
         return;
     }
 

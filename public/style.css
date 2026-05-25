@@ -1578,9 +1578,36 @@ body {
         justify-content: flex-start;
     }
 
-    /* Dropdown вибору гри (тільки мобільний) */
+    /* Dropdown вибору гри */
     .game-select-mobile {
-        display: none;
+        display: block;
+        width: 100%;
+        padding: 11px 40px 11px 14px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 10px;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        font-family: 'Segoe UI', sans-serif;
+        cursor: pointer;
+        outline: none;
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.45)' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 14px center;
+        transition: border-color 0.2s, background 0.2s;
+    }
+    .game-select-mobile:hover,
+    .game-select-mobile:focus {
+        border-color: rgba(255,215,0,0.45);
+        background-color: rgba(255,215,0,0.05);
+    }
+    .game-select-mobile option {
+        background: #151e2d;
+        color: #fff;
+        font-weight: 600;
     }
 
     /* Мобільний: стек вертикально */
@@ -1600,29 +1627,6 @@ body {
         /* Ховаємо grid на мобільному — замість нього dropdown */
         .lobby-left .game-grid {
             display: none;
-        }
-        .game-select-mobile {
-            display: block;
-            width: 100%;
-            padding: 12px 14px;
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 10px;
-            color: #fff;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            outline: none;
-            appearance: none;
-            -webkit-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.4)' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 14px center;
-            padding-right: 36px;
-        }
-        .game-select-mobile option {
-            background: #0f1e2e;
-            color: #fff;
         }
         .lobby-right {
             width: auto;
