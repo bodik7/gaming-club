@@ -177,7 +177,7 @@ const TOKEN_ICONS  = ['🎩','🚗','🐕','🚀','🐎','👑','⚓','🎯'];
 const { CHANCE_CARDS, EXCURSION_CARDS } = require('./public/games/monopoly/messages.js');
 const {
     BUNKER_PROFESSIONS, BUNKER_HEALTH, BUNKER_HOBBIES,
-    BUNKER_TRAITS, BUNKER_BAGGAGE, BUNKER_ACTION_CARDS, ACTION_CARD_PHASES,
+    BUNKER_TRAITS, BUNKER_BAGGAGE, BUNKER_FACTS, BUNKER_ACTION_CARDS, ACTION_CARD_PHASES,
 } = require('./public/games/bunker/attributes.js');
 const { BUNKER_SCENARIOS } = require('./public/games/bunker/scenarios.js');
 
@@ -1678,6 +1678,7 @@ function createBunkerState(roomPlayers, settings = {}) {
     let hobbies = shuffle(BUNKER_HOBBIES);
     let traits  = shuffle(BUNKER_TRAITS);
     let bags    = shuffle(BUNKER_BAGGAGE);
+    let facts   = shuffle(BUNKER_FACTS);
     let actions = shuffle(BUNKER_ACTION_CARDS);
 
     const players = roomPlayers.map((rp, i) => {
@@ -1702,6 +1703,7 @@ function createBunkerState(roomPlayers, settings = {}) {
                 hobby:      { value: hobbies.pop(), isRevealed: false },
                 trait:      { value: traits.pop(),  isRevealed: false },
                 baggage:    { value: bags.pop(),    isRevealed: false },
+                fact:       { value: facts.pop(),   isRevealed: false },
             },
             actionCards: [{ ...actions.pop(), used: false }],
             localMarkers: {}, // клієнтська функція, не в стейті
@@ -1830,7 +1832,7 @@ async function generateBunkerEpilogue(state) {
 // ── Допоміжні ────────────────────────────────
 const BUNKER_ATTR_LABELS = {
     profession: 'Професію', biology: 'Біологію', health: 'Здоров\'я',
-    hobby: 'Хобі', trait: 'Рису характеру', baggage: 'Багаж',
+    hobby: 'Хобі', trait: 'Рису характеру', baggage: 'Багаж', fact: 'Факт',
 };
 const BUNKER_PHASE_MS = {
     game_start:   60_000,

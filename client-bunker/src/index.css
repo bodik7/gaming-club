@@ -29,6 +29,7 @@
   --attr-hobby:      #6088cc;
   --attr-trait:      #aa88cc;
   --attr-baggage:    #cc8844;
+  --attr-fact:       #48b0c8;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

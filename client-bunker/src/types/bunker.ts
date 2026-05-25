@@ -20,6 +20,7 @@ export interface Attributes {
   hobby:      Attribute
   trait:      Attribute
   baggage:    Attribute
+  fact:       Attribute
 }
 
 export interface ActionCard {

@@ -5,12 +5,12 @@ import type { BunkerPlayer, Attribute } from '../types/bunker'
 
 const ATTR_ICONS: Record<string, string> = {
   profession: '💼', biology: '🧬', health: '❤️',
-  hobby: '🎯', trait: '🧠', baggage: '🎒',
+  hobby: '🎯', trait: '🧠', baggage: '🎒', fact: '🔐',
 }
 
 const ATTR_LABELS: Record<string, string> = {
   profession: 'Професія', biology: 'Біологія', health: "Здоров'я",
-  hobby: 'Хобі', trait: 'Риса', baggage: 'Багаж',
+  hobby: 'Хобі', trait: 'Риса', baggage: 'Багаж', fact: 'Факт',
 }
 
 const ATTR_COLORS: Record<string, string> = {
@@ -20,9 +20,10 @@ const ATTR_COLORS: Record<string, string> = {
   hobby:      '#6088cc',
   trait:      '#aa88cc',
   baggage:    '#cc8844',
+  fact:       '#48b0c8',
 }
 
-const ATTR_ORDER = ['profession', 'biology', 'health', 'hobby', 'trait', 'baggage']
+const ATTR_ORDER = ['profession', 'biology', 'health', 'hobby', 'trait', 'baggage', 'fact']
 
 const AVATAR_COLORS = [
   '#6088cc', '#5cb87e', '#cc8844', '#aa88cc',

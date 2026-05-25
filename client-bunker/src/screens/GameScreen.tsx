@@ -20,6 +20,7 @@ const ATTR_LABELS: Record<string, string> = {
   hobby:      '🎯 Хобі',
   trait:      '🧠 Риса',
   baggage:    '🎒 Багаж',
+  fact:       '🔐 Факт',
 }
 
 const ATTR_COLORS: Record<string, string> = {
@@ -29,6 +30,7 @@ const ATTR_COLORS: Record<string, string> = {
   hobby:      '#6088cc',
   trait:      '#aa88cc',
   baggage:    '#cc8844',
+  fact:       '#48b0c8',
 }
 
 const PHASE_META: Record<string, { label: string; color: string; bg: string }> = {
