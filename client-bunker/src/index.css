@@ -190,10 +190,13 @@ body {
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Фіксована кнопка "Готовий" — піднімається над нав-баром */
-  .game-start-fixed-btn {
+  /* Фіксовані панелі фаз — піднімаємо над нав-баром */
+  .phase-fixed-panel {
     bottom: calc(56px + env(safe-area-inset-bottom)) !important;
   }
+
+  /* Блок сценарію у фіксованих панелях — прибираємо, є окрема вкладка */
+  .phase-scenario-block { display: none; }
 
   /* Кнопка надіслати — більша на мобільному */
   .chat-send-btn { padding: 10px 18px; font-size: 18px; }
