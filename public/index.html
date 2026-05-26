@@ -754,11 +754,13 @@
                 const medals = ['🥇','🥈','🥉'];
                 list.innerHTML = rows.slice(0, 10).map((r, i) => {
                     const winRate = r.games ? Math.round(r.wins / r.games * 100) : 0;
+                    const avHtml = window.renderAvatarEl(r.avatarId, r.avatarColor, r.username[0] || '?', 28);
                     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.05)">
-                        <span style="font-size:16px;width:22px;text-align:center">${medals[i] || (i+1)}</span>
-                        <span style="flex:1;font-size:13px;font-weight:600;color:#fff">${r.username}</span>
-                        <span style="font-size:12px;color:rgba(255,255,255,0.4)">${r.wins}/${r.games}</span>
-                        <span style="font-size:12px;font-weight:700;color:${winRate>=60?'#4caf50':winRate>=40?'#ffd700':'rgba(255,255,255,0.5)'}">${winRate}%</span>
+                        <span style="font-size:16px;width:22px;text-align:center;flex-shrink:0">${medals[i] || (i+1)}</span>
+                        ${avHtml}
+                        <span style="flex:1;font-size:13px;font-weight:600;color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.username}</span>
+                        <span style="font-size:12px;color:rgba(255,255,255,0.4);flex-shrink:0">${r.wins}/${r.games}</span>
+                        <span style="font-size:12px;font-weight:700;flex-shrink:0;color:${winRate>=60?'#4caf50':winRate>=40?'#ffd700':'rgba(255,255,255,0.5)'}">${winRate}%</span>
                     </div>`;
                 }).join('');
             } catch {

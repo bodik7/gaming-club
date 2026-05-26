@@ -97,6 +97,11 @@ function updateMafia(state, sideEffect) {
         else if (state.phase === 'day_discussion') playSound('day');
         else if (state.phase === 'day_voting')   playSound('vote');
         else if (state.phase === 'morning' && state.lastDeaths?.length > 0) playSound('death');
+        if (typeof _sendNotif === 'function') {
+            if (state.phase === 'night') _sendNotif('Мафія', 'Настала ніч — час дій!');
+            else if (state.phase === 'day_discussion') _sendNotif('Мафія', 'Обговорення — хто винуватий?');
+            else if (state.phase === 'day_voting') _sendNotif('Мафія', 'Час голосувати!');
+        }
         mPhaseFlash(state.phase);
         // Return to players tab on phase change
         mSwitchTab('players');

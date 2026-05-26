@@ -105,6 +105,20 @@ let _avatarColor   = '#1a56db';
 let _avatarId      = null;
 let _isAdmin       = false;
 
+// ── Push-сповіщення ──────────────────────────
+function _requestNotifPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+}
+function _sendNotif(title, body) {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    if (document.visibilityState === 'visible') return;
+    new Notification(title, { body, icon: '/favicon.svg' });
+}
+
 async function loadProfile(token) {
     try {
         const res = await fetch('/api/me', {
@@ -223,6 +237,7 @@ function _enterLobby(username, joinCode) {
             el.classList.add('has-stats');
         }
     });
+    _requestNotifPermission();
 }
 
 // ── Кнопки авторизації ────────────────────────
@@ -641,6 +656,7 @@ function saveSession(code, playerIndex, playerName) {
 
 function clearSession() {
     localStorage.removeItem(SESSION_KEY);
+    _isReady = false;
 }
 
 function setQuitBtn(visible) {
@@ -1499,25 +1515,45 @@ socket.on('lobbyMsg', ({ name, text }) => {
 });
 
 // ── Отримання оновлень від сервера ───────────
-socket.on('lobbyUpdate', ({ players, bots, gameType }) => {
+socket.on('lobbyUpdate', ({ players, bots, gameType, avatars, ready }) => {
     if (gameType) _selectedGame = gameType; // синхронізуємо з типом кімнати
     const list = document.getElementById('lobby-players-list');
     if (!list) return;
+    const readySet = new Set(ready || []);
     list.innerHTML = players.map((name, i) => {
-        const isHost  = i === 0;
-        const isBot   = bots && bots[i];
-        const canKick = myPlayerIndex === 0 && !isHost && !isBot;
+        const isHost    = i === 0;
+        const isBot     = bots && bots[i];
+        const isMe      = i === myPlayerIndex;
+        const isReady   = isHost || isBot || readySet.has(i);
+        const canKick   = myPlayerIndex === 0 && !isHost && !isBot;
+        const av        = avatars && avatars[i];
+        const avatarHtml = av ? window.renderAvatarEl(av.avatarId, av.avatarColor, name[0] || '?', 28) : '';
         return `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0">
-            <span>${isHost ? '👑 ' : isBot ? '🤖 ' : '🎮 '}${name}</span>
-            ${canKick ? `<button onclick="kickPlayer(${i})"
-                style="background:none;border:1px solid #cc1f1f;color:#cc1f1f;
-                       border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;
-                       transition:all 0.15s"
-                onmouseover="this.style.background='#cc1f1f';this.style.color='white'"
-                onmouseout="this.style.background='none';this.style.color='#cc1f1f'">
-                ✕ Видалити
-            </button>` : ''}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;gap:6px">
+            <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0">
+                ${avatarHtml || `<span style="font-size:16px">${isHost ? '👑' : isBot ? '🤖' : '🎮'}</span>`}
+                <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+                <span style="font-size:11px;flex-shrink:0;${isReady ? 'color:#4caf80' : 'color:rgba(255,255,255,0.28)'}">${isReady ? '✓ Готов' : '...'}</span>
+            </div>
+            <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
+                ${isMe && !isHost && !isBot ? `<button onclick="_toggleReady()"
+                    id="ready-btn-${i}"
+                    style="background:${isReady ? 'rgba(40,140,80,0.25)' : 'rgba(255,255,255,0.06)'};
+                           border:1px solid ${isReady ? 'rgba(76,175,128,0.6)' : 'rgba(255,255,255,0.15)'};
+                           color:${isReady ? '#4caf80' : 'rgba(255,255,255,0.5)'};
+                           border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;white-space:nowrap;
+                           transition:all 0.15s">
+                    ${isReady ? '✓ Готовий' : 'Готовий?'}
+                </button>` : ''}
+                ${canKick ? `<button onclick="kickPlayer(${i})"
+                    style="background:none;border:1px solid #cc1f1f;color:#cc1f1f;
+                           border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;
+                           transition:all 0.15s"
+                    onmouseover="this.style.background='#cc1f1f';this.style.color='white'"
+                    onmouseout="this.style.background='none';this.style.color='#cc1f1f'">
+                    ✕ Видалити
+                </button>` : ''}
+            </div>
         </div>`;
     }).join('');
     const maxMap = { tysyacha: 3, mafia: 15, monopoly: 6, durak: 6, bunker: 15 };
@@ -1525,17 +1561,20 @@ socket.on('lobbyUpdate', ({ players, bots, gameType }) => {
     const min = minMap[_selectedGame] || 2;
     const counter = document.getElementById('lobby-player-count');
     if (counter) counter.textContent = `${players.length}/${maxMap[_selectedGame] || 6}`;
+    const notReadyCount = players.filter((_, i) => i !== 0 && !(bots && bots[i]) && !readySet.has(i)).length;
+    const canStart = players.length >= min && notReadyCount === 0;
     const hint = document.getElementById('waiting-hint');
-    if (hint) hint.textContent = players.length < min
-        ? `Потрібно ще ${min - players.length} гравців для старту`
-        : 'Хост бачить кнопку старту';
-    // Хост може змінитись після kick — оновлюємо видимість кнопки старту
+    if (hint) {
+        if (players.length < min) hint.textContent = `Потрібно ще ${min - players.length} гравців для старту`;
+        else if (notReadyCount > 0) hint.textContent = `Очікуємо готовності ${notReadyCount} гравців`;
+        else hint.textContent = 'Хост бачить кнопку старту';
+    }
     const startBtn = document.getElementById('start-btn');
     const isHost = myPlayerIndex === 0;
     if (startBtn) {
         startBtn.classList.toggle('hidden', !isHost);
-        startBtn.disabled = players.length < min;
-        startBtn.style.opacity = players.length < min ? '0.4' : '1';
+        startBtn.disabled = !canStart;
+        startBtn.style.opacity = canStart ? '1' : '0.4';
     }
     // Кнопки ботів (Мафія)
     let botPanel = document.getElementById('bot-controls');
@@ -1578,6 +1617,12 @@ socket.on('lobbyUpdate', ({ players, bots, gameType }) => {
 
 function kickPlayer(index) {
     socket.emit('kickPlayer', { kickIndex: index });
+}
+
+let _isReady = false;
+function _toggleReady() {
+    _isReady = !_isReady;
+    socket.emit('setReady', { ready: _isReady });
 }
 
 socket.on('kicked', ({ reason }) => {
@@ -1632,6 +1677,10 @@ socket.on('stateUpdate', ({ state, sideEffect, toast }) => {
     if (state?.gameType === 'durak') { updateDurak(state, sideEffect); return; }
     if (state?.gameType === 'mafia') { updateMafia(state, sideEffect); return; }
     if (state?.gameType === 'tysyacha') { updateTysyacha(state, sideEffect); return; }
+    // Monopoly turn notification
+    if (state.currentPlayerIndex === myPlayerIndex) {
+        _sendNotif('Монополія', 'Твій хід! Кидай кубики.');
+    }
     const [d1, d2] = state.lastDiceRoll;
     const diceRolled = (d1 !== _prevDice[0] || d2 !== _prevDice[1]) && d1 > 0;
     const landingPos = sideEffect?.landingPos ?? null;

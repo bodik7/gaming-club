@@ -358,6 +358,16 @@ const _activeSessions = new Map();
 
 function isStr(v, max = 100) { return typeof v === 'string' && v.trim().length > 0 && v.length <= max; }
 
+function emitLobbyUpdate(room) {
+    io.to(room.code).emit('lobbyUpdate', {
+        players:  room.players.map(p => p.name),
+        bots:     room.players.map(p => !!p.isBot),
+        gameType: room.gameType,
+        avatars:  room.players.map(p => ({ avatarId: p.avatarId || null, avatarColor: p.avatarColor || '#1a56db' })),
+        ready:    room.ready ? [...room.ready] : [],
+    });
+}
+
 io.on('connection', (socket) => {
     console.log('+ підключення:', socket.id);
 
@@ -394,6 +404,7 @@ io.on('connection', (socket) => {
             started: false,
             state: null,
             gameType: gtype,
+            ready: new Set(),
             createdAt: Date.now(),
             lastActivityAt: Date.now(),
         };
@@ -403,7 +414,7 @@ io.on('connection', (socket) => {
         socket.playerIndex = 0;
         console.log(`Кімната ${code} створена`);
         cb({ code, playerIndex: 0, gameType: gtype });
-        io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name), bots: room.players.map(p => !!p.isBot), gameType: gtype });
+        emitLobbyUpdate(room);
     });
 
     // Перегляд кімнати без входу
@@ -430,7 +441,7 @@ io.on('connection', (socket) => {
         socket.roomCode = code;
         socket.playerIndex = idx;
 
-        io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name), bots: room.players.map(p => !!p.isBot), gameType: room.gameType });
+        emitLobbyUpdate(room);
         cb({ code, playerIndex: idx, gameType: room.gameType });
     });
 
@@ -465,16 +476,21 @@ io.on('connection', (socket) => {
             roomStore.delete(socket.roomCode);
         } else {
             // Звичайний гравець — прибираємо і переіндексуємо
-            room.players = room.players.filter(p => p.index !== socket.playerIndex);
+            const leavingIdx = socket.playerIndex;
+            room.players = room.players.filter(p => p.index !== leavingIdx);
             room.players.forEach((p, i) => { p.index = i; });
             room.players.forEach(p => {
                 const s = io.sockets.sockets.get(p.socketId);
                 if (s) s.playerIndex = p.index;
             });
+            // Перебудовуємо ready-сет з новими індексами
+            const newReady = new Set();
+            room.players.forEach(p => { if (room.ready.has(p.index + (p.index >= leavingIdx ? 1 : 0))) newReady.add(p.index); });
+            room.ready = newReady;
             socket.leave(socket.roomCode);
             socket.roomCode = null;
             socket.playerIndex = null;
-            io.to(room.code).emit('lobbyUpdate', { players: room.players.map(p => p.name), bots: room.players.map(p => !!p.isBot), gameType: room.gameType });
+            emitLobbyUpdate(room);
         }
     });
 
@@ -634,6 +650,9 @@ io.on('connection', (socket) => {
         // Видаляємо та переіндексуємо
         room.players = room.players.filter(p => p.index !== kickIndex);
         room.players.forEach((p, i) => { p.index = i; });
+        room.ready.delete(kickIndex);
+        const newRdK = new Set([...room.ready].map(i => i > kickIndex ? i - 1 : i));
+        room.ready = newRdK;
 
         // Оновлюємо playerIndex на живих сокетах
         room.players.forEach(p => {
@@ -641,7 +660,7 @@ io.on('connection', (socket) => {
             if (s) s.playerIndex = p.index;
         });
 
-        io.to(socket.roomCode).emit('lobbyUpdate', { players: room.players.map(p => p.name), bots: room.players.map(p => !!p.isBot), gameType: room.gameType });
+        emitLobbyUpdate(room);
     });
 
     // Додати / прибрати бота (тільки хост, тільки в залі очікування)
@@ -654,11 +673,7 @@ io.on('connection', (socket) => {
         const botName = BOT_NAMES.find(n => !usedNames.has(n)) || `Бот-АІ-${room.players.length}`;
         const idx = room.players.length;
         room.players.push({ name: botName, index: idx, socketId: null, isBot: true });
-        io.to(socket.roomCode).emit('lobbyUpdate', {
-            players: room.players.map(p => p.name),
-            bots:    room.players.map(p => !!p.isBot),
-            gameType: room.gameType,
-        });
+        emitLobbyUpdate(room);
     });
 
     socket.on('removeBot', () => {
@@ -667,11 +682,18 @@ io.on('connection', (socket) => {
         const last = room.players[room.players.length - 1];
         if (!last?.isBot) return;
         room.players.pop();
-        io.to(socket.roomCode).emit('lobbyUpdate', {
-            players: room.players.map(p => p.name),
-            bots:    room.players.map(p => !!p.isBot),
-            gameType: room.gameType,
-        });
+        emitLobbyUpdate(room);
+    });
+
+    // Готовність гравця (лобі)
+    socket.on('setReady', ({ ready }) => {
+        const room = roomStore.get(socket.roomCode);
+        if (!room || room.started) return;
+        const idx = socket.playerIndex;
+        if (idx === 0) return; // хост завжди "готовий"
+        if (ready) room.ready.add(idx);
+        else room.ready.delete(idx);
+        emitLobbyUpdate(room);
     });
 
     // Почати гру (тільки хост — index 0)
@@ -1012,7 +1034,7 @@ io.on('connection', (socket) => {
             if (room.state.gameType === 'bunker') emitBunkerUpdate(room);
         } else {
             cb({ success: true, started: false, players: room.players.map(p => p.name), bots: room.players.map(p => p.isBot || false) });
-            io.to(code).emit('lobbyUpdate', { players: room.players.map(p => p.name), bots: room.players.map(p => p.isBot || false), gameType: room.gameType });
+            emitLobbyUpdate(room);
         }
     });
 

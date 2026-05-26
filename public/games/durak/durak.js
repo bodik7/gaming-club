@@ -45,7 +45,13 @@ function updateDurak(state, sideEffect){
     dSelCards.clear(); dSelCard = null; dSelAtk = null;
     renderDurak();
     dStartClientTimer();
-    if(state.phase==='attack' && state.attacker===dMyIdx) playSound('myTurn');
+    if(state.phase==='attack' && state.attacker===dMyIdx) {
+        playSound('myTurn');
+        if(typeof _sendNotif==='function') _sendNotif('Дурак', 'Твій хід — атакуй!');
+    }
+    if(state.phase==='defend' && state.defender===dMyIdx) {
+        if(typeof _sendNotif==='function') _sendNotif('Дурак', 'Твій хід — захищайся!');
+    }
 }
 
 function dStartClientTimer(){

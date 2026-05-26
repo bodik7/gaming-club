@@ -175,18 +175,23 @@ async function getStats(username) {
 
 async function getLeaderboard(gameType) {
     const result = await getClient().execute({
-        sql:  `SELECT username, game_type, COUNT(*) AS games, SUM(won) AS wins,
-                      ROUND(100.0 * SUM(won) / COUNT(*), 1) AS winrate
-               FROM game_stats WHERE game_type = ?
-               GROUP BY username ORDER BY wins DESC, games ASC LIMIT 20`,
+        sql:  `SELECT gs.username, gs.game_type, COUNT(*) AS games, SUM(gs.won) AS wins,
+                      ROUND(100.0 * SUM(gs.won) / COUNT(*), 1) AS winrate,
+                      u.avatar_id, u.avatar_color
+               FROM game_stats gs
+               LEFT JOIN users u ON u.username = gs.username
+               WHERE gs.game_type = ?
+               GROUP BY gs.username ORDER BY wins DESC, games ASC LIMIT 20`,
         args: [gameType],
     });
     return result.rows.map(r => ({
-        username:  r.username,
-        game_type: r.game_type,
-        games:     Number(r.games),
-        wins:      Number(r.wins),
-        winrate:   Number(r.winrate),
+        username:    r.username,
+        game_type:   r.game_type,
+        games:       Number(r.games),
+        wins:        Number(r.wins),
+        winrate:     Number(r.winrate),
+        avatarId:    r.avatar_id   || null,
+        avatarColor: r.avatar_color || '#1a56db',
     }));
 }
 

@@ -105,6 +105,8 @@ function updateTysyacha(state, sideEffect) {
         // Спалах "Ваш хід" + звук
         if (state.currentPlayer === tMyIdx && state.phase === 'playing') {
             playSound('myTurn');
+            if (typeof _sendNotif === 'function') _sendNotif('Тисяча', 'Твій хід!');
+
             const hand = document.getElementById('t-hand');
             if (hand) {
                 hand.classList.remove('t-my-turn-flash');
