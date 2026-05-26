@@ -1038,6 +1038,43 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Режим глядача
+    socket.on('spectatorJoin', ({ code }, cb) => {
+        if (!isStr(code, 20)) return cb({ error: 'not_found' });
+        const room = roomStore.get(code.toUpperCase());
+        if (!room) return cb({ error: 'not_found' });
+        if (!room.started || !room.state) return cb({ error: 'Гра ще не почалась' });
+        if (room.gameType === 'mafia') return cb({ error: 'Глядачі в Мафії недоступні' });
+
+        socket.join(code.toUpperCase());
+        socket.roomCode    = code.toUpperCase();
+        socket.playerIndex = null;
+        socket.isSpectator = true;
+
+        const st = room.gameType === 'tysyacha'
+            ? sanitizeTysyacha(room.state, -1)
+            : room.gameType === 'durak'
+            ? sanitizeDurak(room.state, -1)
+            : room.gameType === 'bunker'
+            ? sanitizeBunker(room.state, -1)
+            : sanitize(room.state);
+
+        io.to(code.toUpperCase()).emit('spectatorJoined', { name: socket.username || 'Глядач' });
+        cb({ success: true, state: st, gameType: room.gameType });
+    });
+
+    // Emoji-реакції (relay, без збереження)
+    socket.on('emojiReaction', ({ emoji }) => {
+        if (!socket.roomCode) return;
+        if (!rateLimit(`emoji:${socket.id}`, 3, 4_000)) return;
+        const ALLOWED = ['😂','👍','🔥','💀','❤️','👏','😱','🤔'];
+        if (!ALLOWED.includes(emoji)) return;
+        const room = roomStore.get(socket.roomCode);
+        if (!room) return;
+        const name = room.players[socket.playerIndex]?.name || (socket.isSpectator ? '👁' : '?');
+        io.to(socket.roomCode).emit('emojiReaction', { emoji, name, playerIndex: socket.playerIndex ?? -1 });
+    });
+
     // Чат
     socket.on('chatMessage', ({ text, icon, name, color }) => {
         if (!socket.roomCode) return;
@@ -1076,6 +1113,7 @@ io.on('connection', (socket) => {
             _activeSessions.delete(socket.username);
         const room = roomStore.get(socket.roomCode);
         if (!room) return;
+        if (socket.isSpectator) return; // глядачі не впливають на стан гри
         // Прибираємо гравця з активного аукціону щоб не зависав
         if (room.state?.auctionState) {
             const a = room.state.auctionState;

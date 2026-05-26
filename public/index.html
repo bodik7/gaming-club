@@ -190,8 +190,12 @@
                                     border-radius:12px;padding:14px 18px;text-align:center">
                             <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:6px">Вас запрошено до кімнати</div>
                             <div id="join-room-peek" style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:10px"></div>
-                            <button class="lobby-btn lobby-btn-blue" onclick="joinRoom()"
-                                    style="padding:10px">🔗 Приєднатись</button>
+                            <div style="display:flex;gap:8px;justify-content:center">
+                                <button class="lobby-btn lobby-btn-blue" onclick="joinRoom()"
+                                        style="padding:10px">🔗 Приєднатись</button>
+                                <button id="spectate-btn" class="lobby-btn" onclick="spectateRoom()"
+                                        style="padding:10px;display:none;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7)">👁 Дивитись</button>
+                            </div>
                         </div>
 
                         <div id="rejoin-error"></div>
@@ -791,5 +795,49 @@
             renderActionButtons();
         }
     </script>
+
+    <!-- Emoji-реакції: overlay поверх усіх ігор -->
+    <div id="emoji-overlay" style="
+        position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden">
+    </div>
+
+    <!-- Панель глядача -->
+    <div id="spectator-bar" style="
+        display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+        background:rgba(10,10,20,0.88);backdrop-filter:blur(12px);
+        border:1px solid rgba(255,255,255,0.12);border-radius:16px;
+        padding:8px 18px;z-index:8000;display:none;align-items:center;gap:12px;
+        font-size:13px;color:rgba(255,255,255,0.55);white-space:nowrap">
+        <span>👁 Режим глядача</span>
+        <div id="spectator-count" style="color:rgba(255,255,255,0.35);font-size:12px"></div>
+        <button onclick="leaveSpectate()"
+            style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+                   color:rgba(255,255,255,0.6);border-radius:8px;padding:4px 12px;font-size:12px;cursor:pointer">
+            ← Вийти
+        </button>
+    </div>
+
+    <!-- Кнопки emoji-реакцій (floating) -->
+    <div id="emoji-btn-bar" style="
+        display:none;position:fixed;right:16px;bottom:70px;z-index:8001;
+        display:none;flex-direction:column;gap:6px;align-items:center">
+        <button onclick="_toggleEmojiBar()"
+            id="emoji-toggle-btn"
+            style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.1);
+                   border:1px solid rgba(255,255,255,0.2);font-size:20px;cursor:pointer;
+                   backdrop-filter:blur(8px);transition:all 0.15s">
+            😄
+        </button>
+        <div id="emoji-picker" style="display:none;flex-direction:column;gap:5px;align-items:center">
+            <button onclick="sendEmoji('😂')" class="emoji-react-btn">😂</button>
+            <button onclick="sendEmoji('👍')" class="emoji-react-btn">👍</button>
+            <button onclick="sendEmoji('🔥')" class="emoji-react-btn">🔥</button>
+            <button onclick="sendEmoji('💀')" class="emoji-react-btn">💀</button>
+            <button onclick="sendEmoji('❤️')" class="emoji-react-btn">❤️</button>
+            <button onclick="sendEmoji('👏')" class="emoji-react-btn">👏</button>
+            <button onclick="sendEmoji('😱')" class="emoji-react-btn">😱</button>
+            <button onclick="sendEmoji('🤔')" class="emoji-react-btn">🤔</button>
+        </div>
+    </div>
 </body>
 </html>

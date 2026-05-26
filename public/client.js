@@ -104,6 +104,8 @@ let _displayName   = '';   // ім'я в іграх (з профілю)
 let _avatarColor   = '#1a56db';
 let _avatarId      = null;
 let _isAdmin       = false;
+let _isSpectator   = false;
+let _emojiBarOpen  = false;
 
 // ── Push-сповіщення ──────────────────────────
 function _requestNotifPermission() {
@@ -217,10 +219,15 @@ function _enterLobby(username, joinCode) {
             const peekEl = document.getElementById('join-room-peek');
             if (!peekEl) return;
             if (error || !players) { peekEl.textContent = ''; return; }
-            const gNames = { tysyacha: 'Тисяча', mafia: 'Мафія', monopoly: 'Монополія', durak: 'Дурак' };
-            peekEl.textContent = started
-                ? '⚠️ Гра вже почалась'
-                : `${gNames[gameType] || gameType} · ${players}/${max} гравців`;
+            const gNames = { tysyacha: 'Тисяча', mafia: 'Мафія', monopoly: 'Монополія', durak: 'Дурак', bunker: 'Бункер' };
+            const specBtn = document.getElementById('spectate-btn');
+            if (started) {
+                peekEl.textContent = '⚠️ Гра вже почалась';
+                if (specBtn && gameType !== 'mafia' && gameType !== 'bunker') specBtn.style.display = '';
+            } else {
+                peekEl.textContent = `${gNames[gameType] || gameType} · ${players}/${max} гравців`;
+                if (specBtn) specBtn.style.display = 'none';
+            }
         });
     } else {
         if (banner) banner.classList.add('hidden');
@@ -657,6 +664,7 @@ function saveSession(code, playerIndex, playerName) {
 function clearSession() {
     localStorage.removeItem(SESSION_KEY);
     _isReady = false;
+    _isSpectator = false;
 }
 
 function setQuitBtn(visible) {
@@ -682,6 +690,7 @@ function tryRejoin() {
         myPlayerIndex = playerIndex;
         if (started && state) {
             document.getElementById('lobby-screen').classList.add('hidden');
+            _showEmojiBar(true);
             setQuitBtn(true);
             if (state.gameType === 'durak') {
                 initDurak(state, myPlayerIndex);
@@ -1045,6 +1054,8 @@ function leaveRoom() {
     clearSession();
     myPlayerIndex = null;
     _inviteCode = '';
+    _showEmojiBar(false);
+    _showSpectatorBar(false);
     document.getElementById('waiting-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.remove('hidden');
     if (_isGuest) document.getElementById('lobby-login-btn')?.classList.remove('hidden');
@@ -1127,6 +1138,8 @@ socket.on('gameAbandoned', ({ reason }) => {
     clearSession();
     myPlayerIndex = null;
     closeModal();
+    _showEmojiBar(false);
+    _showSpectatorBar(false);
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('tysyacha-screen').classList.add('hidden');
     document.getElementById('mafia-screen')?.classList.add('hidden');
@@ -1653,6 +1666,7 @@ socket.on('gameStarted', ({ state, gameType, myPlayerIndex: mpi }) => {
     }
     document.getElementById('waiting-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.add('hidden');
+    _showEmojiBar(true);
     setQuitBtn(true);
     if (gameType === 'durak' || state?.gameType === 'durak') {
         initDurak(state, myPlayerIndex);
@@ -2234,4 +2248,80 @@ window.showTradeMenu = showTradeMenuOnline;
 // Такелоджування для debug
 socket.onAny((event, ...args) => {
     if (event !== 'stateUpdate') console.log('[socket]', event, args[0]);
+});
+
+// ── Режим глядача ─────────────────────────────
+function spectateRoom() {
+    const code = _pendingJoinCode;
+    if (!code) return;
+    socket.emit('spectatorJoin', { code }, ({ success, error, state, gameType }) => {
+        if (error) { _lobbyError(error); return; }
+        _isSpectator = true;
+        myPlayerIndex = -1;
+        document.getElementById('lobby-screen').classList.add('hidden');
+        document.getElementById('join-invite-banner')?.classList.add('hidden');
+        _showSpectatorBar();
+        _showEmojiBar(true);
+        if (gameType === 'durak') { initDurak(state, -1); return; }
+        if (gameType === 'tysyacha') { initTysyacha(state, -1); return; }
+        showGameScreen();
+        applyState(state, false, null, null);
+    });
+}
+
+function leaveSpectate() {
+    socket.emit('leaveRoom');
+    _isSpectator = false;
+    myPlayerIndex = null;
+    _showSpectatorBar(false);
+    _showEmojiBar(false);
+    ['game-screen','durak-screen','tysyacha-screen'].forEach(id => {
+        document.getElementById(id)?.classList.add('hidden');
+    });
+    document.getElementById('lobby-screen').classList.remove('hidden');
+}
+
+function _showSpectatorBar(show = true) {
+    const bar = document.getElementById('spectator-bar');
+    if (bar) bar.style.display = show ? 'flex' : 'none';
+}
+
+socket.on('spectatorJoined', ({ name }) => {
+    const c = document.getElementById('spectator-count');
+    if (c) c.textContent = `+${name} дивиться`;
+});
+
+// ── Emoji-реакції ─────────────────────────────
+function _showEmojiBar(show = true) {
+    const bar = document.getElementById('emoji-btn-bar');
+    if (bar) bar.style.display = show ? 'flex' : 'none';
+}
+
+function _toggleEmojiBar() {
+    _emojiBarOpen = !_emojiBarOpen;
+    const picker = document.getElementById('emoji-picker');
+    if (picker) picker.style.display = _emojiBarOpen ? 'flex' : 'none';
+    const btn = document.getElementById('emoji-toggle-btn');
+    if (btn) btn.style.background = _emojiBarOpen ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)';
+}
+
+function sendEmoji(emoji) {
+    socket.emit('emojiReaction', { emoji });
+    _emojiBarOpen = false;
+    const picker = document.getElementById('emoji-picker');
+    if (picker) picker.style.display = 'none';
+}
+
+socket.on('emojiReaction', ({ emoji, name }) => {
+    const overlay = document.getElementById('emoji-overlay');
+    if (!overlay) return;
+    const el = document.createElement('div');
+    el.className = 'emoji-fly';
+    const x = 10 + Math.random() * 80;
+    const y = 20 + Math.random() * 60;
+    el.style.left = `${x}%`;
+    el.style.top  = `${y}%`;
+    el.innerHTML = `<span>${emoji}</span><span class="emoji-fly-label">${_esc(name)}</span>`;
+    overlay.appendChild(el);
+    setTimeout(() => el.remove(), 2400);
 });
