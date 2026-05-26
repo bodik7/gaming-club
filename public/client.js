@@ -104,26 +104,34 @@ let _displayName   = '';   // ім'я в іграх (з профілю)
 let _avatarColor   = '#1a56db';
 let _isAdmin       = false;
 
+async function loadProfile(token) {
+    try {
+        const res = await fetch('/api/me', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            _displayName = data.displayName || '';
+            _avatarColor = data.avatarColor  || '#1a56db';
+            _isAdmin     = !!data.isAdmin;
+            return data.username;
+        }
+    } catch {}
+    return null;
+}
+
 async function checkAuth() {
     const joinCode = new URLSearchParams(window.location.search).get('join');
 
     const auth = loadAuth();
     if (auth?.token) {
-        try {
-            const res = await fetch('/api/me', {
-                headers: { Authorization: `Bearer ${auth.token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                _authUsername = data.username;
-                _displayName  = data.displayName || '';
-                _avatarColor  = data.avatarColor  || '#1a56db';
-                _isAdmin      = !!data.isAdmin;
-                _isGuest = false;
-                _enterLobby(data.username, joinCode);
-                return;
-            }
-        } catch {}
+        const username = await loadProfile(auth.token);
+        if (username) {
+            _authUsername = username;
+            _isGuest = false;
+            _enterLobby(username, joinCode);
+            return;
+        }
         clearAuth();
     }
     document.getElementById('auth-screen').classList.remove('hidden');
@@ -258,6 +266,7 @@ async function doAuth() {
         saveAuth(data.token, data.username);
         _authUsername = data.username;
         _isGuest = false;
+        await loadProfile(data.token);
         _enterLobby(data.username, null);
     } catch {
         if (errEl) { errEl.textContent = 'Помилка з\'єднання з сервером'; errEl.style.display = 'block'; }
