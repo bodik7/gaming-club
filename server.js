@@ -546,11 +546,11 @@ io.on('connection', (socket) => {
         });
     });
 
-    // Денний чат (day_discussion фаза)
+    // Денний чат (day_discussion і day_voting фази)
     socket.on('dayChatMsg', ({ text }) => {
         const room = roomStore.get(socket.roomCode);
         if (!room?.state || room.state.gameType !== 'mafia') return;
-        if (room.state.phase !== 'day_discussion') return;
+        if (room.state.phase !== 'day_discussion' && room.state.phase !== 'day_voting') return;
         const player = room.state.players[socket.playerIndex];
         if (!player?.isAlive || player.isSilenced) return;
         const esc = s => String(s).replace(/[&<>"']/g, c =>
@@ -577,12 +577,13 @@ io.on('connection', (socket) => {
             .forEach(rp => io.to(rp.socketId).emit('deadChat', msg));
     });
 
-    // Приватний чат мафії
+    // Приватний чат мафії (тільки вночі)
     socket.on('mafiaChat', ({ text }) => {
         const room = roomStore.get(socket.roomCode);
         if (!room?.state || room.state.gameType !== 'mafia') return;
+        if (room.state.phase !== 'night') return;
         const player = room.state.players[socket.playerIndex];
-        if (!player || MAFIA_ROLE_LABELS[player.role]?.faction !== 'mafia') return;
+        if (!player?.isAlive || MAFIA_ROLE_LABELS[player.role]?.faction !== 'mafia') return;
         const esc = s => String(s).replace(/[&<>"']/g, c =>
             ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
         io.to(`${socket.roomCode}_mafia`).emit('mafiaChat', {

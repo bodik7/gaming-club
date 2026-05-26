@@ -450,6 +450,21 @@ function processMafiaAction(state, type, data, pidx) {
             if (voted.length >= eligible.length) state._resolveVoting = true;
             break;
         }
+
+        case 'cancelNightAction': {
+            if (state.phase !== 'night') break;
+            const { actionType } = data;
+            const cancelMap = {
+                mafiaVote:       () => { delete state.nightActions.mafiaVotes?.[pidx]; },
+                sheriffCheck:    () => { if (state.nightActions.sheriffCheck?.actorId === pidx)    delete state.nightActions.sheriffCheck; },
+                donCheck:        () => { if (state.nightActions.donCheck?.actorId === pidx)        delete state.nightActions.donCheck; },
+                doctorHeal:      () => { if (state.nightActions.doctorHeal?.actorId === pidx)      delete state.nightActions.doctorHeal; },
+                roleblockerBlock:() => { if (state.nightActions.roleblockerBlock?.actorId === pidx) delete state.nightActions.roleblockerBlock; },
+                maniacKill:      () => { if (state.nightActions.maniacKill?.actorId === pidx)      delete state.nightActions.maniacKill; },
+            };
+            cancelMap[actionType]?.();
+            break;
+        }
     }
 }
 
