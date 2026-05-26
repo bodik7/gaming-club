@@ -349,7 +349,7 @@ function startTysyachaTimer(room) {
 
         let result = null;
         if (st.phase === 'auction') {
-            if (player.onBarrel) result = processTysyachaAction(st, 'tBid', { amount: st.auction.current }, pidx);
+            if (player.onBarrel) result = processTysyachaAction(st, 'tBid', { amount: st.auction.current + 10 }, pidx);
             else                 result = processTysyachaAction(st, 'tBid', { pass: true }, pidx);
         } else if (st.phase === 'talon') {
             if (st.talonPiles) {
@@ -377,7 +377,7 @@ function startTysyachaTimer(room) {
         let toastText = `⏱️ Авто-хід: ${player.name}`;
         if (st.phase === 'auction') {
             toastText = player.onBarrel
-                ? `⏱️ ${player.name} ставить ${st.auction.current}`
+                ? `⏱️ ${player.name} ставить ${st.auction.current + 10} (AFK)`
                 : `⏱️ ${player.name} пасує (AFK)`;
         } else if (st.phase === 'talon') {
             toastText = st.talonPiles
