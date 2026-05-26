@@ -89,8 +89,8 @@ function sanitizeMafia(state, forIdx) {
     const me = isSpectator ? null : state.players[forIdx];
     const myRole = me?.role;
     const myFaction = MAFIA_ROLE_LABELS[myRole]?.faction;
-    // Dead players and spectators see all roles (they have nothing to hide)
-    const seeAll = isSpectator || (me && !me.isAlive) || state.phase === 'gameover';
+    // Dead players see all roles; spectators do NOT (they only watch chat/flow)
+    const seeAll = (!isSpectator && me && !me.isAlive) || state.phase === 'gameover';
 
     return {
         gameType:   'mafia',
@@ -118,7 +118,7 @@ function sanitizeMafia(state, forIdx) {
         myFaction:   isSpectator ? null : myFaction,
         myRoleLabel: isSpectator ? null : (MAFIA_ROLE_LABELS[myRole] || null),
         isSpectator,
-        mafiaIds:        (myFaction === 'mafia' || isSpectator || seeAll) ? state.mafiaIds : null,
+        mafiaIds:        (myFaction === 'mafia' || seeAll) ? state.mafiaIds : null,
         sheriffFindings: (myRole === 'sheriff' || myRole === 'deputy' || seeAll) ? state.sheriffFindings : null,
         donFindings:     (myRole === 'don' || seeAll) ? state.donFindings : null,
         myVote:    isSpectator ? null : (state.votes?.[forIdx] ?? null),
