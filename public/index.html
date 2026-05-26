@@ -483,9 +483,19 @@
                     <span class="mono m-phase-block-label" id="m-phase-block-label">ФАЗА НОЧІ</span>
                     <span class="m-phase-block-name" id="m-phase-block-name">Ніч</span>
                     <div class="m-phase-bar-track"><div class="m-phase-bar-fill" id="m-phase-bar"></div></div>
-                    <div class="m-phase-block-sub">
-                        <span id="m-phase-round">Раунд 1</span>
-                        <span class="mono m-phase-block-timer" id="m-phase-block-timer"></span>
+                    <div class="m-phase-block-sub" style="align-items:center">
+                        <div>
+                            <span id="m-phase-round">Раунд 1</span>
+                            <div class="m-faction-strip" id="m-faction-strip" style="margin-top:4px"></div>
+                        </div>
+                        <div class="m-circular-timer" id="m-circular-timer" style="display:none">
+                            <svg viewBox="0 0 46 46">
+                                <circle class="m-cir-bg" cx="23" cy="23" r="19"/>
+                                <circle class="m-cir-fill" id="m-cir-fill" cx="23" cy="23" r="19"
+                                    stroke-dasharray="119.4" stroke-dashoffset="0"/>
+                            </svg>
+                            <div class="m-cir-text" id="m-cir-text">—</div>
+                        </div>
                     </div>
                 </div>
                 <!-- Day chat — always visible, read-only at night -->
@@ -572,6 +582,9 @@
                 </div>
             </div>
         </main>
+
+        <!-- Phase overlay (injected by JS) -->
+        <div id="m-phase-overlay-wrap"></div>
 
         <!-- Mobile bottom tabs -->
         <nav class="m-bottom-tabs" aria-label="Навігація">

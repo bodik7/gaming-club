@@ -1710,6 +1710,7 @@ socket.on('lobbyUpdate', ({ players, bots, gameType, avatars, ready }) => {
     if (gameType) _selectedGame = gameType; // синхронізуємо з типом кімнати
     const list = document.getElementById('lobby-players-list');
     if (!list) return;
+    const prevCount = list.querySelectorAll(':scope > div').length;
     const readySet = new Set(ready || []);
     list.innerHTML = players.map((name, i) => {
         const isHost    = i === 0;
@@ -1719,8 +1720,9 @@ socket.on('lobbyUpdate', ({ players, bots, gameType, avatars, ready }) => {
         const canKick   = myPlayerIndex === 0 && !isHost && !isBot;
         const av        = avatars && avatars[i];
         const avatarHtml = av ? window.renderAvatarEl(av.avatarId, av.avatarColor, name[0] || '?', 28) : '';
+        const isNew = i >= prevCount;
         return `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;gap:6px">
+        <div class="${isNew ? 'lobby-player-row-new' : ''}" style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;gap:6px;animation-delay:${isNew ? (i - prevCount) * 0.06 + 's' : '0s'}">
             <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0">
                 ${avatarHtml || `<span style="font-size:16px">${isHost ? '👑' : isBot ? '🤖' : '🎮'}</span>`}
                 <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
@@ -2495,7 +2497,10 @@ socket.on('emojiReaction', ({ emoji, name }) => {
     const overlay = document.getElementById('emoji-overlay');
     if (!overlay) return;
     const el = document.createElement('div');
+    const driftAnims = ['emoji-rise', 'emoji-rise-left', 'emoji-rise-right', 'emoji-rise-wide-left', 'emoji-rise-wide-right'];
+    const anim = driftAnims[Math.floor(Math.random() * driftAnims.length)];
     el.className = 'emoji-fly';
+    el.style.animationName = anim;
     const x = 10 + Math.random() * 80;
     const y = 20 + Math.random() * 60;
     el.style.left = `${x}%`;

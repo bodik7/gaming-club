@@ -32,6 +32,7 @@ function initMafia(state, myIdx) {
     mSwitchTab('players', true);
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('mafia-screen').classList.remove('hidden');
+    _mInitSwipe();
     document.getElementById('mafia-screen').classList.add('visible');
     if (typeof switchViewport === 'function') switchViewport('mafia');
     setQuitBtn(true);
@@ -235,12 +236,32 @@ function mRenderPhaseInfo() {
         }
     }
 
-    // Alive count
+    // Alive count + faction strip
     const aliveEl = document.getElementById('m-alive-count');
     if (aliveEl) {
         const alive = mState.players.filter(p => p.isAlive).length;
         const dead  = mState.players.filter(p => !p.isAlive).length;
         aliveEl.textContent = `(${alive} живих, ${dead} мертвих)`;
+    }
+    const factionEl = document.getElementById('m-faction-strip');
+    if (factionEl) {
+        const alivePlayers = mState.players.filter(p => p.isAlive);
+        const town   = alivePlayers.filter(p => M_ROLE_LABELS[p.role]?.faction === 'town').length;
+        const mafia  = alivePlayers.filter(p => M_ROLE_LABELS[p.role]?.faction === 'mafia').length;
+        const maniac = alivePlayers.filter(p => p.role === 'maniac').length;
+        // Only show factions we know about (roles revealed to us)
+        const me = mMyIdx !== null ? mState.players[mMyIdx] : null;
+        const seeAll = !me?.isAlive || mState.phase === 'gameover' || mState.isSpectator;
+        const myFaction = M_ROLE_LABELS[me?.role]?.faction;
+        const showFactions = seeAll || myFaction === 'mafia' || mState.phase === 'gameover';
+        if (showFactions && (town + mafia + maniac > 0)) {
+            factionEl.innerHTML =
+                (town   > 0 ? `<span class="m-faction-badge town">🔵 ${town}</span>` : '') +
+                (mafia  > 0 ? `<span class="m-faction-badge mafia">🔴 ${mafia}</span>` : '') +
+                (maniac > 0 ? `<span class="m-faction-badge maniac">🟣 ${maniac}</span>` : '');
+        } else {
+            factionEl.innerHTML = '';
+        }
     }
 }
 
@@ -321,6 +342,8 @@ function mRenderPlayers() {
     const displayPlayers = isGameover
         ? s.players
         : [...s.players].sort((a, b) => (b.isAlive ? 1 : 0) - (a.isAlive ? 1 : 0));
+
+    const prevIds = new Set([...el.querySelectorAll('.m-player-card')].map(c => c.dataset.pid));
 
     el.innerHTML = displayPlayers.map((p, _di) => {
         const realIdx = s.players.indexOf(p);
@@ -403,8 +426,9 @@ function mRenderPlayers() {
         const avatarHtml = window.renderAvatarEl
             ? window.renderAvatarEl(p.avatarId, p.avatarColor, p.name[0], 32)
             : '';
+        const isNew = !prevIds.has(String(p.id));
         return `
-        <div class="m-player-card ${deadCls} ${meCls} ${factionCls} ${dyingCls} ${offlineCls}">
+        <div class="m-player-card ${deadCls} ${meCls} ${factionCls} ${dyingCls} ${offlineCls}${isNew ? ' entering' : ''}" data-pid="${p.id}">
             ${actionBtn}
             <div>
                 <div class="m-player-card-top">
@@ -764,13 +788,28 @@ function mGameoverUI(s) {
 }
 
 function mPhaseFlash(phase) {
+    const wrap = document.getElementById('m-phase-overlay-wrap');
+    if (!wrap) return;
+    const cfg = {
+        night:          { icon:'🌙', label:'НІCH', bg:'rgba(6,3,10,0.88)', color:'#a78bfa' },
+        morning:        { icon:'🌅', label:'РАНОК', bg:'rgba(4,6,14,0.82)', color:'#fbbf24' },
+        day_discussion: { icon:'☀️', label:'ДЕНЬ', bg:'rgba(4,6,14,0.75)', color:'#60a5fa' },
+        day_voting:     { icon:'⚖️', label:'ГОЛОСУВАННЯ', bg:'rgba(4,6,14,0.80)', color:'#fca5a5' },
+        resolving:      { icon:'📊', label:'ПІДРАХУНОК', bg:'rgba(4,6,14,0.80)', color:'#d1d5db' },
+        gameover:       { icon:'🏁', label:'КІНЕЦЬ ГРИ', bg:'rgba(0,0,0,0.90)', color:'#ffd700' },
+        role_reveal:    { icon:'🎭', label:'РОЗКРИТТЯ РОЛЕЙ', bg:'rgba(0,0,0,0.92)', color:'#c084fc' },
+    };
+    const c = cfg[phase] || { icon:'🎲', label: phase.toUpperCase(), bg:'rgba(0,0,0,0.8)', color:'white' };
     const el = document.createElement('div');
-    const isNight = ['night','morning','resolving'].includes(phase);
-    el.style.cssText = `position:fixed;inset:0;z-index:195;pointer-events:none;
-        background:${isNight ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.12)'};
-        animation:mPhaseFlashAnim 0.7s ease forwards`;
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 750);
+    el.className = 'm-phase-overlay';
+    el.style.background = c.bg;
+    el.innerHTML = `<div class="m-phase-overlay-content">
+        <span class="m-phase-overlay-icon" style="color:${c.color}">${c.icon}</span>
+        <span class="m-phase-overlay-name" style="color:${c.color}">${c.label}</span>
+    </div>`;
+    wrap.innerHTML = '';
+    wrap.appendChild(el);
+    setTimeout(() => { el.remove(); }, 1950);
 }
 
 function mReturnToLobby() {
@@ -999,15 +1038,30 @@ function mStartTimer(elId, deadline) {
 
 function mStartPhaseTimer(deadline) {
     clearInterval(_mTimers['phase-timer']);
-    const el = document.getElementById('m-phase-block-timer');
-    if (!deadline) { if (el) el.textContent = ''; return; }
+    const wrap  = document.getElementById('m-circular-timer');
+    const fill  = document.getElementById('m-cir-fill');
+    const text  = document.getElementById('m-cir-text');
+    const CIRC  = 119.4; // 2π*19
+
+    if (!deadline) {
+        if (wrap) wrap.style.display = 'none';
+        return;
+    }
+    if (wrap) wrap.style.display = '';
+
+    const total = Math.max(1, deadline - Date.now());
     const update = () => {
-        const el2 = document.getElementById('m-phase-block-timer');
-        if (!el2) { clearInterval(_mTimers['phase-timer']); return; }
         const rem = Math.max(0, deadline - Date.now());
         const sec = Math.ceil(rem / 1000);
-        el2.textContent = `🕒 ${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`;
-        if (rem <= 0) clearInterval(_mTimers['phase-timer']);
+        const pct = rem / total;
+        if (text) text.textContent = sec > 0
+            ? (sec >= 60 ? `${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}` : sec)
+            : '—';
+        if (fill) {
+            fill.style.strokeDashoffset = CIRC * (1 - pct);
+            fill.className = 'm-cir-fill' + (pct > 0.4 ? '' : pct > 0.15 ? ' warn' : ' danger');
+        }
+        if (rem <= 0) { clearInterval(_mTimers['phase-timer']); if (wrap) wrap.style.display = 'none'; }
     };
     update();
     _mTimers['phase-timer'] = setInterval(update, 300);
@@ -1041,6 +1095,30 @@ function mStartNightFlavor(deadline) {
         }, pct * remaining);
         _mFlavorTimeouts.push(t);
     });
+}
+
+// ── Mobile swipe between tabs ─────────────────
+let _mSwipeX = null;
+function _mInitSwipe() {
+    const body = document.querySelector('.m-body');
+    if (!body || body._swipeInited) return;
+    body._swipeInited = true;
+    const TABS = ['chat', 'players', 'passport'];
+    body.addEventListener('touchstart', e => {
+        if (e.touches.length === 1) _mSwipeX = e.touches[0].clientX;
+    }, { passive: true });
+    body.addEventListener('touchend', e => {
+        if (_mSwipeX === null) return;
+        const dx = e.changedTouches[0].clientX - _mSwipeX;
+        _mSwipeX = null;
+        if (Math.abs(dx) < 55) return;
+        const cur = TABS.indexOf(_mActiveTab);
+        if (cur === -1) return;
+        const next = dx < 0
+            ? TABS[Math.min(cur + 1, TABS.length - 1)]
+            : TABS[Math.max(cur - 1, 0)];
+        if (next !== _mActiveTab) mSwitchTab(next);
+    }, { passive: true });
 }
 
 // ── Role meta ─────────────────────────────────

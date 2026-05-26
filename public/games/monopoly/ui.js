@@ -360,6 +360,17 @@ function flashCell(pos, type) {
     setTimeout(() => cellDiv.classList.remove(`cell-flash-${type}`), 700);
 }
 
+function stampCell(pos) {
+    const cellDiv = document.querySelector(`.cell[data-pos="${pos}"]`);
+    if (!cellDiv) return;
+    const stamp = document.createElement('div');
+    stamp.className = 'cell-stamp-overlay';
+    stamp.textContent = 'КУПЛЕНО';
+    cellDiv.style.position = 'relative';
+    cellDiv.appendChild(stamp);
+    setTimeout(() => stamp.remove(), 1200);
+}
+
 // Повертає індекс МОГо гравця (в online = myPlayerIndex, локально = currentPlayerIndex)
 function _myIdx() {
     return typeof myPlayerIndex === 'number' ? myPlayerIndex : currentPlayerIndex;

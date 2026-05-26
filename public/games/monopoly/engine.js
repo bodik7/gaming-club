@@ -253,6 +253,7 @@ function buyProperty(player, cell) {
     log(`🏆 ${player.name} придбав "${cell.name}" за ₴${cell.price}`, 'success');
     playSound('buy');
     flashCell(cell.pos, 'buy');
+    stampCell(cell.pos);
     renderPlayers();
     updateBoardCell(cell.pos);
     updateMonopolies();
