@@ -155,9 +155,13 @@ function renderTScores(s) {
             ? (s.marriages?.[p.id] || []).reduce((sum, suit) => sum + T_MARRIAGE[suit], 0) : 0;
         const totalPts    = p.trickPts + marriagePts;
         const inGame      = s.phase === 'playing' && totalPts > 0;
+        const avatarHtml = window.renderAvatarEl
+            ? window.renderAvatarEl(p.avatarId, p.avatarColor, p.name[0], 26)
+            : '';
         return `
         <div class="t-score-pill ${isActive ? 'active' : ''} ${isMe ? 'me' : ''} ${scoreCls} ${offline ? 'offline' : ''}">
             <div class="t-score-top">
+                ${avatarHtml}
                 ${offline ? '<span title="Офлайн" style="font-size:10px">📴</span>' : ''}
                 ${p.onBarrel ? `<span class="t-barrel-icon" title="Бочка ${p.barrelAttempts}/3">🛢️</span>` : ''}
                 ${isDealer ? `<span title="Роздає" style="font-size:11px">🃏</span>` : ''}

@@ -119,7 +119,8 @@ function renderDInfo(s){
         const badge    = isAtk ? '<span class="d-role-badge atk">⚔</span>' : isDef ? '<span class="d-role-badge def">🛡</span>' : '';
         const cnt      = done ? '✓' : `${p.handCount}<span style="font-size:8px;opacity:.5">🂠</span>`;
         const offBadge = offline ? '<span class="d-offline-badge">📴</span>' : '';
-        return `<div class="${cls}">${badge}${offBadge}<b>${isMe?'👤 ':''}${p.name}</b><span class="d-pill-cnt">${cnt}</span></div>`;
+        const avHtml   = window.renderAvatarEl ? window.renderAvatarEl(p.avatarId, p.avatarColor, p.name[0], 24) : '';
+        return `<div class="${cls}">${badge}${offBadge}${avHtml}<b>${isMe?'👤 ':''}${p.name}</b><span class="d-pill-cnt">${cnt}</span></div>`;
     }).join('') +
     `<div class="d-pill info">${mode} · ${phaseLabel}</div>` +
     `<div class="d-pill trump-pill" style="color:${dSuitColor(s.trumpCard)}">${s.trump} козир <span style="opacity:.5;font-size:10px">(${s.deckCount}🂠)</span></div>`;

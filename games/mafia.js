@@ -58,6 +58,8 @@ function createMafiaState(roomPlayers, settings = {}) {
         isAlive:    true,
         isSilenced: false,
         skippedVotes: 0,
+        avatarId:   rp.avatarId   || null,
+        avatarColor: rp.avatarColor || '#1a56db',
     }));
 
     const mafiaIds = players.filter(p => p.role === 'mafia' || p.role === 'don').map(p => p.id);
@@ -99,6 +101,8 @@ function sanitizeMafia(state, forIdx) {
             name:       p.name,
             isAlive:    p.isAlive,
             isSilenced: p.isSilenced,
+            avatarId:   p.avatarId   || null,
+            avatarColor: p.avatarColor || '#1a56db',
             role: (p.id === forIdx || state.phase === 'gameover' ||
                    (myFaction === 'mafia' && MAFIA_ROLE_LABELS[p.role]?.faction === 'mafia') ||
                    (myRole === 'sheriff' && p.role === 'deputy') ||

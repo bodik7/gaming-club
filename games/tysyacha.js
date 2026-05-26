@@ -28,6 +28,8 @@ function createTysyachaState(roomPlayers) {
             id: i, name: rp.name,
             score: 0, hand: deck.slice(i*cpp, (i+1)*cpp), trickPts: 0,
             onBarrel: false, barrelAttempts: 0,
+            avatarId: rp.avatarId || null,
+            avatarColor: rp.avatarColor || '#1a56db',
         })),
         talon: deck.slice(cpp*n),
         dealer: 0, round: 1,
@@ -311,6 +313,8 @@ function sanitizeTysyacha(state, forIdx) {
             hand: i === forIdx ? p.hand : null,
             onBarrel: p.onBarrel || false,
             barrelAttempts: p.barrelAttempts || 0,
+            avatarId: p.avatarId || null,
+            avatarColor: p.avatarColor || '#1a56db',
         })),
         talonCount: state.talonPiles
             ? state.talonPiles.reduce((s, p) => s + p.length, 0)

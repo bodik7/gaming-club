@@ -191,6 +191,7 @@ app.get('/api/me', requireAuth, async (req, res) => {
             username:    req.authUser.username,
             displayName: user?.display_name || null,
             avatarColor: user?.avatar_color || '#1a56db',
+            avatarId:    user?.avatar_id    || null,
             isAdmin:     Number(user?.is_admin) === 1,
             stats,
         });
@@ -202,12 +203,13 @@ app.get('/api/me', requireAuth, async (req, res) => {
 
 // Оновлення профілю
 app.patch('/api/profile', requireAuth, async (req, res) => {
-    const { displayName, avatarColor } = req.body;
-    const dn = typeof displayName === 'string'
+    const { displayName, avatarColor, avatarId } = req.body;
+    const dn    = typeof displayName === 'string'
         ? displayName.trim().slice(0, 20).replace(/[<>"']/g, '') : null;
     const color = /^#[0-9a-fA-F]{6}$/.test(avatarColor) ? avatarColor : null;
+    const avId  = /^(char|zodiac)_\d{1,2}$/.test(avatarId) ? avatarId : null;
     try {
-        await db.updateProfile(req.authUser.username, { displayName: dn || null, avatarColor: color });
+        await db.updateProfile(req.authUser.username, { displayName: dn || null, avatarColor: color, avatarId: avId });
         res.json({ ok: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -360,7 +362,7 @@ io.on('connection', (socket) => {
     console.log('+ підключення:', socket.id);
 
     // Автентифікація через токен при підключенні (опційно)
-    socket.on('authenticate', ({ token }) => {
+    socket.on('authenticate', async ({ token }) => {
         try {
             const payload = jwt.verify(token, JWT_SECRET);
             socket.username = payload.username;
@@ -374,6 +376,10 @@ io.on('connection', (socket) => {
                 }
             }
             _activeSessions.set(payload.username, socket.id);
+            // Load avatar info for use in game rooms
+            const user = await db.getUser(payload.username);
+            socket.avatarId    = user?.avatar_id    || null;
+            socket.avatarColor = user?.avatar_color || '#1a56db';
         } catch {}
     });
 
@@ -384,7 +390,7 @@ io.on('connection', (socket) => {
         const gtype = gameType === 'tysyacha' ? 'tysyacha' : gameType === 'mafia' ? 'mafia' : gameType === 'durak' ? 'durak' : gameType === 'bunker' ? 'bunker' : 'monopoly';
         const room = {
             code,
-            players: [{ socketId: socket.id, name: playerName, index: 0, username: socket.username || null }],
+            players: [{ socketId: socket.id, name: playerName, index: 0, username: socket.username || null, avatarId: socket.avatarId || null, avatarColor: socket.avatarColor || '#1a56db' }],
             started: false,
             state: null,
             gameType: gtype,
@@ -419,7 +425,7 @@ io.on('connection', (socket) => {
         if (room.players.length >= maxPlayers) return cb({ error: `Кімната повна (макс ${maxPlayers})` });
 
         const idx = room.players.length;
-        room.players.push({ socketId: socket.id, name: playerName, index: idx, username: socket.username || null });
+        room.players.push({ socketId: socket.id, name: playerName, index: idx, username: socket.username || null, avatarId: socket.avatarId || null, avatarColor: socket.avatarColor || '#1a56db' });
         socket.join(code);
         socket.roomCode = code;
         socket.playerIndex = idx;

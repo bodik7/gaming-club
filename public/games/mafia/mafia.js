@@ -370,12 +370,16 @@ function mRenderPlayers() {
             roleText = '🔒 ПРИХОВАНА';
         }
 
+        const avatarHtml = window.renderAvatarEl
+            ? window.renderAvatarEl(p.avatarId, p.avatarColor, p.name[0], 32)
+            : '';
         return `
         <div class="m-player-card ${deadCls} ${meCls} ${factionCls} ${dyingCls} ${offlineCls}">
             ${actionBtn}
             <div>
                 <div class="m-player-card-top">
                     <div class="m-player-card-name-wrap">
+                        ${avatarHtml}
                         <span class="m-player-alive-dot ${p.isAlive ? 'alive' : 'dead'}"></span>
                         <span class="m-player-card-name">${p.name}${isMe ? ' (Я)' : ''}${offlineCls ? ' 📴' : ''}</span>
                     </div>

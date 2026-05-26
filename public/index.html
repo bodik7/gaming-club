@@ -663,7 +663,14 @@
 
                 <!-- Профіль -->
                 <div id="cab-panel-profile" class="cab-panel">
-                    <div class="cab-section-title">Ім'я в іграх</div>
+                    <div class="cab-section-title">Аватар</div>
+                    <div class="avatar-picker-tabs">
+                        <button class="ap-tab active" id="ap-tab-char"   onclick="cabAvatarTab('char')">Персонажі</button>
+                        <button class="ap-tab"        id="ap-tab-zodiac" onclick="cabAvatarTab('zodiac')">Зодіак</button>
+                        <button class="ap-tab"        id="ap-tab-none"   onclick="cabAvatarTab('none')">Без аватара</button>
+                    </div>
+                    <div id="avatar-picker-grid" class="avatar-picker-grid"></div>
+                    <div class="cab-section-title" style="margin-top:16px">Ім'я в іграх</div>
                     <p class="cab-hint">Це ім'я автоматично підставляється в кожну гру. Логін залишається незмінним.</p>
                     <input id="cab-display-name" class="cab-input" type="text" maxlength="20"
                            placeholder="Відображуване ім'я (до 20 символів)">
@@ -710,6 +717,8 @@
     <!-- UI (рендеринг) -->
     <script src="games/monopoly/ui.js"></script>
 
+    <!-- Avatar library -->
+    <script src="avatars.js"></script>
     <!-- Socket-клієнт -->
     <script src="client.js"></script>
     <!-- Тисяча клієнт -->

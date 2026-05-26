@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Зодіак — аватари v2</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #08060f;
+    color: #f0e8d0;
+    font-family: 'Segoe UI', sans-serif;
+    padding: 40px 24px;
+  }
+  h1 { font-size: 22px; font-weight: 700; color: #c9a227; margin-bottom: 4px; }
+  .sub { font-size: 13px; color: rgba(240,232,208,0.35); margin-bottom: 36px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 18px; max-width: 960px;
+  }
+  .card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(201,162,39,0.12);
+    border-radius: 16px;
+    padding: 20px 14px 14px;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 10px;
+    transition: border-color .2s, transform .15s, box-shadow .2s;
+    cursor: pointer;
+  }
+  .card:hover { border-color: rgba(201,162,39,0.5); transform: translateY(-3px); box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+  .card svg { width: 86px; height: 86px; }
+  .label { font-size: 12px; font-weight: 700; color: rgba(240,232,208,0.8); text-align: center; }
+  .note  { font-size: 10px; color: rgba(240,232,208,0.3); text-align: center; line-height: 1.4; }
+
+  /* ── Entrance & ambient ── */
+  @keyframes card-enter { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes z-float    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  /* ── Zodiac-specific ── */
+  @keyframes twinkle    { 0%,100%{opacity:.65} 50%{opacity:.04} }
+  @keyframes sym-glow   { 0%,100%{opacity:.85} 50%{opacity:1;filter:brightness(1.7) drop-shadow(0 0 6px gold)} }
+  @keyframes mane-pulse { 0%,100%{opacity:.85} 50%{opacity:.25} }
+  @keyframes venom-drip { 0%,100%{filter:drop-shadow(0 0 2px #00e040);opacity:.8} 50%{filter:drop-shadow(0 0 14px #00e040);opacity:1} }
+  @keyframes wave-flow  { from{stroke-dashoffset:20} to{stroke-dashoffset:0} }
+  @keyframes scales-sw  { 0%,100%{transform:rotate(-5deg)} 50%{transform:rotate(5deg)} }
+  @keyframes thread-an  { 0%,100%{stroke-dashoffset:0;opacity:.7} 50%{stroke-dashoffset:-12;opacity:.2} }
+  @keyframes horn-glow  { 0%,100%{filter:drop-shadow(0 0 2px #c9a227)} 50%{filter:drop-shadow(0 0 10px #c9a227)} }
+
+  /* entrance stagger */
+  .card { animation: card-enter .5s ease backwards; }
+  .card:nth-child(1)  { animation-delay: .04s; }
+  .card:nth-child(2)  { animation-delay: .09s; }
+  .card:nth-child(3)  { animation-delay: .14s; }
+  .card:nth-child(4)  { animation-delay: .19s; }
+  .card:nth-child(5)  { animation-delay: .24s; }
+  .card:nth-child(6)  { animation-delay: .29s; }
+  .card:nth-child(7)  { animation-delay: .34s; }
+  .card:nth-child(8)  { animation-delay: .39s; }
+  .card:nth-child(9)  { animation-delay: .44s; }
+  .card:nth-child(10) { animation-delay: .49s; }
+  .card:nth-child(11) { animation-delay: .54s; }
+  .card:nth-child(12) { animation-delay: .59s; }
+  .card:hover { box-shadow: 0 8px 32px rgba(0,0,0,.5), 0 0 20px rgba(201,162,39,.15); }
+
+  /* float — staggered per card */
+  .card svg { animation: z-float 4s ease-in-out infinite; }
+  .card:nth-child(1)  svg { animation-delay: 0s;    }
+  .card:nth-child(2)  svg { animation-delay: .35s;  }
+  .card:nth-child(3)  svg { animation-delay: .7s;   }
+  .card:nth-child(4)  svg { animation-delay: 1.05s; }
+  .card:nth-child(5)  svg { animation-delay: 1.4s;  }
+  .card:nth-child(6)  svg { animation-delay: 1.75s; }
+  .card:nth-child(7)  svg { animation-delay: 2.1s;  }
+  .card:nth-child(8)  svg { animation-delay: 2.45s; }
+  .card:nth-child(9)  svg { animation-delay: 2.8s;  }
+  .card:nth-child(10) svg { animation-delay: 3.15s; }
+  .card:nth-child(11) svg { animation-delay: 3.5s;  }
+  .card:nth-child(12) svg { animation-delay: 3.85s; }
+
+  /* per-element classes */
+  .c-star  { animation: twinkle   2s   ease-in-out infinite; }
+  .z-sym   { animation: sym-glow  2.5s ease-in-out infinite; }
+  .mane-r  { animation: mane-pulse 1.6s ease-in-out infinite; }
+  .venom   { animation: venom-drip 1.2s ease-in-out infinite; }
+  .wave    { animation: wave-flow  3s   linear      infinite; stroke-dasharray: 8 5; }
+  .scales  { animation: scales-sw  4s   ease-in-out infinite; transform-origin: 40px 32px; }
+  .thread  { animation: thread-an  3s   ease-in-out infinite; }
+  .horn    { animation: horn-glow  2s   ease-in-out infinite; }
+</style>
+</head>
+<body>
+<h1>♈ Зодіак · Аватари</h1>
+<p class="sub">Символьні емблеми · SVG</p>
+<div class="grid">
+
+
+<!-- ══════ 1. ОВЕН ♈ ══════ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none">
+  <defs>
+    <radialGradient id="g_aries" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#3d0c00"/>
+      <stop offset="100%" stop-color="#0f0200"/>
+    </radialGradient>
+  </defs>
+  <circle cx="40" cy="40" r="38" fill="url(#g_aries)"/>
+  <circle cx="40" cy="40" r="37" fill="none" stroke="#c9a227" stroke-width=".8" opacity=".4"/>
+
+  <!-- RAM — голова в профіль, дивиться ліворуч -->
+  <!-- тіло/шия -->
+  <ellipse cx="36" cy="58" rx="10" ry="8" fill="#8B2000"/>
+  <path d="M30 56 Q28 62 30 66 Q34 70 38 66" fill="#8B2000"/>
+  <!-- голова барана -->
+  <ellipse cx="30" cy="46" rx="14" ry="11" fill="#A83010"/>
+  <!-- морда витягнута вниз -->
+  <path d="M20 50 Q16 56 18 62 Q22 66 28 60 Q24 56 22 50Z" fill="#C04020"/>
+  <ellipse cx="19" cy="61" rx="3" ry="2" fill="#8B2000"/>
+  <!-- ніздря -->
+  <circle cx="18" cy="62" r="1.2" fill="#600"/>
+  <!-- oko -->
+  <ellipse cx="26" cy="44" rx="3" ry="3.5" fill="#1a0800"/>
+  <circle cx="26" cy="44" r="1.8" fill="#d46020"/>
+  <circle cx="27" cy="43" r=".9" fill="white" opacity=".5"/>
+  <!-- РОГИ — закручена спіраль характерна для барана -->
+  <path d="M32 38 Q26 28 30 18 Q36 10 44 16 Q50 22 46 30 Q42 36 38 36"
+        stroke="#c9a227" stroke-width="3.5" fill="none" stroke-linecap="round" class="horn"/>
+  <path d="M32 38 Q24 30 28 18 Q34 8 44 14 Q52 20 48 30 Q44 38 38 36"
+        stroke="#a07010" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".6"/>
+  <!-- ♈ символ -->
+  <text x="48" y="64" font-size="20" fill="#c9a227" opacity=".9" font-family="serif" class="z-sym">♈</text>
+  <!-- зірки сузір'я -->
+  <circle cx="58" cy="20" r="1.2" fill="#c9a227" opacity=".6" class="c-star"/>
+  <circle cx="65" cy="16" r="1" fill="#c9a227" opacity=".5" class="c-star" style="animation-delay:.6s"/>
+  <circle cx="70" cy="22" r=".8" fill="#c9a227" opacity=".4" class="c-star" style="animation-delay:1.2s"/>
+  <line x1="58" y1="20" x2="65" y2="16" stroke="#c9a227" stroke-width=".5" opacity=".3"/>
+  <line x1="65" y1="16" x2="70" y2="22" stroke="#c9a227" stroke-width=".5" opacity=".3"/>
+</svg>
+<div class="label">Берсерк Кону</div>
+<div class="note">Овен · Вогонь</div>
+</div>
+
+
+<!-- ══════ 2. ТЕЛЕЦЬ ♉ ══════ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none">
+  <defs>
+    <radialGradient id="g_taurus" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#1a1200"/>
+      <stop offset="100%" stop-color="#060400"/>
+    </radialGradient>
+  </defs>
+  <circle cx="40" cy="40" r="38" fill="url(#g_taurus)"/>
+  <circle cx="40" cy="40" r="37" fill="none" stroke="#c9a227" stroke-width=".8" opacity=".4"/>
+
+  <!-- BULL — голова фронтально, потужна -->
+  <!-- шия/плечі -->
+  <path d="M22 70 Q24 58 40 56 Q56 58 58 70Z" fill="#5a3010"/>
+  <!-- голова масивна -->
+  <ellipse cx="40" cy="46" rx="22" ry="18" fill="#7a4820"/>
+  <!-- лоб широкий -->
+  <ellipse cx="40" cy="36" rx="20" ry="10" fill="#8B5528"/>
+  <!-- вуха -->
+  <ellipse cx="18" cy="46" rx="6" ry="8" fill="#6a3a18" transform="rotate(-15,18,46)"/>
+  <ellipse cx="62" cy="46" rx="6" ry="8" fill="#6a3a18" transform="rotate(15,62,46)"/>
+  <ellipse cx="18" cy="46" rx="3.5" ry="5" fill="#c49060" transform="rotate(-15,18,46)"/>
+  <ellipse cx="62" cy="46" rx="3.5" ry="5" fill="#c49060" transform="rotate(15,62,46)"/>
+  <!-- РОГИ бика — широкі вигнуті догори -->
+  <path d="M22 36 Q10 24 8 12 Q14 8 20 18 Q22 26 24 34"
+        stroke="#5a3010" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M58 36 Q70 24 72 12 Q66 8 60 18 Q58 26 56 34"
+        stroke="#5a3010" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- тонша лінія рогу (текстура) -->
+  <path d="M22 36 Q11 25 10 14" stroke="#8b6030" stroke-width="2" fill="none" stroke-linecap="round" opacity=".5"/>
+  <path d="M58 36 Q69 25 70 14" stroke="#8b6030" stroke-width="2" fill="none" stroke-linecap="round" opacity=".5"/>
+  <!-- очі -->
+  <ellipse cx="30" cy="46" rx="7" ry="6.5" fill="#1a0c00"/>
+  <ellipse cx="50" cy="46" rx="7" ry="6.5" fill="#1a0c00"/>
+  <ellipse cx="30" cy="46" rx="3.5" ry="3.5" fill="#5a3800"/>
+  <ellipse cx="50" cy="46" rx="3.5" ry="3.5" fill="#5a3800"/>
+  <circle cx="32" cy="44" r="1.8" fill="white" opacity=".4"/>
+  <circle cx="52" cy="44" r="1.8" fill="white" opacity=".4"/>
+  <!-- ніс з кільцем — ключова деталь бика -->
+  <ellipse cx="40" cy="58" rx="9" ry="6" fill="#c49060"/>
+  <ellipse cx="36" cy="58" rx="2.5" ry="2" fill="#3a1a00"/>
+  <ellipse cx="44" cy="58" rx="2.5" ry="2" fill="#3a1a00"/>
+  <path d="M36 56 Q40 52 44 56" stroke="#c9a227" stroke-width="2.5" fill="none" stroke-linecap="round" class="horn"/>
+  <!-- ♉ -->
+  <text x="48" y="76" font-size="16" fill="#c9a227" opacity=".9" font-family="serif" class="z-sym">♉</text>
+</svg>
+<div class="label">Бичачий Банк</div>
+<div class="note">Телець · Земля</div>
+</div>
+
+
+<!-- ══════ 3. БЛИЗНЮКИ ♊ ══════ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none">
+  <defs>
+    <radialGradient id="g_gem" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#001a2a"/>
+      <stop offset="100%" stop-color="#000508"/>
+    </radialGradient>
+  </defs>
+  <circle cx="40" cy="40" r="38" fill="url(#g_gem)"/>
+  <circle cx="40" cy="40" r="37" fill="none" stroke="#c9a227" stroke-width=".8" opacity=".4"/>
+
+  <!-- TWINS — два силуети обличчям одне до одного -->
+  <!-- ліва фігура (світла) -->
+  <ellipse cx="25" cy="32" rx="10" ry="11" fill="#e0c090"/>
+  <path d="M16 32 Q14 22 18 14 Q22 8 25 10 Q28 8 32 14 Q36 22 34 32Z" fill="#c8a870"/>
+  <!-- волосся ліва -->
+  <path d="M16 26 Q17 16 25 14 Q28 12 32 16 Q30 14 25 16 Q20 18 18 26Z" fill="#3a2010"/>
+  <!-- oko ліва -->
+  <ellipse cx="21" cy="32" rx="3" ry="3.5" fill="#1a1a2a"/>
+  <circle cx="21" cy="32" r="2" fill="#1a6ab0"/>
+  <circle cx="22" cy="31" r=".9" fill="white" opacity=".6"/>
+  <!-- ліва картка -->
+  <rect x="12" y="44" width="10" height="13" rx="2" fill="white" stroke="#ddd" stroke-width=".5"/>
+  <text x="13.5" y="53" font-size="8" fill="#1a56db">♠</text>
+
+  <!-- права фігура (темна, дзеркальна) -->
+  <ellipse cx="55" cy="32" rx="10" ry="11" fill="#2a1a3a"/>
+  <path d="M64 32 Q66 22 62 14 Q58 8 55 10 Q52 8 48 14 Q44 22 46 32Z" fill="#1a0a2a"/>
+  <!-- волосся права -->
+  <path d="M64 26 Q63 16 55 14 Q52 12 48 16 Q50 14 55 16 Q60 18 62 26Z" fill="#c9a227" opacity=".7"/>
+  <!-- oko права -->
+  <ellipse cx="59" cy="32" rx="3" ry="3.5" fill="#0a0010"/>
+  <circle cx="59" cy="32" r="2" fill="#c02080"/>
+  <circle cx="60" cy="31" r=".9" fill="white" opacity=".5"/>
+  <!-- права картка -->
+  <rect x="58" y="44" width="10" height="13" rx="2" fill="#1a1a2a" stroke="#333" stroke-width=".5"/>
+  <text x="59.5" y="53" font-size="8" fill="#e02424">♥</text>
+
+  <!-- ♊ символ — центр, між двома -->
+  <text x="28" y="76" font-size="22" fill="#c9a227" opacity=".9" font-family="serif" class="z-sym">♊</text>
+
+  <!-- лінія між ними (нерозривний зв'язок) -->
+  <line x1="35" y1="36" x2="45" y2="36" stroke="#c9a227" stroke-width="1" stroke-dasharray="2,2" opacity=".6" class="thread"/>
+  <!-- зірки сузір'я Близнюків (Кастор і Поллукс) -->
+  <circle cx="25" cy="8" r="1.5" fill="#c9a227" opacity=".8" class="c-star"/>
+  <circle cx="55" cy="8" r="1.5" fill="#c9a227" opacity=".8" class="c-star" style="animation-delay:.7s"/>
+  <line x1="25" y1="8" x2="55" y2="8" stroke="#c9a227" stroke-width=".6" opacity=".3"/>
+</svg>
+<div class="label">Дворушник</div>
+<div class="note">Близнюки · Повітря</div>
+</div>
+
+
+<!-- ══════ 4. РАК ♋ ══════ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none">
+  <defs>
+    <radialGradient id="g_cancer" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#001a2a"/>
+      <stop offset="100%" stop-color="#000508"/>
+    </radialGradient>
+  </defs>
+  <circle cx="40" cy="40" r="38" fill="url(#g_cancer)"/>
+  <circle cx="40" cy="40" r="37" fill="none" stroke="#4090c0" stroke-width=".8" opacity=".5"/>
+
+  <!-- CRAB — вид зверху, симетричний -->
+  <!-- панцир центральний -->
+  <ellipse cx="40" cy="44" rx="18" ry="14" fill="#C04020"/>
+  <ellipse cx="40" cy="42" rx="16" ry="11" fill="#D05030"/>
+  <!-- текстура панцира — сегменти -->
+  <path d="M26 40 Q40 36 54 40" stroke="#a02010" stroke-width="1.5" fill="none"/>
+  <path d="M24 46 Q40 42 56 46" stroke="#a02010" stroke-width="1.5" fill="none"/>
+  <path d="M26 52 Q40 48 54 52" stroke="#a02010" stroke-width="1.5" fill="none"/>
+  <line x1="40" y1="30" x2="40" y2="58" stroke="#a02010" stroke-width="1.2" opacity=".5"/>
+  <!-- КЛІШНІ — ліва -->
+  <path d="M22 40 Q12 34 8 26 Q6 18 12 16 Q18 14 20 22 Q16 26 18 32 Q20 36 22 38Z" fill="#B03018"/>
+  <path d="M10 20 Q8 14 14 12 Q10 16 12 20" fill="#D04020"/>
+  <!-- палець клішні -->
+  <path d="M8 26 Q4 22 6 18 Q10 20 10 24Z" fill="#D04020"/>
+  <!-- клішня права -->
+  <path d="M58 40 Q68 34 72 26 Q74 18 68 16 Q62 14 60 22 Q64 26 62 32 Q60 36 58 38Z" fill="#B03018"/>
+  <path d="M70 20 Q72 14 66 12 Q70 16 68 20" fill="#D04020"/>
+  <path d="M72 26 Q76 22 74 18 Q70 20 70 24Z" fill="#D04020"/>
+  <!-- ніжки — по 4 з кожного боку -->
+  <path d="M26 36 Q18 30 16 24" stroke="#a02010" stroke-width="2" stroke-linecap="round"/>
+  <path d="M26 42 Q16 38 14 32" stroke="#a02010" stroke-width="2" stroke-linecap="round"/>
+  <path d="M26 50 Q16 48 14 44" stroke="#a02010" stroke-width="2" stroke-linecap="round"/>
+  <path d="M54 36 Q62 30 64 24" stroke="#a02010" stroke-width="2" stroke-linecap="round"/>
+  <path d="M54 42 Q64 38 66 32" stroke="#a02010" stroke-width="2" stroke-linecap="round"/>
+  <path d="M54 50 Q64 48 66 44" stroke="#a02010" stroke-width="2" stroke-linecap="round"/>
+  <!-- очі на стеблинках -->
+  <circle cx="31" cy="33" r="5" fill="#1a0800"/>
+  <circle cx="31" cy="33" r="3" fill="#ff6d00" opacity=".8"/>
+  <circle cx="32.5" cy="31.5" r="1.2" fill="white" opacity=".5"/>
+  <circle cx="49" cy="33" r="5" fill="#1a0800"/>
+  <circle cx="49" cy="33" r="3" fill="#ff6d00" opacity=".8"/>
+  <circle cx="50.5" cy="31.5" r="1.2" fill="white" opacity=".5"/>
+  <line x1="31" y1="38" x2="31" y2="33" stroke="#c04020" stroke-width="2.5"/>
+  <line x1="49" y1="38" x2="49" y2="33" stroke="#c04020" stroke-width="2.5"/>
+  <!-- ♋ -->
+  <text x="29" y="74" font-size="18" fill="#4090c0" opacity=".9" font-family="serif" class="z-sym">♋</text>
+</svg>
+<div class="label">Залізна Клішня</div>
+<div class="note">Рак · Вода</div>
+</div>
+
+
+<!-- ══════ 5. ЛЕВ ♌ ══════ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none">
+  <defs>
+    <radialGradient id="g_leo" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#2a1200"/>
+      <stop offset="100%" stop-color="#080200"/>
+    </radialGradient>
+  </defs>
+  <circle cx="40" cy="40" r="38" fill="url(#g_leo)"/>
+  <circle cx="40" cy="40" r="37" fill="none" stroke="#c9a227" stroke-width=".8" opacity=".5"/>
+
+  <!-- ГРИВА — промені навкруги -->
+  <circle cx="40" cy="44" r="26" fill="#c97020" opacity=".25"/>
+  <path d="M40 18 Q43 9 40 5 Q37 9 40 18Z" fill="#e09030" class="mane-r"/>
+  <path d="M54 22 Q61 14 59 9 Q55 12 54 22Z" fill="#e09030" class="mane-r" style="animation-delay:.2s"/>
+  <path d="M62 34 Q72 28 70 22 Q66 24 62 34Z" fill="#e09030" class="mane-r" style="animation-delay:.4s"/>
+  <path d="M62 48 Q72 46 72 40 Q68 40 62 48Z" fill="#d08020" class="mane-r" style="animation-delay:.6s"/>
+  <path d="M56 60 Q64 62 66 56 Q62 54 56 60Z" fill="#d08020" class="mane-r" style="animation-delay:.8s"/>
+  <path d="M26 22 Q19 14 21 9 Q25 12 26 22Z" fill="#e09030" class="mane-r" style="animation-delay:1.0s"/>
+  <path d="M18 34 Q8 28 10 22 Q14 24 18 34Z" fill="#e09030" class="mane-r" style="animation-delay:1.2s"/>
+  <path d="M18 48 Q8 46 8 40 Q12 40 18 48Z" fill="#d08020" class="mane-r" style="animation-delay:1.4s"/>
+  <path d="M24 60 Q16 62 14 56 Q18 54 24 60Z" fill="#d08020" class="mane-r" style="animation-delay:1.6s"/>
+  <!-- лице лева -->
+  <circle cx="40" cy="44" r="20" fill="#e8a050"/>
+  <!-- морда -->
+  <ellipse cx="40" cy="52" rx="13" ry="9" fill="#f0c080"/>
+  <!-- ніс лева характерний -->
+  <path d="M34 50 Q40 48 46 50 Q43 54 40 55 Q37 54 34 50Z" fill="#8B3A00"/>
+  <ellipse cx="37" cy="51" rx="2" ry="1.5" fill="#600"/>
+  <ellipse cx="43" cy="51" rx="2" ry="1.5" fill="#600"/>
+  <!-- очі гордого лева -->
+  <ellipse cx="29" cy="43" rx="7" ry="6.5" fill="#1a0800"/>
+  <ellipse cx="51" cy="43" rx="7" ry="6.5" fill="#1a0800"/>
+  <ellipse cx="29" cy="43" rx="4" ry="4" fill="#c9a227"/>
+  <ellipse cx="51" cy="43" rx="4" ry="4" fill="#c9a227"/>
+  <ellipse cx="29" cy="43" rx="1.8" ry="2.5" fill="#1a0800"/>
+  <ellipse cx="51" cy="43" rx="1.8" ry="2.5" fill="#1a0800"/>
+  <circle cx="30.5" cy="41" r="1.8" fill="white" opacity=".5"/>
+  <circle cx="52.5" cy="41" r="1.8" fill="white" opacity=".5"/>
+  <!-- вуса -->
+  <line x1="24" y1="52" x2="34" y2="51" stroke="#5a3010" stroke-width="1.2"/>
+  <line x1="22" y1="54" x2="33" y2="53" stroke="#5a3010" stroke-width="1.2"/>
+  <line x1="46" y1="51" x2="56" y2="52" stroke="#5a3010" stroke-width="1.2"/>
+  <line x1="47" y1="53" x2="58" y2="54" stroke="#5a3010" stroke-width="1.2"/>
+  <!-- ♌ символ (виглядає як хвіст лева) -->
+  <text x="28" y="74" font-size="20" fill="#c9a227" opacity=".9" font-family="serif" class="z-sym">♌</text>
+</svg>
+<div class="label">Цар Кону</div>
+<div class="note">Лев · Вогонь</div>
+</div>
+
+
+<!-- ══════ 6. ДІВА ♍ ══════ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none">
+  <defs>
+    <radialGradient id="g_virgo" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#0a1a08"/>
+      <stop offset="100%" stop-color="#020502"/>
+    </radialGradient>
+  </defs>
+  <circle cx="40" cy="40" r="38" fill="url(#g_virgo)"/>
+  <circle cx="40" cy="40" r="37" fill="none" stroke="#6ab040" stroke-width=".8" opacity=".4"/>
+
+  <!-- MAIDEN — фігура діви, обличчя+колосся -->
+  <!-- волосся довге (праворуч стікає) -->
+  <path d="M52 20 Q60 28 62 40 Q62 54 56 62" stroke="#8b5020" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M54 20 Q64 30 64 44 Q62 56 58 64" stroke="#6a3a10" stroke-width="2" fill="none" stroke-linecap="round" opacity=".5"/>
+  <!-- голова -->
+  <ellipse cx="34" cy="38" rx="17" ry="18" fill="#f0d8b8"/>
+  <!-- волосся зверху/збоку -->
+  <path d="M18 34 Q20 18 34 16 Q44 16 48 24 Q46 18 34 18 Q22 20 20 34Z" fill="#3a2010"/>
+  <path d="M48 24 Q52 18 52 26 Q50 22 48 26Z" fill="#3a2010"/>
+  <!-- пасмо волосся через лоб -->
+  <path d="M20 32 Q22 24 28 22" stroke="#4a2810" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- брови тонкі -->
+  <path d="M22 33 Q28 30 33 33" stroke="#3a2010" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M37 33 Q42 30 46 33" stroke="#3a2010" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- очі — чисті, уважні -->
+  <ellipse cx="26" cy="38" rx="5.5" ry="5" fill="#1a1200"/>
+  <ellipse cx="43" cy="38" rx="5.5" ry="5" fill="#1a1200"/>
+  <ellipse cx="26" cy="38" rx="3" ry="3" fill="#3a6a18"/>
+  <ellipse cx="43" cy="38" rx="3" ry="3" fill="#3a6a18"/>
+  <circle cx="27.5" cy="36.5" r="1.5" fill="white" opacity=".6"/>
+  <circle cx="44.5" cy="36.5" r="1.5" fill="white" opacity=".6"/>
+  <!-- ніс тонкий -->
+  <path d="M32 43 Q34 45 37 43" stroke="#c09070" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <!-- тонкі губи -->
+  <path d="M26 49 Q34 52 42 49" stroke="#c06060" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M26 49 Q34 54 42 49" stroke="#c06060" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- КОЛОССЯ ПШЕНИЦІ — ключовий символ Діви -->
+  <path d="M56 62 Q54 52 56 44 Q58 38 60 32" stroke="#c9a227" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <ellipse cx="60" cy="32" rx="3" ry="5" fill="#c9a227" transform="rotate(-15,60,32)"/>
+  <ellipse cx="63" cy="36" rx="3" ry="4.5" fill="#c9a227" transform="rotate(10,63,36)"/>
+  <ellipse cx="57" cy="37" rx="3" ry="4.5" fill="#c9a227" transform="rotate(-25,57,37)"/>
+  <ellipse cx="62" cy="42" rx="2.5" ry="4" fill="#a08020" transform="rotate(5,62,42)"/>
+  <ellipse cx="55" cy="43" rx="2.5" ry="4" fill="#a08020" transform="rotate(-20,55,43)"/>
+  <!-- ♍ -->
+  <text x="12" y="74" font-size="18" fill="#6ab040" opacity=".9" font-family="serif" class="z-sym">♍</text>
+</svg>
+<div class="label">Холодний Розрахунок</div>
+<div class="note">Діва · Земля</div>
+</div>
+
+
+<!-- ══════ 7. ТЕРЕЗИ ♎ ══════ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none">
+  <defs>
+    <radialGradient id="g_libra" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#0a0a1a"/>
+      <stop offset="100%" stop-color="#02020a"/>
+    </radialGradient>
+  </defs>
+  <circle cx="40" cy="40" r="38" fill="url(#g_libra)"/>
+  <circle cx="40" cy="40" r="37" fill="none" stroke="#c9a227" stroke-width=".8" opacity=".4"/>
+
+  <!-- ТЕРЕЗИ — головний об'єкт аватара -->
+  <!-- стійка -->
+  <line x1="40" y1="66" x2="40" y2="24" stroke="#c9a227" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- основа -->
+  <path d="M28 66 Q40 70 52 66" stroke="#c9a227" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- балка горизонтальна -->
+  <line x1="16" y1="32" x2="64" y2="32" stroke="#c9a227" stroke-width="2" stroke-linecap="round"/>
+  <!-- точка балансу -->
+  <circle cx="40" cy="32" r="4" fill="#c9a227"/>
+  <circle cx="40" cy="32" r="2" fill="#0a0a1a"/>
+  <!-- ланцюжки чаш -->
+  <line x1="18" y1="32" x2="14" y2="44" stroke="#a07010" stroke-width="1.2"/>
+  <line x1="22" y1="32" x2="24" y2="44" stroke="#a07010" stroke-width="1.2"/>
+  <line x1="58" y1="32" x2="56" y2="44" stroke="#a07010" stroke-width="1.2"/>
+  <line x1="62" y1="32" x2="66" y2="44" stroke="#a07010" stroke-width="1.2"/>
+  <!-- ліва чаша — з картою -->
+  <path d="M10 46 Q19 44 28 46 Q26 52 19 54 Q12 52 10 46Z" fill="#1a1200" stroke="#c9a227" stroke-width="1.2"/>
+  <text x="14" y="52" font-size="9" fill="#c9a227">♠A</text>
+  <!-- права чаша — злегка нижче (нерівновага — драма) -->
+  <path d="M52 50 Q61 48 70 50 Q68 56 61 58 Q54 56 52 50Z" fill="#1a1200" stroke="#c9a227" stroke-width="1.2"/>
+  <text x="56" y="56" font-size="9" fill="#e02424">♥K</text>
+  <!-- ліва сторона балки злегка вгору (нерівновага) -->
+  <line x1="16" y1="32" x2="64" y2="32" stroke="#c9a227" stroke-width="2" fill="none"
+        transform="rotate(-4,40,32)" class="scales"/>
+  <!-- зірки нагорі -->
+  <circle cx="40" cy="10" r="2" fill="#c9a227" opacity=".8" class="c-star"/>
+  <circle cx="30" cy="14" r="1.2" fill="#c9a227" opacity=".5" class="c-star" style="animation-delay:.5s"/>
+  <circle cx="50" cy="14" r="1.2" fill="#c9a227" opacity=".5" class="c-star" style="animation-delay:1s"/>
+  <!-- ♎ -->
+  <text x="28" y="78" font-size="18" fill="#c9a227" opacity=".7" font-family="serif" class="z-sym">♎</text>
+</svg>
+<div class="label">Суддя і Вирок</div>
+<div class="note">Терези · Повітря</div>
+</div>
+
+
+<!-- ══════ 8. СКОРПІОН ♏ ══════ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none">
+  <defs>
+    <radialGradient id="g_scorp" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#0f0018"/>
+      <stop offset="100%" stop-color="#030005"/>
+    </radialGradient>
+  </defs>
+  <circle cx="40" cy="40" r="38" fill="url(#g_scorp)"/>
+  <circle cx="40" cy="40" r="37" fill="none" stroke="#8b00c0" stroke-width=".8" opacity=".5"/>
+
+  <!-- SCORPION — вид зверху/збоку, виразний -->
+  <!-- хвіст зігнутий вгору (характерно для скорпіона) -->
+  <path d="M40 52 Q50 54 58 50 Q66 44 64 36 Q62 28 58 24 Q62 28 64 36 Q66 46 58 52 Q50 58 40 56"
+        stroke="#7a00a0" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- сегменти хвоста -->
+  <circle cx="62" cy="36" r="3" fill="#6a0090"/>
+  <circle cx="60" cy="28" r="2.5" fill="#6a0090"/>
+  <circle cx="56" cy="22" r="2" fill="#5a0080"/>
+  <!-- ЖАЛО -->
+  <path d="M56 22 Q52 14 54 10 Q58 12 60 18 Q62 14 60 10 Q64 12 62 18 Q62 22 58 24Z" fill="#9a00c0"/>
+  <!-- крапля отрути -->
+  <circle cx="55" cy="11" r="2.5" fill="#00e040" opacity=".8" class="venom"/>
+  <!-- тіло центральне -->
+  <ellipse cx="36" cy="46" rx="16" ry="10" fill="#5a0080"/>
+  <!-- голова -->
+  <ellipse cx="28" cy="38" rx="12" ry="10" fill="#6a0090"/>
+  <!-- сегменти тіла -->
+  <path d="M22 44 Q36 40 52 46" stroke="#4a0068" stroke-width="1.2" fill="none"/>
+  <path d="M22 50 Q36 46 50 50" stroke="#4a0068" stroke-width="1.2" fill="none"/>
+  <!-- КЛІШНІ -->
+  <path d="M20 34 Q10 26 8 18 Q12 14 16 20 Q14 26 16 32Z" fill="#500070"/>
+  <path d="M10 20 Q8 14 12 12 Q10 16 12 20" fill="#7a00a0"/>
+  <path d="M8 18 Q4 16 6 12 Q10 14 10 18Z" fill="#7a00a0"/>
+  <path d="M18 30 Q10 26 10 20" stroke="#4a0060" stroke-width="1.5" fill="none"/>
+  <!-- ліва клішня -->
+  <path d="M20 40 Q10 44 8 52 Q12 56 16 50 Q14 46 18 42Z" fill="#500070"/>
+  <path d="M8 52 Q4 54 4 58 Q8 58 10 54Z" fill="#7a00a0"/>
+  <!-- ніжки -->
+  <path d="M24 38 Q16 32 14 26" stroke="#4a0068" stroke-width="2" stroke-linecap="round"/>
+  <path d="M24 44 Q14 40 12 34" stroke="#4a0068" stroke-width="2" stroke-linecap="round"/>
+  <path d="M24 50 Q14 48 12 44" stroke="#4a0068" stroke-width="2" stroke-linecap="round"/>
+  <path d="M36 36 Q32 28 34 22" stroke="#4a0068" stroke-width="2" stroke-linecap="round"/>
+  <path d="M42 38 Q44 30 46 24" stroke="#4a0068" stroke-width="2" stroke-linecap="round"/>
+  <!-- очі -->
+  <circle cx="22" cy="36" r="4" fill="#0a0010"/>
+  <circle cx="22" cy="36" r="2.5" fill="#00c040" opacity=".9"/>
+  <circle cx="34" cy="34" r="4" fill="#0a0010"/>
+  <circle cx="34" cy="34" r="2.5" fill="#00c040" opacity=".9"/>
+  <!-- ♏ -->
+  <text x="8" y="76" font-size="18" fill="#9a00c0" opacity=".9" font-family="serif" class="z-sym">♏</text>
+</svg>
+<div class="label">Отруйна Ставка</div>
+<div class="note">Скорпіон · Вода</div>
+</div>
+
+
+<!-- ══════ 9. СТРІЛЕЦЬ ♐ ══════ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none">
+  <defs>
+    <radialGradient id="g_sag" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#1a0a00"/>
+      <stop offset="100%" stop-color="#060200"/>
+    </radialGradient>
+  </defs>
+  <circle cx="40" cy="40" r="38" fill="url(#g_sag)"/>
+  <circle cx="40" cy="40" r="37" fill="none" stroke="#c9a227" stroke-width=".8" opacity=".4"/>
+
+  <!-- CENTAUR ARCHER — верхня частина людини + кінська нижня -->
+  <!-- кінське тіло -->
+  <ellipse cx="36" cy="58" rx="22" ry="14" fill="#8b5020"/>
+  <path d="M16 56 Q14 62 18 68 Q22 70 24 66 Q22 62 22 58Z" fill="#7a4018"/> <!-- передня нога -->
+  <path d="M28 58 Q26 66 30 70 Q34 72 34 68 Q32 64 30 60Z" fill="#7a4018"/>
+  <path d="M44 60 Q42 68 46 72 Q50 72 50 68 Q48 64 46 60Z" fill="#7a4018"/>
+  <path d="M56 56 Q54 62 58 66 Q62 68 62 64 Q60 60 58 56Z" fill="#7a4018"/>
+  <!-- хвіст коня -->
+  <path d="M58 52 Q64 48 68 42 Q66 50 62 56" stroke="#6a3010" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M68 42 Q70 38 68 36" stroke="#5a2808" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- торс людини -->
+  <ellipse cx="30" cy="44" rx="12" ry="14" fill="#c47040"/>
+  <!-- голова -->
+  <ellipse cx="30" cy="28" rx="10" ry="11" fill="#c47040"/>
+  <!-- волосся (дике) -->
+  <path d="M22 24 Q24 14 30 12 Q36 14 38 24 Q36 16 30 16 Q24 18 22 24Z" fill="#3a1a00"/>
+  <path d="M38 24 Q42 16 40 12 Q44 14 40 22Z" fill="#3a1a00"/>
+  <!-- очі мисливця -->
+  <ellipse cx="25" cy="28" rx="4" ry="4.5" fill="#1a0800"/>
+  <ellipse cx="35" cy="28" rx="4" ry="4.5" fill="#1a0800"/>
+  <circle cx="25" cy="28" r="2.2" fill="#d46020"/>
+  <circle cx="35" cy="28" r="2.2" fill="#d46020"/>
+  <circle cx="26.2" cy="26.8" r="1.1" fill="white" opacity=".5"/>
+  <circle cx="36.2" cy="26.8" r="1.1" fill="white" opacity=".5"/>
+  <!-- ЛІНІЙНА СТРІЛА — головна деталь Стрільця, діагональ -->
+  <line x1="10" y1="62" x2="68" y2="14" stroke="#c9a227" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- наконечник -->
+  <path d="M68 14 L60 16 L66 8 L72 14 Z" fill="#c9a227"/>
+  <!-- оперення -->
+  <path d="M10 62 L6 66 L8 60Z" fill="#a07010"/>
+  <path d="M10 62 L6 58 L12 60Z" fill="#8b5010"/>
+  <!-- лук -->
+  <path d="M22 50 Q32 36 42 32" stroke="#8b5020" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <line x1="22" y1="50" x2="42" y2="32" stroke="#6a3010" stroke-width="1" stroke-dasharray="2,2"/>
+  <!-- ♐ -->
+  <text x="50" y="76" font-size="18" fill="#c9a227" opacity=".9" font-family="serif" class="z-sym">♐</text>
+</svg>
+<div class="label">Влучна Здогадка</div>
+<div class="note">Стрілець · Вогонь</div>
+</div>
+
+
+<!-- ══════ 10. КОЗОРІГ ♑ ══════ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none">
+  <defs>
+    <radialGradient id="g_cap" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#001a0e"/>
+      <stop offset="100%" stop-color="#000508"/>
+    </radialGradient>
+  </defs>
+  <circle cx="40" cy="40" r="38" fill="url(#g_cap)"/>
+  <circle cx="40" cy="40" r="37" fill="none" stroke="#1a8a60" stroke-width=".8" opacity=".4"/>
+
+  <!-- SEA-GOAT — перед козла + хвіст риби -->
+  <!-- РИБЯЧИЙ ХВІСТ (нижня частина) -->
+  <path d="M24 58 Q20 64 16 72 Q22 72 28 66 Q24 70 24 64Z" fill="#1a6a4a"/>
+  <path d="M26 60 Q22 68 18 74 Q24 72 30 68 Q26 72 26 66Z" fill="#0e5038"/>
+  <!-- луска хвоста -->
+  <path d="M24 62 Q28 60 32 62" stroke="#2a8a60" stroke-width="1" fill="none"/>
+  <path d="M22 66 Q28 64 32 66" stroke="#2a8a60" stroke-width="1" fill="none"/>
+  <path d="M20 70 Q26 68 30 70" stroke="#2a8a60" stroke-width="1" fill="none"/>
+  <!-- плавник -->
+  <path d="M14 68 Q10 60 16 56 Q14 62 18 64Z" fill="#1a6a4a"/>
+  <path d="M56 58 Q60 64 64 72 Q58 72 52 66 Q56 70 56 64Z" fill="#1a6a4a"/>
+  <!-- КОЗЯЧА ГОЛОВА/ТІЛ (верхня частина) -->
+  <ellipse cx="40" cy="38" rx="20" ry="22" fill="#b0906a"/>
+  <!-- морда витягнута -->
+  <path d="M26 50 Q22 58 24 66 Q30 70 36 62 Q32 58 30 50Z" fill="#c4a07a"/>
+  <!-- борода козла (характерна) -->
+  <path d="M26 62 Q30 70 34 66 Q30 68 28 64Z" fill="#e0c090"/>
+  <path d="M28 64 Q32 74 36 70 Q32 70 30 66Z" fill="#d0b080"/>
+  <!-- РОГИ козла — вигнуті назад -->
+  <path d="M32 22 Q24 14 26 6 Q30 2 34 8 Q32 14 34 20"
+        stroke="#7a5a30" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <path d="M48 22 Q56 14 54 6 Q50 2 46 8 Q48 14 46 20"
+        stroke="#7a5a30" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <path d="M33 22 Q26 15 28 7" stroke="#a08050" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"/>
+  <path d="M47 22 Q54 15 52 7" stroke="#a08050" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"/>
+  <!-- КОЗЯЧЕ OKO — вертикальна прямокутна зіниця -->
+  <ellipse cx="30" cy="40" rx="6" ry="6.5" fill="#1a1000"/>
+  <ellipse cx="50" cy="40" rx="6" ry="6.5" fill="#1a1000"/>
+  <rect x="28" y="37" width="4" height="6" rx="2" fill="#c9a227" opacity=".8"/>
+  <rect x="48" y="37" width="4" height="6" rx="2" fill="#c9a227" opacity=".8"/>
+  <rect x="28.8" y="38" width="2.4" height="4" rx=".5" fill="#0a0800"/>
+  <rect x="48.8" y="38" width="2.4" height="4" rx=".5" fill="#0a0800"/>
+  <!-- ♑ -->
+  <text x="48" y="76" font-size="18" fill="#1a8a60" opacity=".9" font-family="serif" class="z-sym">♑</text>
+</svg>
+<div class="label">Терпець і Нагорода</div>
+<div class="note">Козоріг · Земля</div>
+</div>
+
+
+<!-- ══════ 11. ВОДОЛІЙ ♒ ══════ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none">
+  <defs>
+    <radialGradient id="g_aqua" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#000e1a"/>
+      <stop offset="100%" stop-color="#000305"/>
+    </radialGradient>
+  </defs>
+  <circle cx="40" cy="40" r="38" fill="url(#g_aqua)"/>
+  <circle cx="40" cy="40" r="37" fill="none" stroke="#2a7ab0" stroke-width=".8" opacity=".5"/>
+
+  <!-- WATER BEARER — фігура з глечиком та потоком -->
+  <!-- фігура (силует людини) -->
+  <ellipse cx="30" cy="28" rx="10" ry="11" fill="#1a4a7a"/>
+  <!-- тулуб -->
+  <path d="M22 36 Q24 46 28 50 Q32 54 36 52 Q40 50 38 44 Q36 40 34 36Z" fill="#1a4a7a"/>
+  <!-- рука що тримає глечик -->
+  <path d="M36 36 Q44 30 52 26" stroke="#1a4a7a" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- ГЛЕЧИК -->
+  <path d="M50 18 Q46 18 44 22 Q42 28 46 32 Q50 36 54 32 Q58 28 56 22 Q54 18 50 18Z" fill="#2a6a9a" stroke="#4090c0" stroke-width="1.2"/>
+  <!-- горлечко глечика -->
+  <rect x="47" y="14" width="6" height="6" rx="3" fill="#2a6a9a" stroke="#4090c0" stroke-width="1"/>
+  <!-- вушко глечика -->
+  <path d="M54 24 Q60 22 60 28 Q60 34 54 32" stroke="#4090c0" stroke-width="2" fill="none"/>
+  <!-- ПОТІК ВОДИ — головна деталь, хвилі -->
+  <!-- верхній потік -->
+  <path d="M46 32 Q40 36 34 32 Q28 28 22 32 Q16 36 10 30" stroke="#60a0e0" stroke-width="2.5" fill="none" stroke-linecap="round" class="wave"/>
+  <!-- нижній потік -->
+  <path d="M46 38 Q40 42 34 38 Q28 34 22 38 Q16 42 10 36" stroke="#4080c0" stroke-width="2.5" fill="none" stroke-linecap="round" class="wave" style="animation-delay:.5s"/>
+  <!-- третя хвиля -->
+  <path d="M44 44 Q38 48 32 44 Q26 40 20 44 Q14 48 8 42" stroke="#2060a0" stroke-width="2" fill="none" stroke-linecap="round" class="wave" style="animation-delay:1s"/>
+  <!-- бризки/краплі -->
+  <circle cx="12" cy="30" r="2" fill="#60a0e0" opacity=".6"/>
+  <circle cx="8" cy="36" r="1.5" fill="#60a0e0" opacity=".5"/>
+  <circle cx="14" cy="42" r="1.8" fill="#4080c0" opacity=".6"/>
+  <!-- зірки водолія -->
+  <circle cx="62" cy="52" r="1.5" fill="#c9a227" opacity=".6"/>
+  <circle cx="68" cy="48" r="1.2" fill="#c9a227" opacity=".5"/>
+  <circle cx="70" cy="56" r="1" fill="#c9a227" opacity=".4"/>
+  <line x1="62" y1="52" x2="68" y2="48" stroke="#c9a227" stroke-width=".5" opacity=".3"/>
+  <line x1="68" y1="48" x2="70" y2="56" stroke="#c9a227" stroke-width=".5" opacity=".3"/>
+  <!-- очі водолія -->
+  <ellipse cx="24" cy="26" rx="4" ry="4.5" fill="#0a1a2a"/>
+  <ellipse cx="36" cy="26" rx="4" ry="4.5" fill="#0a1a2a"/>
+  <circle cx="24" cy="26" r="2.5" fill="#2a7ab0"/>
+  <circle cx="36" cy="26" r="2.5" fill="#2a7ab0"/>
+  <circle cx="25.2" cy="24.8" r="1.2" fill="white" opacity=".5"/>
+  <circle cx="37.2" cy="24.8" r="1.2" fill="white" opacity=".5"/>
+  <!-- ♒ символ (подвійна хвиля) -->
+  <text x="46" y="76" font-size="18" fill="#2a7ab0" opacity=".9" font-family="serif" class="z-sym">♒</text>
+</svg>
+<div class="label">Розливає Фортуну</div>
+<div class="note">Водолій · Повітря</div>
+</div>
+
+
+<!-- ══════ 12. РИБИ ♓ ══════ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none">
+  <defs>
+    <radialGradient id="g_pisces" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#000d1a"/>
+      <stop offset="100%" stop-color="#000205"/>
+    </radialGradient>
+  </defs>
+  <circle cx="40" cy="40" r="38" fill="url(#g_pisces)"/>
+  <circle cx="40" cy="40" r="37" fill="none" stroke="#2060b0" stroke-width=".8" opacity=".4"/>
+
+  <!-- TWO FISH — класичний символ Риб, дві риби по колу -->
+  <!-- РИБА 1 — пливе вліво-вниз (верхня) -->
+  <ellipse cx="28" cy="24" rx="14" ry="7" fill="#1a4a8a" transform="rotate(-30,28,24)"/>
+  <!-- луска риби 1 -->
+  <path d="M22 20 Q28 18 34 22" stroke="#2a6ab0" stroke-width="1" fill="none" opacity=".6"/>
+  <path d="M22 24 Q28 22 34 26" stroke="#2a6ab0" stroke-width="1" fill="none" opacity=".6"/>
+  <!-- хвіст риби 1 -->
+  <path d="M14 28 Q8 22 6 28 Q8 34 14 30Z" fill="#1a4a8a" transform="rotate(-30,14,28)"/>
+  <!-- oko риби 1 -->
+  <circle cx="36" cy="20" r="3" fill="#0a1020"/>
+  <circle cx="36" cy="20" r="1.8" fill="#4090d0"/>
+  <circle cx="37" cy="19" r=".8" fill="white" opacity=".6"/>
+  <!-- плавники риби 1 -->
+  <path d="M28 18 Q30 12 34 14 Q30 16 28 18Z" fill="#2a6ab0" opacity=".7"/>
+  <path d="M26 30 Q22 34 24 38 Q28 34 26 30Z" fill="#2a6ab0" opacity=".5"/>
+
+  <!-- РИБА 2 — пливе вправо-вгору (нижня, дзеркальна) -->
+  <ellipse cx="52" cy="56" rx="14" ry="7" fill="#4090d0" transform="rotate(-30,52,56)"/>
+  <!-- луска риби 2 -->
+  <path d="M46 52 Q52 50 58 54" stroke="#60a0e0" stroke-width="1" fill="none" opacity=".6"/>
+  <path d="M46 56 Q52 54 58 58" stroke="#60a0e0" stroke-width="1" fill="none" opacity=".6"/>
+  <!-- хвіст риби 2 -->
+  <path d="M66 52 Q72 46 74 52 Q72 58 66 54Z" fill="#4090d0" transform="rotate(-30,66,52)"/>
+  <!-- oko риби 2 -->
+  <circle cx="44" cy="60" r="3" fill="#0a1020"/>
+  <circle cx="44" cy="60" r="1.8" fill="#6ab0e0"/>
+  <circle cx="45" cy="59" r=".8" fill="white" opacity=".6"/>
+  <!-- плавники риби 2 -->
+  <path d="M54 50 Q56 44 60 46 Q56 48 54 50Z" fill="#60a0e0" opacity=".7"/>
+  <path d="M50 62 Q46 66 48 70 Q52 66 50 62Z" fill="#60a0e0" opacity=".5"/>
+
+  <!-- ЗВ'ЯЗУЮЧА НИТКА між двома рибами (символ ♓) -->
+  <path d="M36 22 Q40 40 44 58" stroke="#c9a227" stroke-width="1.5" fill="none" stroke-dasharray="3,3" opacity=".7" class="thread"/>
+  <!-- ♓ -->
+  <text x="28" y="76" font-size="20" fill="#2a7ab0" opacity=".9" font-family="serif" class="z-sym">♓</text>
+  <!-- бульбашки -->
+  <circle cx="18" cy="50" r="2.5" fill="none" stroke="#4090d0" stroke-width="1" opacity=".5" class="c-star"/>
+  <circle cx="14" cy="44" r="1.8" fill="none" stroke="#4090d0" stroke-width="1" opacity=".4" class="c-star" style="animation-delay:.6s"/>
+  <circle cx="62" cy="28" r="2" fill="none" stroke="#4090d0" stroke-width="1" opacity=".4" class="c-star" style="animation-delay:1.2s"/>
+</svg>
+<div class="label">Два Боки Монети</div>
+<div class="note">Риби · Вода</div>
+</div>
+
+
+</div>
+<p style="margin-top:32px;font-size:11px;color:rgba(240,232,208,.25)">12 знаків зодіаку · символьні SVG-аватари</p>
+</body>
+</html>

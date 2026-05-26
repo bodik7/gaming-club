@@ -78,7 +78,7 @@ function dStartTurnTimer(room) {
 
 function createDurakState(roomPlayers, settings={}) {
     const deck = shuffle(D_SUITS.flatMap(s=>D_RANKS.map(r=>r+s)));
-    const players = roomPlayers.map((rp,i)=>({ id:i, name:rp.name, hand:deck.splice(0,6) }));
+    const players = roomPlayers.map((rp,i)=>({ id:i, name:rp.name, hand:deck.splice(0,6), avatarId: rp.avatarId||null, avatarColor: rp.avatarColor||'#1a56db' }));
     const trumpCard = deck[deck.length-1];
     deck.splice(deck.length-1, 1);
     deck.unshift(trumpCard);
@@ -227,6 +227,7 @@ function sanitizeDurak(state, forIdx) {
             id:p.id, name:p.name, handCount:p.hand.length,
             hand: i===forIdx ? p.hand : null,
             finished: state.finished.includes(p.id),
+            avatarId: p.avatarId||null, avatarColor: p.avatarColor||'#1a56db',
         })),
         deckCount: state.deck.length,
         trump: state.trump, trumpCard: state.trumpCard,

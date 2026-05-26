@@ -102,6 +102,7 @@ let _isGuest       = false;
 let _authUsername  = '';
 let _displayName   = '';   // ім'я в іграх (з профілю)
 let _avatarColor   = '#1a56db';
+let _avatarId      = null;
 let _isAdmin       = false;
 
 async function loadProfile(token) {
@@ -113,6 +114,7 @@ async function loadProfile(token) {
             const data = await res.json();
             _displayName = data.displayName || '';
             _avatarColor = data.avatarColor  || '#1a56db';
+            _avatarId    = data.avatarId     || null;
             _isAdmin     = !!data.isAdmin;
             return data.username;
         }
@@ -164,8 +166,16 @@ function _enterLobby(username, joinCode) {
         if (bar) bar.classList.remove('hidden');
         if (nameEl) nameEl.textContent = nameInGame;
         if (avatarEl) {
-            avatarEl.textContent = nameInGame[0].toUpperCase();
-            avatarEl.style.background = _avatarColor;
+            if (_avatarId && window.AVATARS?.[_avatarId]) {
+                avatarEl.innerHTML = window.AVATARS[_avatarId];
+                avatarEl.style.background = 'transparent';
+                avatarEl.textContent = '';
+                avatarEl.querySelector('svg')?.setAttribute('width', '36');
+                avatarEl.querySelector('svg')?.setAttribute('height', '36');
+            } else {
+                avatarEl.textContent = nameInGame[0].toUpperCase();
+                avatarEl.style.background = _avatarColor;
+            }
         }
         if (logoutBtn) logoutBtn.style.display = '';
         document.getElementById('lobby-login-btn')?.classList.add('hidden');
@@ -287,6 +297,7 @@ function logOut() {
     _authUsername = '';
     _displayName  = '';
     _avatarColor  = '#1a56db';
+    _avatarId     = null;
     _isAdmin      = false;
     closeCabinet();
     document.getElementById('lobby-screen').classList.add('hidden');
@@ -307,7 +318,8 @@ const GAME_LABELS = {
 };
 
 // ── Стан кабінету ──────────────────────────────
-let _cabColor = _avatarColor;
+let _cabColor    = _avatarColor;
+let _cabAvatarId = null;
 let _cabAllUsers = [];
 
 function openCabinet() {
@@ -335,10 +347,14 @@ function openCabinet() {
     if (loginEl) loginEl.value = _authUsername;
 
     // Позначити активний колір
-    _cabColor = _avatarColor;
+    _cabColor    = _avatarColor;
+    _cabAvatarId = _avatarId;
     document.querySelectorAll('.cab-color-dot').forEach(d => {
         d.classList.toggle('active', d.dataset.color === _cabColor);
     });
+
+    // Заповнити picker аватарів
+    cabAvatarTab(_cabAvatarId ? (_cabAvatarId.startsWith('zodiac') ? 'zodiac' : 'char') : 'char');
 
     // Адмін-вкладка
     document.querySelectorAll('.cab-tab-admin').forEach(t => t.classList.toggle('hidden', !_isAdmin));
@@ -367,7 +383,62 @@ function cabPickColor(btn) {
     document.querySelectorAll('.cab-color-dot').forEach(d =>
         d.classList.toggle('active', d.dataset.color === _cabColor));
     const av = document.getElementById('cab-avatar-circle');
-    if (av) av.style.background = _cabColor;
+    if (av && !_cabAvatarId) av.style.background = _cabColor;
+}
+
+function cabAvatarTab(group) {
+    ['char','zodiac','none'].forEach(g => {
+        const btn = document.getElementById(`ap-tab-${g}`);
+        if (btn) btn.classList.toggle('active', g === group);
+    });
+    const grid = document.getElementById('avatar-picker-grid');
+    if (!grid || !window.AVATARS) return;
+    if (group === 'none') {
+        grid.innerHTML = '<div style="color:rgba(255,255,255,0.35);font-size:12px;padding:8px 2px">Аватар не вибрано — буде відображатись кольоровий кружок з літерою</div>';
+        if (_cabAvatarId) { _cabAvatarId = null; _cabUpdateAvatarPreview(); }
+        return;
+    }
+    const ids = Object.keys(window.AVATARS).filter(id => id.startsWith(group));
+    grid.innerHTML = ids.map(id => {
+        const meta = window.AVATAR_META[id] || {};
+        const sel  = id === _cabAvatarId ? ' selected' : '';
+        return `<div class="ap-item${sel}" onclick="cabSelectAvatar('${id}')" title="${meta.label||''}\n${meta.note||''}">
+            ${window.AVATARS[id].replace('<svg ', '<svg width="52" height="52" ')}
+            <div class="ap-item-name">${meta.label||''}</div>
+        </div>`;
+    }).join('');
+}
+
+function cabSelectAvatar(id) {
+    _cabAvatarId = (_cabAvatarId === id) ? null : id;
+    document.querySelectorAll('.ap-item').forEach(el => {
+        el.classList.toggle('selected', el.onclick?.toString().includes(`'${id}'`) && _cabAvatarId === id);
+    });
+    // Re-render to update selection properly
+    const current = document.querySelector('.ap-item.selected');
+    document.querySelectorAll('.ap-item').forEach(el =>
+        el.classList.remove('selected'));
+    if (_cabAvatarId) {
+        const idx = Object.keys(window.AVATARS).filter(k => k.startsWith(_cabAvatarId.split('_')[0])).indexOf(_cabAvatarId);
+        const items = document.querySelectorAll('.ap-item');
+        if (items[idx]) items[idx].classList.add('selected');
+    }
+    _cabUpdateAvatarPreview();
+}
+
+function _cabUpdateAvatarPreview() {
+    const av = document.getElementById('cab-avatar-circle');
+    const nameInGame = _displayName || _authUsername;
+    if (!av) return;
+    if (_cabAvatarId && window.AVATARS?.[_cabAvatarId]) {
+        av.innerHTML = window.AVATARS[_cabAvatarId];
+        av.style.background = 'transparent';
+        av.querySelector('svg')?.setAttribute('width', '72');
+        av.querySelector('svg')?.setAttribute('height', '72');
+    } else {
+        av.innerHTML = nameInGame[0]?.toUpperCase() || '?';
+        av.style.background = _cabColor;
+    }
 }
 
 async function cabSaveProfile() {
@@ -380,19 +451,29 @@ async function cabSaveProfile() {
         const res = await fetch('/api/profile', {
             method:  'PATCH',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth?.token}` },
-            body:    JSON.stringify({ displayName, avatarColor: _cabColor }),
+            body:    JSON.stringify({ displayName, avatarColor: _cabColor, avatarId: _cabAvatarId }),
         });
         if (!res.ok) throw new Error((await res.json()).error || 'Помилка');
         // Зберігаємо локально
         _displayName  = displayName;
         _avatarColor  = _cabColor;
+        _avatarId     = _cabAvatarId;
         // Оновлюємо sidebar і account-bar
         const nameInGame = _displayName || _authUsername;
         document.getElementById('cab-sidebar-name').textContent = nameInGame;
-        document.getElementById('cab-avatar-circle').style.background = _avatarColor;
-        document.getElementById('cab-avatar-circle').textContent = nameInGame[0]?.toUpperCase() || '?';
+        _cabUpdateAvatarPreview();
         const accAv = document.getElementById('account-avatar');
-        if (accAv) { accAv.textContent = nameInGame[0]?.toUpperCase() || '?'; accAv.style.background = _avatarColor; }
+        if (accAv) {
+            if (_avatarId && window.AVATARS?.[_avatarId]) {
+                accAv.innerHTML = window.AVATARS[_avatarId];
+                accAv.style.background = 'transparent';
+                accAv.querySelector('svg')?.setAttribute('width', '36');
+                accAv.querySelector('svg')?.setAttribute('height', '36');
+            } else {
+                accAv.innerHTML = nameInGame[0]?.toUpperCase() || '?';
+                accAv.style.background = _avatarColor;
+            }
+        }
         const accName = document.getElementById('account-name');
         if (accName) accName.textContent = nameInGame;
         const nameInput = document.getElementById('lobby-name');

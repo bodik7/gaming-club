@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Аватари — превʼю</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0f0f14;
+    color: #f0e8d0;
+    font-family: 'Segoe UI', sans-serif;
+    padding: 40px 24px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 22px; font-weight: 700; color: #c9a227; margin-bottom: 8px; letter-spacing: 1px; }
+  p { font-size: 13px; color: rgba(240,232,208,0.45); margin-bottom: 36px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 20px;
+    max-width: 960px;
+  }
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(201,162,39,0.15);
+    border-radius: 16px;
+    padding: 24px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    transition: border-color .2s, transform .15s;
+    cursor: pointer;
+  }
+  .card:hover {
+    border-color: rgba(201,162,39,0.55);
+    transform: translateY(-3px);
+  }
+  .card svg { width: 80px; height: 80px; }
+  .label {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(240,232,208,0.6);
+    letter-spacing: .5px;
+    text-align: center;
+  }
+  .note {
+    margin-top: 4px;
+    font-size: 10px;
+    color: rgba(240,232,208,0.25);
+    text-align: center;
+  }
+
+  /* ── Entrance & ambient ── */
+  @keyframes card-enter { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes av-float   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  /* ── Character-specific ── */
+  @keyframes neon-b  { 0%,100%{filter:drop-shadow(0 0 3px #00e5ff);opacity:.9} 50%{filter:drop-shadow(0 0 13px #00e5ff);opacity:.5} }
+  @keyframes neon-r  { 0%,100%{filter:drop-shadow(0 0 3px #ff1744);opacity:.9} 50%{filter:drop-shadow(0 0 13px #ff1744);opacity:.4} }
+  @keyframes flame   { 0%,100%{opacity:1;stroke-width:1.5} 33%{opacity:.25;stroke-width:2.5} 66%{opacity:.8;stroke-width:1} }
+  @keyframes moon-glow { 0%,100%{filter:drop-shadow(0 0 2px #c9a227);opacity:.7} 50%{filter:drop-shadow(0 0 10px #c9a227);opacity:1} }
+  @keyframes twinkle { 0%,100%{opacity:.6} 50%{opacity:.04} }
+  @keyframes visor-p { 0%,100%{filter:drop-shadow(0 0 3px #e040fb)} 50%{filter:drop-shadow(0 0 16px #e040fb)} }
+  @keyframes gold-sh { 0%,100%{filter:drop-shadow(0 0 1px #c9a227);opacity:.9} 50%{filter:drop-shadow(0 0 8px #ffea00);opacity:1} }
+
+  /* entrance stagger */
+  .card { animation: card-enter .5s ease backwards; }
+  .card:nth-child(1)  { animation-delay: .04s; }
+  .card:nth-child(2)  { animation-delay: .09s; }
+  .card:nth-child(3)  { animation-delay: .14s; }
+  .card:nth-child(4)  { animation-delay: .19s; }
+  .card:nth-child(5)  { animation-delay: .24s; }
+  .card:nth-child(6)  { animation-delay: .29s; }
+  .card:nth-child(7)  { animation-delay: .34s; }
+  .card:nth-child(8)  { animation-delay: .39s; }
+  .card:nth-child(9)  { animation-delay: .44s; }
+  .card:nth-child(10) { animation-delay: .49s; }
+  .card:nth-child(11) { animation-delay: .54s; }
+  .card:nth-child(12) { animation-delay: .59s; }
+  .card:hover { box-shadow: 0 8px 32px rgba(0,0,0,.5), 0 0 20px rgba(201,162,39,.18); }
+
+  /* float — each card offset so they don't sync */
+  .card svg { animation: av-float 4s ease-in-out infinite; }
+  .card:nth-child(1)  svg { animation-delay: 0s;    }
+  .card:nth-child(2)  svg { animation-delay: .35s;  }
+  .card:nth-child(3)  svg { animation-delay: .7s;   }
+  .card:nth-child(4)  svg { animation-delay: 1.05s; }
+  .card:nth-child(5)  svg { animation-delay: 1.4s;  }
+  .card:nth-child(6)  svg { animation-delay: 1.75s; }
+  .card:nth-child(7)  svg { animation-delay: 2.1s;  }
+  .card:nth-child(8)  svg { animation-delay: 2.45s; }
+  .card:nth-child(9)  svg { animation-delay: 2.8s;  }
+  .card:nth-child(10) svg { animation-delay: 3.15s; }
+  .card:nth-child(11) svg { animation-delay: 3.5s;  }
+  .card:nth-child(12) svg { animation-delay: 3.85s; }
+
+  /* per-element classes */
+  .neon-b   { animation: neon-b   1.6s ease-in-out infinite; }
+  .neon-r   { animation: neon-r   2.1s ease-in-out infinite; }
+  .flame    { animation: flame    0.8s ease-in-out infinite; }
+  .moon-eye { animation: moon-glow 2.5s ease-in-out infinite; }
+  .nstar    { animation: twinkle  2s   ease-in-out infinite; }
+  .visor    { animation: visor-p  1.8s ease-in-out infinite; }
+  .gold     { animation: gold-sh  2.2s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<h1>🎨 Кастомні аватари</h1>
+<p>Hover для збільшення · Клацни щоб вибрати (майбутнє)</p>
+
+<div class="grid">
+
+<!-- ═══ 1. ЛИС-ШУЛЕР ═══ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- вуха -->
+  <polygon points="14,42 22,14 32,38" fill="#d4601a"/>
+  <polygon points="66,42 58,14 48,38" fill="#d4601a"/>
+  <polygon points="17,40 23,20 30,37" fill="#f4a05a"/>
+  <polygon points="63,40 57,20 50,37" fill="#f4a05a"/>
+  <!-- голова -->
+  <ellipse cx="40" cy="48" rx="24" ry="22" fill="#e07830"/>
+  <!-- морда -->
+  <ellipse cx="40" cy="56" rx="14" ry="10" fill="#f5c88a"/>
+  <!-- тінь вилиць -->
+  <ellipse cx="40" cy="48" rx="24" ry="22" fill="url(#fox_shadow)" opacity=".3"/>
+  <!-- очі — хитрі, напівзакриті -->
+  <ellipse cx="31" cy="46" rx="5" ry="4" fill="#1a0d00"/>
+  <ellipse cx="49" cy="46" rx="5" ry="4" fill="#1a0d00"/>
+  <ellipse cx="32.5" cy="44.5" rx="1.5" ry="1.5" fill="white" opacity=".6"/>
+  <ellipse cx="50.5" cy="44.5" rx="1.5" ry="1.5" fill="white" opacity=".6"/>
+  <!-- закриті повіки (хитрість) -->
+  <path d="M26 44 Q31 41 36 44" stroke="#1a0d00" stroke-width="1.5" fill="none"/>
+  <path d="M44 44 Q49 41 54 44" stroke="#1a0d00" stroke-width="1.5" fill="none"/>
+  <!-- ніс -->
+  <ellipse cx="40" cy="55" rx="3.5" ry="2.5" fill="#a03510"/>
+  <!-- посмішка хитра -->
+  <path d="M33 60 Q40 65 47 60" stroke="#a03510" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- картка в зубах -->
+  <rect x="33" y="62" width="14" height="9" rx="1.5" fill="white" stroke="#ccc" stroke-width=".5"/>
+  <text x="36.5" y="69" font-size="6" fill="#e02424" font-family="Georgia,serif">♥A</text>
+  <defs>
+    <radialGradient id="fox_shadow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity=".25"/>
+    </radialGradient>
+  </defs>
+</svg>
+<div class="label">Лис-шулер</div>
+<div class="note">Тактика і блеф</div>
+</div>
+
+<!-- ═══ 2. ВОВК-МАФІОЗІ ═══ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- капелюх -->
+  <rect x="20" y="12" width="40" height="6" rx="3" fill="#1a1a1a"/>
+  <rect x="26" y="7" width="28" height="14" rx="4" fill="#222"/>
+  <path d="M20 18 Q40 22 60 18" stroke="#333" stroke-width="1.5" fill="none"/>
+  <!-- вуха -->
+  <polygon points="25,36 20,18 32,32" fill="#5a5a6e"/>
+  <polygon points="55,36 60,18 48,32" fill="#5a5a6e"/>
+  <polygon points="26,35 22,22 30,32" fill="#8a8a9e"/>
+  <polygon points="54,35 58,22 50,32" fill="#8a8a9e"/>
+  <!-- голова -->
+  <ellipse cx="40" cy="46" rx="22" ry="20" fill="#6a6a7e"/>
+  <!-- морда -->
+  <ellipse cx="40" cy="54" rx="12" ry="8" fill="#b0b0c0"/>
+  <!-- очі — темні, під полями -->
+  <ellipse cx="32" cy="44" rx="5" ry="5" fill="#111"/>
+  <ellipse cx="48" cy="44" rx="5" ry="5" fill="#111"/>
+  <ellipse cx="33.5" cy="42.5" rx="1.8" ry="1.8" fill="white" opacity=".5"/>
+  <ellipse cx="49.5" cy="42.5" rx="1.8" ry="1.8" fill="white" opacity=".5"/>
+  <!-- ніс -->
+  <ellipse cx="40" cy="53" rx="3" ry="2" fill="#2a2a3a"/>
+  <!-- суворий рот -->
+  <path d="M34 58 Q40 56 46 58" stroke="#2a2a3a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- краватка -->
+  <path d="M37 66 L40 72 L43 66 L40 63 Z" fill="#c00"/>
+  <rect x="38" y="63" width="4" height="3" rx=".5" fill="#900"/>
+</svg>
+<div class="label">Вовк-мафіозі</div>
+<div class="note">Мовчить і спостерігає</div>
+</div>
+
+<!-- ═══ 3. ВЕДМІДЬ-БАНКІР ═══ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- вушка -->
+  <circle cx="24" cy="28" r="10" fill="#8B5E3C"/>
+  <circle cx="56" cy="28" r="10" fill="#8B5E3C"/>
+  <circle cx="24" cy="28" r="6" fill="#c4845a"/>
+  <circle cx="56" cy="28" r="6" fill="#c4845a"/>
+  <!-- голова -->
+  <circle cx="40" cy="46" r="24" fill="#a06838"/>
+  <!-- морда -->
+  <ellipse cx="40" cy="54" rx="13" ry="9" fill="#c4845a"/>
+  <!-- окуляри -->
+  <circle cx="31" cy="44" r="7" fill="none" stroke="#2a1a00" stroke-width="2.5"/>
+  <circle cx="49" cy="44" r="7" fill="none" stroke="#2a1a00" stroke-width="2.5"/>
+  <line x1="38" y1="44" x2="42" y2="44" stroke="#2a1a00" stroke-width="2.5"/>
+  <line x1="24" y1="42" x2="22" y2="40" stroke="#2a1a00" stroke-width="2.5"/>
+  <line x1="56" y1="42" x2="58" y2="40" stroke="#2a1a00" stroke-width="2.5"/>
+  <!-- зіниці за склом -->
+  <circle cx="31" cy="44" r="3.5" fill="#1a0d00"/>
+  <circle cx="49" cy="44" r="3.5" fill="#1a0d00"/>
+  <circle cx="32" cy="43" r="1.2" fill="white" opacity=".6"/>
+  <circle cx="50" cy="43" r="1.2" fill="white" opacity=".6"/>
+  <!-- ніс -->
+  <ellipse cx="40" cy="53" rx="4" ry="2.8" fill="#3a1a00"/>
+  <!-- задоволена посмішка -->
+  <path d="M32 58 Q40 64 48 58" stroke="#3a1a00" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- краватка-метелик -->
+  <polygon points="36,65 40,68 44,65 40,62" fill="#1a56db"/>
+  <circle cx="40" cy="65" r="2" fill="#0e3fa0"/>
+  <!-- монета -->
+  <circle cx="40" cy="74" r="4" fill="#c9a227" stroke="#a07010" stroke-width="1" class="gold"/>
+  <text x="38.5" y="76.5" font-size="5" fill="#7a4d00" font-weight="bold">₴</text>
+</svg>
+<div class="label">Ведмідь-банкір</div>
+<div class="note">Монополія його стихія</div>
+</div>
+
+<!-- ═══ 4. КІБЕРПАНК-КРОЛИК ═══ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- вуха довгі -->
+  <rect x="27" y="4" width="9" height="28" rx="4.5" fill="#c0a0c8"/>
+  <rect x="44" y="4" width="9" height="28" rx="4.5" fill="#c0a0c8"/>
+  <rect x="29" y="5" width="5" height="24" rx="2.5" fill="#e060e0" opacity=".5"/>
+  <rect x="46" y="5" width="5" height="24" rx="2.5" fill="#e060e0" opacity=".5"/>
+  <!-- неон-лінії на вухах -->
+  <line x1="31.5" y1="7" x2="31.5" y2="28" stroke="#e040fb" stroke-width="1" opacity=".8"/>
+  <line x1="48.5" y1="7" x2="48.5" y2="28" stroke="#e040fb" stroke-width="1" opacity=".8"/>
+  <!-- голова -->
+  <ellipse cx="40" cy="52" rx="22" ry="20" fill="#9060a0"/>
+  <!-- кіберне обличчя — пластина -->
+  <rect x="24" y="42" width="32" height="20" rx="6" fill="#6030708"/>
+  <rect x="24" y="42" width="32" height="20" rx="6" fill="#200030" opacity=".6"/>
+  <!-- ліве кіберне oko -->
+  <rect x="26" y="45" width="12" height="9" rx="3" fill="#001020"/>
+  <rect x="26" y="45" width="12" height="9" rx="3" fill="none" stroke="#00e5ff" stroke-width="1.5"/>
+  <rect x="28" y="47" width="8" height="5" rx="2" fill="#00e5ff" opacity=".15"/>
+  <line x1="32" y1="45" x2="32" y2="54" stroke="#00e5ff" stroke-width=".8" opacity=".6"/>
+  <circle cx="32" cy="49.5" r="2.5" fill="#00e5ff" opacity=".9" class="neon-b"/>
+  <!-- праве oko — червоне (різне) -->
+  <rect x="42" y="45" width="12" height="9" rx="3" fill="#100000"/>
+  <rect x="42" y="45" width="12" height="9" rx="3" fill="none" stroke="#ff1744" stroke-width="1.5"/>
+  <circle cx="48" cy="49.5" r="2.5" fill="#ff1744" opacity=".9" class="neon-r"/>
+  <line x1="48" y1="45" x2="48" y2="54" stroke="#ff1744" stroke-width=".8" opacity=".6"/>
+  <!-- рот — data-стрічка -->
+  <rect x="28" y="57" width="24" height="5" rx="2.5" fill="#001020" stroke="#7c4dff" stroke-width="1"/>
+  <line x1="31" y1="59.5" x2="34" y2="59.5" stroke="#7c4dff" stroke-width="1.2"/>
+  <line x1="36" y1="59.5" x2="44" y2="59.5" stroke="#7c4dff" stroke-width="1.2"/>
+  <line x1="46" y1="59.5" x2="49" y2="59.5" stroke="#7c4dff" stroke-width="1.2"/>
+  <!-- шрам / щілина на щоці -->
+  <path d="M22 50 L26 54" stroke="#00e5ff" stroke-width="1.2" stroke-dasharray="2,1.5" opacity=".7"/>
+</svg>
+<div class="label">Кіберпанк-кролик</div>
+<div class="note">Два ока — два світи</div>
+</div>
+
+<!-- ═══ 5. СКЕЛЕТ-КОВБОЙ ═══ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- капелюх ковбоя -->
+  <path d="M14 30 Q40 26 66 30 L64 24 Q40 20 16 24 Z" fill="#5a3a1a"/>
+  <rect x="22" y="12" width="36" height="16" rx="5" fill="#6b4420"/>
+  <path d="M22 22 Q40 18 58 22" stroke="#8b6640" stroke-width="1.5" fill="none"/>
+  <!-- голова — череп -->
+  <ellipse cx="40" cy="50" rx="20" ry="22" fill="#f0ede5"/>
+  <!-- тінь форми черепа -->
+  <ellipse cx="40" cy="44" rx="18" ry="16" fill="#e8e4da"/>
+  <!-- орбіти очей -->
+  <ellipse cx="31" cy="48" rx="7" ry="8" fill="#1a1206"/>
+  <ellipse cx="49" cy="48" rx="7" ry="8" fill="#1a1206"/>
+  <!-- відблиски в очах -->
+  <ellipse cx="29" cy="45" rx="2" ry="2.5" fill="white" opacity=".15"/>
+  <ellipse cx="47" cy="45" rx="2" ry="2.5" fill="white" opacity=".15"/>
+  <!-- ніс — порожнеча -->
+  <path d="M37 57 Q40 55 43 57 Q40 61 37 57Z" fill="#1a1206"/>
+  <!-- щелепа -->
+  <path d="M28 65 Q40 72 52 65" stroke="#1a1206" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- зуби -->
+  <line x1="34" y1="65" x2="34" y2="70" stroke="#1a1206" stroke-width="1.5"/>
+  <line x1="38" y1="66" x2="38" y2="71" stroke="#1a1206" stroke-width="1.5"/>
+  <line x1="42" y1="66" x2="42" y2="71" stroke="#1a1206" stroke-width="1.5"/>
+  <line x1="46" y1="65" x2="46" y2="70" stroke="#1a1206" stroke-width="1.5"/>
+  <!-- хрестик на капелюсі -->
+  <text x="35" y="21" font-size="8" fill="#c9a227" font-family="serif">✦</text>
+</svg>
+<div class="label">Скелет-ковбой</div>
+<div class="note">Грає до кінця</div>
+</div>
+
+<!-- ═══ 6. ДРАКОН-ДЖОКЕР ═══ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- дзвіночки-ріжки -->
+  <path d="M26 20 L20 8 L28 16" fill="#ffd600" stroke="#c9a227" stroke-width="1"/>
+  <path d="M54 20 L60 8 L52 16" fill="#ffd600" stroke="#c9a227" stroke-width="1"/>
+  <circle cx="20" cy="8" r="2.5" fill="#c9a227"/>
+  <circle cx="60" cy="8" r="2.5" fill="#c9a227"/>
+  <!-- гребінь -->
+  <path d="M28 28 L24 18 L32 26 L34 16 L38 28 L40 14 L42 28 L46 16 L48 26 L56 18 L52 28"
+        fill="#c00020" stroke="#900018" stroke-width="1" stroke-linejoin="round"/>
+  <!-- голова -->
+  <ellipse cx="40" cy="50" rx="23" ry="21" fill="#1a7a30"/>
+  <!-- луска-текстура -->
+  <ellipse cx="40" cy="46" rx="21" ry="17" fill="#1e8a36" opacity=".5"/>
+  <!-- морда -->
+  <ellipse cx="40" cy="58" rx="14" ry="9" fill="#2aaa50"/>
+  <!-- ніздрі з вогнем -->
+  <ellipse cx="36" cy="57" rx="2" ry="1.5" fill="#0d4a1a"/>
+  <ellipse cx="44" cy="57" rx="2" ry="1.5" fill="#0d4a1a"/>
+  <path d="M35 55 L33 50" stroke="#ff6d00" stroke-width="1.5" stroke-linecap="round" class="flame"/>
+  <path d="M45 55 L47 50" stroke="#ff6d00" stroke-width="1.5" stroke-linecap="round" class="flame" style="animation-delay:.4s"/>
+  <!-- очі — вертикальна зіниця (котяча/дракон) -->
+  <ellipse cx="30" cy="46" rx="6" ry="7" fill="#ffd600"/>
+  <ellipse cx="50" cy="46" rx="6" ry="7" fill="#ffd600"/>
+  <ellipse cx="30" cy="46" rx="2" ry="6" fill="#0d0d0d"/>
+  <ellipse cx="50" cy="46" rx="2" ry="6" fill="#0d0d0d"/>
+  <ellipse cx="31" cy="43" rx="1.2" ry="1.2" fill="white" opacity=".5"/>
+  <ellipse cx="51" cy="43" rx="1.2" ry="1.2" fill="white" opacity=".5"/>
+  <!-- посмішка Джокера -->
+  <path d="M30 63 Q35 60 40 63 Q45 66 50 63" stroke="#0d4a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M30 63 Q28 66 30 68" stroke="#0d4a1a" stroke-width="1.5" fill="none"/>
+  <path d="M50 63 Q52 66 50 68" stroke="#0d4a1a" stroke-width="1.5" fill="none"/>
+</svg>
+<div class="label">Дракон-джокер</div>
+<div class="note">Непередбачуваний</div>
+</div>
+
+<!-- ═══ 7. АКУЛА-ГРАВЕЦЬ ═══ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- плавник -->
+  <path d="M40 12 L34 34 L46 34 Z" fill="#2060a0"/>
+  <path d="M40 12 L36 32 L44 32 Z" fill="#1a4a80"/>
+  <!-- голова -->
+  <ellipse cx="40" cy="50" rx="24" ry="20" fill="#2060a0"/>
+  <!-- світліше черево -->
+  <ellipse cx="40" cy="56" rx="18" ry="13" fill="#d0e8f8"/>
+  <!-- зябра -->
+  <path d="M18 44 Q22 48 18 52" stroke="#1040708" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".6"/>
+  <path d="M20 42 Q25 47 20 52" stroke="#1040708" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".4"/>
+  <path d="M62 44 Q58 48 62 52" stroke="#1040708" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".6"/>
+  <!-- очі — чорні та холодні -->
+  <circle cx="30" cy="46" r="6" fill="black"/>
+  <circle cx="50" cy="46" r="6" fill="black"/>
+  <circle cx="31.5" cy="44.5" r="2" fill="white" opacity=".2"/>
+  <circle cx="51.5" cy="44.5" r="2" fill="white" opacity=".2"/>
+  <!-- усмішка з зубами -->
+  <path d="M24 57 Q40 68 56 57" fill="#d0e8f8" stroke="none"/>
+  <path d="M24 57 Q40 66 56 57" stroke="#1040708" stroke-width="1.5" fill="none"/>
+  <!-- зуби -->
+  <path d="M28 57 L30 63 L33 57" fill="white" stroke="#ccc" stroke-width=".5"/>
+  <path d="M34 58 L36 64 L38 58" fill="white" stroke="#ccc" stroke-width=".5"/>
+  <path d="M40 58 L42 64 L44 58" fill="white" stroke="#ccc" stroke-width=".5"/>
+  <path d="M46 58 L48 63 L50 57" fill="white" stroke="#ccc" stroke-width=".5"/>
+  <!-- фішка казино у зубах -->
+  <circle cx="40" cy="70" r="5" fill="#c9a227" stroke="#a07010" stroke-width="1" class="gold"/>
+  <circle cx="40" cy="70" r="3" fill="none" stroke="#a07010" stroke-width=".8" stroke-dasharray="1.5,1.5"/>
+</svg>
+<div class="label">Акула-гравець</div>
+<div class="note">Кров'ю не пахне, а ₴ так</div>
+</div>
+
+<!-- ═══ 8. КІБЕРСАМУРАЙ ═══ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- шолом-кабуто -->
+  <path d="M18 38 Q20 16 40 13 Q60 16 62 38 Z" fill="#1a1a2e"/>
+  <path d="M22 38 Q24 20 40 17 Q56 20 58 38 Z" fill="#16213e"/>
+  <!-- декор шолому — рога/виступи -->
+  <path d="M20 30 L12 20 L22 28" fill="#c9a227" stroke="#a07010" stroke-width="1"/>
+  <path d="M60 30 L68 20 L58 28" fill="#c9a227" stroke="#a07010" stroke-width="1"/>
+  <!-- маска-лице (темна) -->
+  <ellipse cx="40" cy="52" rx="22" ry="20" fill="#0f3460"/>
+  <!-- маска-пластина -->
+  <rect x="20" y="40" width="40" height="22" rx="5" fill="#1a1a2e"/>
+  <!-- очна щілина — неонова -->
+  <rect x="22" y="44" width="36" height="8" rx="4" fill="#000510" class="visor"/>
+  <rect x="22" y="44" width="36" height="8" rx="4" fill="none" stroke="#e040fb" stroke-width="1"/>
+  <!-- два ока в щілині -->
+  <ellipse cx="32" cy="48" rx="5" ry="3" fill="#e040fb" opacity=".9"/>
+  <ellipse cx="48" cy="48" rx="5" ry="3" fill="#e040fb" opacity=".9"/>
+  <ellipse cx="32" cy="48" rx="2" ry="1.5" fill="white" opacity=".3"/>
+  <ellipse cx="48" cy="48" rx="2" ry="1.5" fill="white" opacity=".3"/>
+  <!-- вертикальні декори на шоломі -->
+  <rect x="38" y="14" width="4" height="8" rx="2" fill="#e040fb" opacity=".6"/>
+  <!-- маска нижня частина — рот-решітка -->
+  <rect x="24" y="55" width="32" height="7" rx="3.5" fill="#0a0a1a" stroke="#333" stroke-width="1"/>
+  <line x1="28" y1="55" x2="28" y2="62" stroke="#333" stroke-width="1"/>
+  <line x1="34" y1="55" x2="34" y2="62" stroke="#333" stroke-width="1"/>
+  <line x1="40" y1="55" x2="40" y2="62" stroke="#333" stroke-width="1"/>
+  <line x1="46" y1="55" x2="46" y2="62" stroke="#333" stroke-width="1"/>
+  <line x1="52" y1="55" x2="52" y2="62" stroke="#333" stroke-width="1"/>
+  <!-- мон (герб) на шоломі -->
+  <circle cx="40" cy="25" r="5" fill="none" stroke="#c9a227" stroke-width="1.5"/>
+  <path d="M40 20 L40 30 M35 25 L45 25" stroke="#c9a227" stroke-width="1"/>
+</svg>
+<div class="label">Кіберсамурай</div>
+<div class="note">Честь і нічна фаза</div>
+</div>
+
+<!-- ═══ 9. ЛЕДІ-ЧИРВА ═══ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- корона -->
+  <path d="M22 30 L20 18 L28 26 L40 14 L52 26 L60 18 L58 30 Z" fill="#c9a227" stroke="#a07010" stroke-width="1.2"/>
+  <circle cx="20" cy="18" r="2.5" fill="#e02424"/>
+  <circle cx="60" cy="18" r="2.5" fill="#e02424"/>
+  <circle cx="40" cy="14" r="3" fill="#e02424" class="gold"/>
+  <!-- волосся -->
+  <ellipse cx="40" cy="52" rx="24" ry="22" fill="#8b1a1a"/>
+  <!-- бокові локони -->
+  <ellipse cx="18" cy="54" rx="6" ry="12" fill="#8b1a1a"/>
+  <ellipse cx="62" cy="54" rx="6" ry="12" fill="#8b1a1a"/>
+  <!-- обличчя -->
+  <ellipse cx="40" cy="50" rx="18" ry="18" fill="#f5d5b0"/>
+  <!-- рум'янець -->
+  <ellipse cx="28" cy="52" rx="5" ry="3" fill="#e06060" opacity=".35"/>
+  <ellipse cx="52" cy="52" rx="5" ry="3" fill="#e06060" opacity=".35"/>
+  <!-- очі — з довгими віями -->
+  <ellipse cx="32" cy="47" rx="5" ry="4.5" fill="#1a0d00"/>
+  <ellipse cx="48" cy="47" rx="5" ry="4.5" fill="#1a0d00"/>
+  <!-- зіниця -->
+  <ellipse cx="33" cy="47" rx="2" ry="2.5" fill="#4a200a"/>
+  <ellipse cx="49" cy="47" rx="2" ry="2.5" fill="#4a200a"/>
+  <ellipse cx="33.5" cy="45.5" rx="1.2" ry="1.2" fill="white" opacity=".7"/>
+  <ellipse cx="49.5" cy="45.5" rx="1.2" ry="1.2" fill="white" opacity=".7"/>
+  <!-- вії -->
+  <path d="M27 44 Q29 41 32 43 Q35 41 37 44" stroke="#1a0d00" stroke-width="1.5" fill="none"/>
+  <path d="M43 44 Q45 41 48 43 Q51 41 53 44" stroke="#1a0d00" stroke-width="1.5" fill="none"/>
+  <!-- ніс -->
+  <path d="M38 52 Q40 53 42 52" stroke="#c09070" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <!-- губи -->
+  <path d="M33 57 Q36 55 40 55 Q44 55 47 57" stroke="#c02020" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M33 57 Q40 61 47 57" stroke="#c02020" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- символ чирви на чолі -->
+  <path d="M40 36 C37 33 33 35 33 38 C33 41 36 42 40 46 C44 42 47 41 47 38 C47 35 43 33 40 36Z"
+        fill="#e02424" transform="scale(.55) translate(32,18)"/>
+</svg>
+<div class="label">Леді-Чирва</div>
+<div class="note">Королева блефу</div>
+</div>
+
+<!-- ═══ 10. ПІРАТ-КОЗАК ═══ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- бандана -->
+  <path d="M18 36 Q20 20 40 18 Q60 20 62 36 L56 36 Q50 24 40 22 Q30 24 24 36Z" fill="#c00020"/>
+  <line x1="16" y1="36" x2="66" y2="36" stroke="#900018" stroke-width="2"/>
+  <!-- вузол банданки -->
+  <circle cx="62" cy="34" r="4" fill="#c00020" stroke="#900018" stroke-width="1"/>
+  <path d="M62 34 L68 28 M62 34 L70 36" stroke="#c00020" stroke-width="2" stroke-linecap="round"/>
+  <!-- голова -->
+  <ellipse cx="40" cy="52" rx="22" ry="22" fill="#d4a070"/>
+  <!-- Шрам через ліве oko -->
+  <line x1="27" y1="40" x2="33" y2="50" stroke="#8b3a1a" stroke-width="2" stroke-linecap="round"/>
+  <!-- пов'язка на лівому оці -->
+  <ellipse cx="29" cy="46" rx="8" ry="7" fill="#1a1206"/>
+  <path d="M21 42 Q29 38 37 42" stroke="#3a2010" stroke-width="2.5" fill="none"/>
+  <!-- праве oko -->
+  <ellipse cx="51" cy="46" rx="6" ry="6" fill="#1a0d00"/>
+  <circle cx="53" cy="44" r="2" fill="white" opacity=".5"/>
+  <!-- вуса -->
+  <path d="M33 57 Q37 55 40 56 Q43 55 47 57" stroke="#3a2010" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M30 57 Q26 53 24 55" stroke="#3a2010" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M50 57 Q54 53 56 55" stroke="#3a2010" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- ніс картопляний -->
+  <ellipse cx="40" cy="53" rx="4.5" ry="3.5" fill="#c49060"/>
+  <!-- ніс-ніздрі -->
+  <ellipse cx="38" cy="54" rx="1.2" ry="1" fill="#a07040"/>
+  <ellipse cx="42" cy="54" rx="1.2" ry="1" fill="#a07040"/>
+  <!-- посмішка -->
+  <path d="M32 61 Q40 67 48 61" stroke="#3a2010" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- золотий зуб -->
+  <rect x="38" y="62" width="4" height="5" rx="1" fill="#c9a227" class="gold"/>
+</svg>
+<div class="label">Пірат-козак</div>
+<div class="note">Морський вовк столу</div>
+</div>
+
+<!-- ═══ 11. МАСКА НОЧІ ═══ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- фон-нічне небо (голова) -->
+  <circle cx="40" cy="46" r="28" fill="#0a0520"/>
+  <!-- зіркова текстура -->
+  <circle cx="28" cy="36" r="1" fill="white" opacity=".6" class="nstar"/>
+  <circle cx="52" cy="32" r="1.2" fill="white" opacity=".5" class="nstar" style="animation-delay:.5s"/>
+  <circle cx="20" cy="50" r=".8" fill="white" opacity=".4" class="nstar" style="animation-delay:1.0s"/>
+  <circle cx="60" cy="54" r=".8" fill="white" opacity=".4" class="nstar" style="animation-delay:1.5s"/>
+  <circle cx="34" cy="28" r=".7" fill="white" opacity=".5" class="nstar" style="animation-delay:.3s"/>
+  <circle cx="56" cy="40" r=".7" fill="white" opacity=".6" class="nstar" style="animation-delay:.8s"/>
+  <!-- маска (половина) — срібна -->
+  <path d="M14 50 Q16 30 40 28 Q64 30 66 50 Q60 56 52 54 Q46 68 40 56 Q34 68 28 54 Q20 56 14 50Z"
+        fill="#c8d0e0" stroke="#9090a8" stroke-width="1.5"/>
+  <!-- орнамент на масці -->
+  <path d="M40 30 Q40 36 40 42" stroke="#9090a8" stroke-width="1" stroke-dasharray="2,2"/>
+  <path d="M25 38 Q32 42 40 42 Q48 42 55 38" stroke="#9090a8" stroke-width="1" fill="none"/>
+  <!-- очі маски — порожні, темні -->
+  <ellipse cx="29" cy="44" rx="8" ry="6" fill="#0a0520"/>
+  <ellipse cx="51" cy="44" rx="8" ry="6" fill="#0a0520"/>
+  <!-- сяйво в очах — місяць/зірки -->
+  <path d="M24 42 Q29 38 34 42" stroke="#c9a227" stroke-width="1.5" fill="none" opacity=".7"/>
+  <path d="M46 42 Q51 38 56 42" stroke="#c9a227" stroke-width="1.5" fill="none" opacity=".7"/>
+  <circle cx="29" cy="45" r="2.5" fill="#c9a227" opacity=".7" class="moon-eye"/>
+  <circle cx="51" cy="45" r="2.5" fill="#c9a227" opacity=".7" class="moon-eye" style="animation-delay:1.2s"/>
+  <!-- низ маски — відкритий рот -->
+  <path d="M28 54 Q34 50 40 56 Q46 50 52 54" stroke="#9090a8" stroke-width="1.5" fill="none"/>
+  <!-- стрічки маски -->
+  <path d="M14 50 L8 46" stroke="#9090a8" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M66 50 L72 46" stroke="#9090a8" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- місяць на чолі -->
+  <path d="M36 33 Q40 28 44 33 Q41 30 36 33Z" fill="#c9a227" opacity=".8"/>
+</svg>
+<div class="label">Маска Ночі</div>
+<div class="note">Ніхто не знає хто</div>
+</div>
+
+<!-- ═══ 12. ЩАСТЯ — СОВА ═══ -->
+<div class="card">
+<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- тіло-бібліотека (знизу) -->
+  <ellipse cx="40" cy="62" rx="18" ry="12" fill="#5a3a10"/>
+  <!-- крила -->
+  <path d="M22 58 Q14 48 18 40 Q22 50 28 54Z" fill="#7a5a28"/>
+  <path d="M58 58 Q66 48 62 40 Q58 50 52 54Z" fill="#7a5a28"/>
+  <!-- пір'я крил -->
+  <path d="M18 40 Q16 50 22 58" stroke="#c9a227" stroke-width=".8" fill="none" opacity=".5"/>
+  <path d="M62 40 Q64 50 58 58" stroke="#c9a227" stroke-width=".8" fill="none" opacity=".5"/>
+  <!-- голова -->
+  <circle cx="40" cy="44" r="22" fill="#8b6a2a"/>
+  <!-- лицеве перо (кола) -->
+  <circle cx="40" cy="44" r="17" fill="none" stroke="#c9a227" stroke-width="1.5" opacity=".4"/>
+  <circle cx="40" cy="44" r="14" fill="#a08040" opacity=".3"/>
+  <!-- вушні пучки перья -->
+  <path d="M28 26 L24 16 L30 24" fill="#5a3a10"/>
+  <path d="M52 26 L56 16 L50 24" fill="#5a3a10"/>
+  <path d="M29 25 L26 18 L30 23" fill="#c9a227" opacity=".6"/>
+  <path d="M51 25 L54 18 L50 23" fill="#c9a227" opacity=".6"/>
+  <!-- великі круглі очі сови -->
+  <circle cx="30" cy="44" r="9" fill="#f5e060"/>
+  <circle cx="50" cy="44" r="9" fill="#f5e060"/>
+  <circle cx="30" cy="44" r="6" fill="#1a0d00"/>
+  <circle cx="50" cy="44" r="6" fill="#1a0d00"/>
+  <!-- зіниця з відблиском -->
+  <circle cx="32" cy="42" r="2.5" fill="white" opacity=".4"/>
+  <circle cx="52" cy="42" r="2.5" fill="white" opacity=".4"/>
+  <!-- дзьоб -->
+  <path d="M37 50 L40 55 L43 50 Z" fill="#c9a227"/>
+  <!-- книга в лапах -->
+  <rect x="30" y="66" width="20" height="11" rx="2" fill="#1a56db"/>
+  <rect x="30" y="66" width="3" height="11" rx="1" fill="#0e3fa0"/>
+  <text x="34" y="74" font-size="6" fill="white" font-weight="bold">♣♦</text>
+</svg>
+<div class="label">Сова-стратег</div>
+<div class="note">Все прораховує наперед</div>
+</div>
+
+</div><!-- /.grid -->
+
+<p style="margin-top:32px;font-size:11px;opacity:.35">Натискай на аватар — у майбутньому тут буде вибір</p>
+</body>
+</html>

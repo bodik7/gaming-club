@@ -32,6 +32,7 @@ async function init() {
             created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
             display_name TEXT,
             avatar_color TEXT    DEFAULT '#1a56db',
+            avatar_id    TEXT,
             is_admin     INTEGER DEFAULT 0
         )` },
         { sql: `CREATE TABLE IF NOT EXISTS game_stats (
@@ -57,6 +58,7 @@ async function init() {
         `ALTER TABLE users ADD COLUMN display_name TEXT`,
         `ALTER TABLE users ADD COLUMN avatar_color TEXT DEFAULT '#1a56db'`,
         `ALTER TABLE users ADD COLUMN is_admin    INTEGER DEFAULT 0`,
+        `ALTER TABLE users ADD COLUMN avatar_id   TEXT`,
     ];
     for (const sql of migrations) {
         try {
@@ -94,15 +96,16 @@ async function createUser(username, hash) {
     });
 }
 
-async function updateProfile(username, { displayName, avatarColor }) {
+async function updateProfile(username, { displayName, avatarColor, avatarId }) {
     // UPSERT: create row if JWT user has no DB record (e.g. after DB reset)
     await getClient().execute({
-        sql: `INSERT INTO users (username, hash, display_name, avatar_color)
-              VALUES (?, '', ?, ?)
+        sql: `INSERT INTO users (username, hash, display_name, avatar_color, avatar_id)
+              VALUES (?, '', ?, ?, ?)
               ON CONFLICT(username) DO UPDATE SET
                   display_name = excluded.display_name,
-                  avatar_color = excluded.avatar_color`,
-        args: [username, displayName ?? null, avatarColor ?? '#1a56db'],
+                  avatar_color = excluded.avatar_color,
+                  avatar_id    = excluded.avatar_id`,
+        args: [username, displayName ?? null, avatarColor ?? '#1a56db', avatarId ?? null],
     });
 }
 

@@ -17,6 +17,8 @@ function createGameState(roomPlayers) {
         inJail: false, jailTurns: 0, hasJailCard: false,
         bankrupt: false, loan: 0, loanInterest: 0, loanTurnsLeft: 0,
         stats: { rentPaid: 0, rentReceived: 0, housesBuilt: 0, hotelsBuilt: 0, taxesPaid: 0, cardsTotal: 0 },
+        avatarId: rp.avatarId || null,
+        avatarColor: rp.avatarColor || '#1a56db',
     }));
     const cellState = {};
     BOARD.forEach(c => {

@@ -272,11 +272,17 @@ function renderPlayers() {
             </div>`;
         }).join('');
         const isOffline = typeof _offlinePlayers !== 'undefined' && _offlinePlayers.has(i);
+        const avatarHtml = window.renderAvatarEl
+            ? window.renderAvatarEl(p.avatarId, p.avatarColor || p.color, p.name[0], 32)
+            : `<div class="player-token" style="background:${p.color}">${p.icon}</div>`;
         card.innerHTML = `
             <div class="player-header">
-                <div class="player-token" style="background:${p.color}">${p.icon}</div>
+                ${avatarHtml}
                 <div>
-                    <div class="player-name">${p.name}${isOffline ? ' <span title="Офлайн" style="font-size:11px">📴</span>' : ''}</div>
+                    <div class="player-name" style="display:flex;align-items:center;gap:4px">
+                        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};flex-shrink:0"></span>
+                        ${p.name}${isOffline ? ' <span title="Офлайн" style="font-size:11px">📴</span>' : ''}
+                    </div>
                     ${i === currentPlayerIndex ? '<div class="turn-indicator">🎲 Ваш хід</div>' : ''}
                 </div>
             </div>
