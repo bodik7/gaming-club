@@ -629,6 +629,19 @@ io.on('connection', (socket) => {
         cb({ rooms: available });
     });
 
+    socket.on('getActiveRooms', (cb) => {
+        const active = roomStore.all()
+            .filter(r => r.started && r.state && r.gameType !== 'mafia')
+            .map(r => ({
+                code:        r.code,
+                gameType:    r.gameType,
+                playerCount: r.players.filter(p => !p.isBot).length,
+                playerNames: r.players.filter(p => !p.isBot).map(p => p.name),
+                avatars:     r.players.filter(p => !p.isBot).map(p => ({ avatarId: p.avatarId || null, avatarColor: p.avatarColor || '#1a56db' })),
+            }));
+        cb({ rooms: active });
+    });
+
     // Видалити гравця з кімнати (тільки хост, до початку гри)
     socket.on('kickPlayer', ({ kickIndex }) => {
         if (typeof kickIndex !== 'number') return;

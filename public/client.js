@@ -1457,6 +1457,72 @@ function findRoom() {
     });
 }
 
+function watchRoom() {
+    socket.emit('getActiveRooms', ({ rooms: list }) => {
+        const gameIcons = { monopoly:'🏦', tysyacha:'🃏', durak:'🂡', bunker:'🏚️' };
+        const gameNames = { monopoly:'Монополія', tysyacha:'Тисяча', durak:'Дурак', bunker:'Бункер' };
+        let body;
+        if (!list.length) {
+            body = `<p style="text-align:center;color:rgba(255,255,255,0.4);padding:20px 0 8px;font-size:14px">
+                        🎮 Зараз немає активних ігор
+                    </p>`;
+        } else {
+            body = list.map(r => {
+                const avatarRow = r.playerNames.map((name, i) => {
+                    const av = r.avatars?.[i];
+                    const chip = av ? window.renderAvatarEl(av.avatarId, av.avatarColor, name[0] || '?', 22) : '';
+                    return `<div style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,0.55)">${chip}<span>${_esc(name)}</span></div>`;
+                }).join('');
+                return `
+                <div style="padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);
+                            margin-bottom:8px;background:rgba(255,255,255,0.04)">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+                        <div style="font-weight:700;color:#fff;font-size:14px">
+                            ${gameIcons[r.gameType]||'🎮'} ${gameNames[r.gameType]||r.gameType}
+                        </div>
+                        <button onclick="closeModal();_spectateCode('${r.code}')"
+                            style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);
+                                   color:rgba(255,255,255,0.8);border-radius:8px;padding:5px 14px;
+                                   font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;
+                                   transition:background 0.15s"
+                            onmouseover="this.style.background='rgba(255,255,255,0.2)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+                            👁 Дивитись
+                        </button>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px">
+                        ${avatarRow}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        showModal({
+            title: '👁 Активні ігри',
+            body,
+            buttons: [
+                { text: '🔄 Оновити', class: 'btn-secondary', action: () => { closeModal(); setTimeout(watchRoom, 100); } },
+                { text: 'Закрити',    class: 'btn-secondary', action: closeModal },
+            ]
+        });
+    });
+}
+
+function _spectateCode(code) {
+    _pendingJoinCode = code.toUpperCase();
+    socket.emit('spectatorJoin', { code }, ({ success, error, state, gameType }) => {
+        if (error) { showModal({ title: '❌ Помилка', body: `<p style="text-align:center;padding:12px;color:#f88">${_esc(error)}</p>`, buttons: [{ text: 'OK', class: 'btn-secondary', action: closeModal }] }); return; }
+        _isSpectator = true;
+        myPlayerIndex = -1;
+        document.getElementById('lobby-screen').classList.add('hidden');
+        _showSpectatorBar();
+        _showEmojiBar(true);
+        if (gameType === 'durak') { initDurak(state, -1); return; }
+        if (gameType === 'tysyacha') { initTysyacha(state, -1); return; }
+        showGameScreen();
+        applyState(state, false, null, null);
+    });
+}
+
 function quickJoin(code) {
     const name = document.getElementById('lobby-name').value.trim();
     if (!name) {
@@ -2254,12 +2320,12 @@ socket.onAny((event, ...args) => {
 function spectateRoom() {
     const code = _pendingJoinCode;
     if (!code) return;
+    document.getElementById('join-invite-banner')?.classList.add('hidden');
     socket.emit('spectatorJoin', { code }, ({ success, error, state, gameType }) => {
         if (error) { _lobbyError(error); return; }
         _isSpectator = true;
         myPlayerIndex = -1;
         document.getElementById('lobby-screen').classList.add('hidden');
-        document.getElementById('join-invite-banner')?.classList.add('hidden');
         _showSpectatorBar();
         _showEmojiBar(true);
         if (gameType === 'durak') { initDurak(state, -1); return; }
