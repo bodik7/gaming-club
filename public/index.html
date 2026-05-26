@@ -157,14 +157,12 @@
                 <div class="lobby-glass" style="display:flex;flex-direction:column;gap:14px;height:100%;box-sizing:border-box">
 
                     <!-- Вкладки: Приєднатись / Лідерборд -->
-                    <div style="display:flex;gap:8px;background:rgba(255,255,255,0.05);border-radius:10px;padding:4px">
-                        <button id="tab-join" onclick="switchLobbyTab('join')"
-                            style="flex:1;padding:8px;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:rgba(255,215,0,0.15);color:#ffd700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                            🎮 Приєднатись
+                    <div class="lobby-tabs">
+                        <button id="tab-join" class="lobby-tab active" onclick="switchLobbyTab('join')">
+                            Приєднатись
                         </button>
-                        <button id="tab-leaderboard" onclick="switchLobbyTab('leaderboard')"
-                            style="flex:1;padding:8px;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:none;color:rgba(255,255,255,0.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                            🏆 Лідерборд
+                        <button id="tab-leaderboard" class="lobby-tab" onclick="switchLobbyTab('leaderboard')">
+                            Лідерборд
                         </button>
                     </div>
 
@@ -649,12 +647,8 @@
             const isJoin = tab === 'join';
             document.getElementById('panel-join').style.display        = isJoin ? 'flex' : 'none';
             document.getElementById('panel-leaderboard').style.display = isJoin ? 'none' : 'flex';
-            const btnJoin = document.getElementById('tab-join');
-            const btnLb   = document.getElementById('tab-leaderboard');
-            btnJoin.style.background = isJoin ? 'rgba(255,215,0,0.15)' : 'none';
-            btnJoin.style.color      = isJoin ? '#ffd700' : 'rgba(255,255,255,0.4)';
-            btnLb.style.background   = isJoin ? 'none' : 'rgba(255,215,0,0.15)';
-            btnLb.style.color        = isJoin ? 'rgba(255,255,255,0.4)' : '#ffd700';
+            document.getElementById('tab-join').classList.toggle('active', isJoin);
+            document.getElementById('tab-leaderboard').classList.toggle('active', !isJoin);
             if (!isJoin) loadLeaderboard(_currentLbGame || 'monopoly');
         }
 
