@@ -1493,35 +1493,50 @@ function watchRoom() {
         const gameNames = { monopoly:'Монополія', tysyacha:'Тисяча', durak:'Дурак', bunker:'Бункер' };
         let body;
         if (!list.length) {
-            body = `<p style="text-align:center;color:rgba(255,255,255,0.4);padding:20px 0 8px;font-size:14px">
+            body = `<p style="text-align:center;color:#888;padding:20px 0 8px;font-size:14px">
                         🎮 Зараз немає активних ігор
                     </p>`;
         } else {
             body = list.map(r => {
                 const avatarRow = r.playerNames.map((name, i) => {
                     const av = r.avatars?.[i];
-                    const chip = av ? window.renderAvatarEl(av.avatarId, av.avatarColor, name[0] || '?', 22) : '';
-                    return `<div style="display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,0.55)">${chip}<span>${_esc(name)}</span></div>`;
+                    const chip = av ? window.renderAvatarEl(av.avatarId, av.avatarColor, name[0] || '?', 24) : '';
+                    return `<div style="display:flex;align-items:center;gap:5px;font-size:12px;color:#444">${chip}<span>${_esc(name)}</span></div>`;
                 }).join('');
+                const adminKill = _isAdmin
+                    ? `<button onclick="_adminKillRoomFromModal('${r.code}')"
+                           style="background:#fff0f0;border:1px solid #f5c6cb;color:#c0392b;
+                                  border-radius:7px;padding:4px 10px;font-size:11px;font-weight:700;
+                                  cursor:pointer;white-space:nowrap"
+                           onmouseover="this.style.background='#fce8e8'"
+                           onmouseout="this.style.background='#fff0f0'">
+                           🗑 Закрити
+                       </button>`
+                    : '';
                 return `
-                <div style="padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);
-                            margin-bottom:8px;background:rgba(255,255,255,0.04)">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-                        <div style="font-weight:700;color:#fff;font-size:14px">
-                            ${gameIcons[r.gameType]||'🎮'} ${gameNames[r.gameType]||r.gameType}
+                <div style="padding:12px 14px;border-radius:10px;border:1.5px solid #e0e8f5;
+                            margin-bottom:8px;background:#f8faff">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px">
+                        <div>
+                            <span style="font-weight:700;color:#004494;font-size:15px">
+                                ${gameIcons[r.gameType]||'🎮'} ${gameNames[r.gameType]||r.gameType}
+                            </span>
+                            <span style="font-size:11px;color:#999;margin-left:6px">${r.code}</span>
                         </div>
-                        <button onclick="closeModal();_spectateCode('${r.code}')"
-                            style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);
-                                   color:rgba(255,255,255,0.8);border-radius:8px;padding:5px 14px;
-                                   font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;
-                                   transition:background 0.15s"
-                            onmouseover="this.style.background='rgba(255,255,255,0.2)'"
-                            onmouseout="this.style.background='rgba(255,255,255,0.1)'">
-                            👁 Дивитись
-                        </button>
+                        <div style="display:flex;gap:6px;flex-shrink:0">
+                            <button onclick="closeModal();_spectateCode('${r.code}')"
+                                style="background:#0057b7;border:none;color:#fff;
+                                       border-radius:7px;padding:5px 14px;
+                                       font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap"
+                                onmouseover="this.style.background='#003f8a'"
+                                onmouseout="this.style.background='#0057b7'">
+                                👁 Дивитись
+                            </button>
+                            ${adminKill}
+                        </div>
                     </div>
-                    <div style="display:flex;flex-wrap:wrap;gap:6px">
-                        ${avatarRow}
+                    <div style="display:flex;flex-wrap:wrap;gap:7px">
+                        ${avatarRow || '<span style="font-size:12px;color:#aaa">Немає гравців</span>'}
                     </div>
                 </div>`;
             }).join('');
@@ -1535,6 +1550,23 @@ function watchRoom() {
             ]
         });
     });
+}
+
+async function _adminKillRoomFromModal(code) {
+    if (!confirm(`Закрити кімнату ${code}? Усі гравці будуть відключені.`)) return;
+    const auth = loadAuth();
+    try {
+        const res = await fetch(`/api/admin/rooms/${encodeURIComponent(code)}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${auth?.token}` },
+        });
+        if (!res.ok) throw new Error((await res.json()).error);
+        showToast(`✅ Кімнату ${code} закрито`, { color: '#1b5e20', duration: 3000 });
+        closeModal();
+        setTimeout(watchRoom, 200);
+    } catch (e) {
+        showToast('❌ ' + e.message, { color: '#b71c1c', duration: 3000 });
+    }
 }
 
 function _spectateCode(code) {
