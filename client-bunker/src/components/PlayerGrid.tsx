@@ -122,14 +122,28 @@ function PlayerCard({
 
       {/* ── Заголовок ── */}
       <div className="flex items-center gap-2 relative">
-        <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black"
-             style={{
-               background: isDead ? 'rgba(100,100,100,0.2)' : `${aColor}22`,
-               border: `1.5px solid ${isDead ? 'rgba(100,100,100,0.3)' : aColor + '60'}`,
-               color: isDead ? '#555' : aColor,
-             }}>
-          {isBot ? '🤖' : player.name[0]?.toUpperCase()}
-        </div>
+        {(() => {
+          const w = (window as any)
+          const svgStr = player.avatarId && w.AVATARS?.[player.avatarId]
+          if (svgStr) {
+            const sized = svgStr.replace('<svg ', '<svg width="28" height="28" style="display:block" ')
+            return (
+              <div className="flex-shrink-0 w-7 h-7 rounded-full overflow-hidden"
+                   style={{ opacity: isDead ? 0.4 : 1 }}
+                   dangerouslySetInnerHTML={{ __html: sized }} />
+            )
+          }
+          return (
+            <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black"
+                 style={{
+                   background: isDead ? 'rgba(100,100,100,0.2)' : `${aColor}22`,
+                   border: `1.5px solid ${isDead ? 'rgba(100,100,100,0.3)' : aColor + '60'}`,
+                   color: isDead ? '#555' : aColor,
+                 }}>
+              {isBot ? '🤖' : player.name[0]?.toUpperCase()}
+            </div>
+          )
+        })()}
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1 mb-px">

@@ -41,6 +41,8 @@ export interface BunkerPlayer {
   hasRevealed:    boolean
   attributes:     Attributes
   actionCards:    ActionCard[]
+  avatarId?:      string | null
+  avatarColor?:   string | null
 }
 
 export interface Scenario {
