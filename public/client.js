@@ -558,14 +558,22 @@ async function cabLoadAdmin() {
         if (!rooms.length) {
             roomsEl.innerHTML = '<div class="cab-loading">Немає активних кімнат</div>';
         } else {
+            const now = Date.now();
             roomsEl.innerHTML = `<table class="cab-admin-table">
-                <tr><th>Код</th><th>Гра</th><th>Гравці</th><th>Статус</th></tr>
-                ${rooms.map(r => `<tr>
-                    <td><b>${r.code}</b></td>
-                    <td>${GAME_LABELS[r.gameType] || r.gameType}</td>
-                    <td>${r.players}</td>
-                    <td>${r.started ? '▶ Гра' : '⏳ Чекає'}</td>
-                </tr>`).join('')}
+                <tr><th>Код</th><th>Гра</th><th>Гравці</th><th>Статус</th><th>Час</th><th></th></tr>
+                ${rooms.map(r => {
+                    const ageMin = r.createdAt ? Math.floor((now - r.createdAt) / 60000) : '?';
+                    const idleMin = r.lastActivity ? Math.floor((now - r.lastActivity) / 60000) : '?';
+                    const stale = idleMin > 30 || (!r.started && ageMin > 15);
+                    return `<tr style="${stale ? 'background:rgba(204,50,50,0.1)' : ''}">
+                        <td><b>${r.code}</b></td>
+                        <td>${GAME_LABELS[r.gameType] || r.gameType}</td>
+                        <td title="${r.playerNames?.join(', ')}">${r.players} 👤</td>
+                        <td>${r.started ? '▶ Гра' : '⏳ Чекає'}</td>
+                        <td style="font-size:11px;color:rgba(255,255,255,0.45)">${stale ? '⚠️ ' : ''}${ageMin}хв${idleMin !== ageMin ? ` / idle ${idleMin}хв` : ''}</td>
+                        <td><button class="cab-admin-del-btn" onclick="cabKillRoom('${r.code}')">Закрити</button></td>
+                    </tr>`;
+                }).join('')}
             </table>`;
         }
     } catch { roomsEl.innerHTML = '<div class="cab-loading">Помилка</div>'; }
@@ -615,6 +623,22 @@ async function cabDeleteUser(username) {
         _cabAllUsers = _cabAllUsers.filter(u => u.username !== username);
         cabRenderUsers(_cabAllUsers);
         showToast(`✅ Користувача ${username} видалено`, { color: '#1b5e20', duration: 3000 });
+    } catch (e) {
+        showToast('❌ ' + e.message, { color: '#b71c1c', duration: 3000 });
+    }
+}
+
+async function cabKillRoom(code) {
+    if (!confirm(`Закрити кімнату ${code}? Усі гравці будуть відключені.`)) return;
+    const auth = loadAuth();
+    try {
+        const res = await fetch(`/api/admin/rooms/${encodeURIComponent(code)}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${auth?.token}` },
+        });
+        if (!res.ok) throw new Error((await res.json()).error);
+        showToast(`✅ Кімнату ${code} закрито`, { color: '#1b5e20', duration: 3000 });
+        cabLoadAdmin(); // оновлюємо список
     } catch (e) {
         showToast('❌ ' + e.message, { color: '#b71c1c', duration: 3000 });
     }

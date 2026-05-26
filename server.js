@@ -240,14 +240,29 @@ app.patch('/api/admin/users/:username/admin', requireAdmin, async (req, res) => 
 });
 
 app.get('/api/admin/rooms', requireAdmin, (req, res) => {
-    // rooms оголошується нижче, але до моменту виклику маршруту вже ініціалізований
-    const list = Object.values(rooms).map(r => ({
-        code:     r.code,
-        gameType: r.gameType,
-        players:  r.players?.length || 0,
-        started:  !!r.gameStarted,
+    const list = roomStore.all().map(r => ({
+        code:        r.code,
+        gameType:    r.gameType,
+        players:     r.players?.length || 0,
+        playerNames: (r.players || []).map(p => p.name),
+        started:     !!r.started,
+        createdAt:   r.createdAt || null,
+        lastActivity: r.lastActivityAt || null,
     }));
     res.json(list);
+});
+
+app.delete('/api/admin/rooms/:code', requireAdmin, (req, res) => {
+    const code = req.params.code.toUpperCase();
+    const room = roomStore.get(code);
+    if (!room) return res.status(404).json({ error: 'Кімнату не знайдено' });
+    io.to(code).emit('roomClosed', { reason: 'Кімнату закрив адміністратор' });
+    room.players.forEach(p => {
+        const s = io.sockets.sockets.get(p.socketId);
+        if (s) { s.leave(code); s.roomCode = null; s.playerIndex = null; }
+    });
+    roomStore.delete(code);
+    res.json({ ok: true });
 });
 
 // Статистика конкретного гравця

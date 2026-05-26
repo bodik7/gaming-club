@@ -185,8 +185,7 @@
                             🔍 Знайти вільну кімнату
                         </button>
 
-                        <button class="lobby-btn lobby-btn-outline" onclick="watchRoom()"
-                                style="border-color:rgba(255,255,255,0.18);color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.04)">
+                        <button class="lobby-btn lobby-btn-outline" onclick="watchRoom()">
                             👁 Дивитись гру
                         </button>
 
@@ -700,7 +699,10 @@
 
                 <!-- Адмін -->
                 <div id="cab-panel-admin" class="cab-panel hidden">
-                    <div class="cab-section-title">Активні кімнати</div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                        <div class="cab-section-title" style="margin-bottom:0">Активні кімнати</div>
+                        <button onclick="cabLoadAdmin()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.6);border-radius:8px;padding:4px 12px;font-size:12px;cursor:pointer">🔄 Оновити</button>
+                    </div>
                     <div id="cab-admin-rooms" class="cab-admin-table-wrap">
                         <div class="cab-loading">Завантаження…</div>
                     </div>
