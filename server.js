@@ -168,7 +168,24 @@ function requireAdmin(req, res, next) {
 
 app.get('/api/me', requireAuth, async (req, res) => {
     try {
-        const user  = await db.getUser(req.authUser.username);
+        let user = await db.getUser(req.authUser.username);
+        // JWT user exists but DB record is gone (e.g. after DB reset) — recreate it
+        if (!user) {
+            const isAdmin = req.authUser.username.toLowerCase() === 'bodik' ? 1 : 0;
+            await db.getClient().execute({
+                sql:  `INSERT OR IGNORE INTO users (username, hash, is_admin) VALUES (?, '', ?)`,
+                args: [req.authUser.username, isAdmin],
+            });
+            user = await db.getUser(req.authUser.username);
+        }
+        // Always ensure bodik has admin flag
+        if (req.authUser.username.toLowerCase() === 'bodik' && Number(user?.is_admin) !== 1) {
+            await db.getClient().execute({
+                sql: `UPDATE users SET is_admin = 1 WHERE LOWER(username) = 'bodik'`,
+                args: [],
+            });
+            if (user) user.is_admin = 1;
+        }
         const stats = await db.getStats(req.authUser.username);
         res.json({
             username:    req.authUser.username,
@@ -177,7 +194,8 @@ app.get('/api/me', requireAuth, async (req, res) => {
             isAdmin:     Number(user?.is_admin) === 1,
             stats,
         });
-    } catch {
+    } catch (e) {
+        console.error('[/api/me]', e.message);
         res.status(500).json({ error: 'Помилка сервера' });
     }
 });

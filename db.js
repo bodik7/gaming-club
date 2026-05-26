@@ -7,8 +7,14 @@ let _client = null;
 
 function getClient() {
     if (!_client) {
+        const url = (process.env.TURSO_DATABASE_URL || 'file:gameclub.db').trim();
+        if (!process.env.TURSO_DATABASE_URL) {
+            console.warn('[db] ⚠️  TURSO_DATABASE_URL не встановлено — використовується локальний файл (дані тимчасові!)');
+        } else {
+            console.log('[db] Підключення до Turso:', url.slice(0, 40));
+        }
         _client = createClient({
-            url:       (process.env.TURSO_DATABASE_URL || 'file:gameclub.db').trim(),
+            url,
             authToken: process.env.TURSO_AUTH_TOKEN?.trim(),
         });
     }
@@ -79,9 +85,14 @@ async function createUser(username, hash) {
 }
 
 async function updateProfile(username, { displayName, avatarColor }) {
+    // UPSERT: create row if JWT user has no DB record (e.g. after DB reset)
     await getClient().execute({
-        sql:  `UPDATE users SET display_name = ?, avatar_color = ? WHERE username = ? COLLATE NOCASE`,
-        args: [displayName ?? null, avatarColor ?? '#1a56db', username],
+        sql: `INSERT INTO users (username, hash, display_name, avatar_color)
+              VALUES (?, '', ?, ?)
+              ON CONFLICT(username) DO UPDATE SET
+                  display_name = excluded.display_name,
+                  avatar_color = excluded.avatar_color`,
+        args: [username, displayName ?? null, avatarColor ?? '#1a56db'],
     });
 }
 
@@ -239,7 +250,7 @@ async function cleanGhostUsers() {
 }
 
 module.exports = {
-    init,
+    init, getClient,
     getUser, createUser, updateProfile, getAllUsers, deleteUser, setAdmin,
     addStat, getStats, getLeaderboard, saveGameStats,
     saveRoom, getRoom, deleteRoom, getAllRooms, cleanOldRooms,
