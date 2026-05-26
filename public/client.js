@@ -1489,8 +1489,8 @@ function findRoom() {
 
 function watchRoom() {
     socket.emit('getActiveRooms', ({ rooms: list }) => {
-        const gameIcons = { monopoly:'🏦', tysyacha:'🃏', durak:'🂡', bunker:'🏚️' };
-        const gameNames = { monopoly:'Монополія', tysyacha:'Тисяча', durak:'Дурак', bunker:'Бункер' };
+        const gameIcons = { monopoly:'🏦', tysyacha:'🃏', durak:'🂡', bunker:'🏚️', mafia:'🕵️' };
+        const gameNames = { monopoly:'Монополія', tysyacha:'Тисяча', durak:'Дурак', bunker:'Бункер', mafia:'Мафія' };
         let body;
         if (!list.length) {
             body = `<p style="text-align:center;color:#888;padding:20px 0 8px;font-size:14px">
@@ -1524,14 +1524,14 @@ function watchRoom() {
                             <span style="font-size:11px;color:#999;margin-left:6px">${r.code}</span>
                         </div>
                         <div style="display:flex;gap:6px;flex-shrink:0">
-                            <button onclick="closeModal();_spectateCode('${r.code}')"
+                            ${r.canSpectate ? `<button onclick="closeModal();_spectateCode('${r.code}')"
                                 style="background:#0057b7;border:none;color:#fff;
                                        border-radius:7px;padding:5px 14px;
                                        font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap"
                                 onmouseover="this.style.background='#003f8a'"
                                 onmouseout="this.style.background='#0057b7'">
                                 👁 Дивитись
-                            </button>
+                            </button>` : ''}
                             ${adminKill}
                         </div>
                     </div>

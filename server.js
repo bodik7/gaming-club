@@ -406,6 +406,7 @@ io.on('connection', (socket) => {
             const user = await db.getUser(payload.username);
             socket.avatarId    = user?.avatar_id    || null;
             socket.avatarColor = user?.avatar_color || '#1a56db';
+            socket.isAdmin     = Number(user?.is_admin) === 1;
         } catch {}
     });
 
@@ -655,13 +656,14 @@ io.on('connection', (socket) => {
 
     socket.on('getActiveRooms', (cb) => {
         const active = roomStore.all()
-            .filter(r => r.started && r.state && r.gameType !== 'mafia')
+            .filter(r => r.started && r.state && (r.gameType !== 'mafia' || socket.isAdmin))
             .map(r => ({
                 code:        r.code,
                 gameType:    r.gameType,
                 playerCount: r.players.filter(p => !p.isBot).length,
                 playerNames: r.players.filter(p => !p.isBot).map(p => p.name),
                 avatars:     r.players.filter(p => !p.isBot).map(p => ({ avatarId: p.avatarId || null, avatarColor: p.avatarColor || '#1a56db' })),
+                canSpectate: r.gameType !== 'mafia',
             }));
         cb({ rooms: active });
     });
