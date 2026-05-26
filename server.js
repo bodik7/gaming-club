@@ -374,6 +374,7 @@ const _activeSessions = new Map();
 function isStr(v, max = 100) { return typeof v === 'string' && v.trim().length > 0 && v.length <= max; }
 
 function emitLobbyUpdate(room) {
+    if (room.started) return; // не надсилаємо лобі-оновлення під час гри
     io.to(room.code).emit('lobbyUpdate', {
         players:  room.players.map(p => p.name),
         bots:     room.players.map(p => !!p.isBot),
@@ -464,6 +465,14 @@ io.on('connection', (socket) => {
     socket.on('leaveRoom', () => {
         const room = roomStore.get(socket.roomCode);
         if (!room) return;
+
+        // Глядач просто виходить з socket-кімнати
+        if (socket.isSpectator) {
+            socket.leave(socket.roomCode);
+            socket.roomCode = null;
+            socket.isSpectator = false;
+            return;
+        }
 
         // Bunker under active game: special logic
         if (room.started && room.state?.gameType === 'bunker') {
@@ -746,6 +755,7 @@ io.on('connection', (socket) => {
             // Мафіозі приєднуються до приватної sub-room
             const mafiaIds = room.state.mafiaIds;
             room.players.forEach(rp => {
+                if (!rp.socketId) return; // боти
                 const s = io.sockets.sockets.get(rp.socketId);
                 if (s && mafiaIds.includes(rp.index)) s.join(`${room.code}_mafia`);
                 io.to(rp.socketId).emit('gameStarted', {
@@ -844,6 +854,7 @@ io.on('connection', (socket) => {
             room.started = true;
             const mafiaIds = room.state.mafiaIds;
             room.players.forEach(rp => {
+                if (!rp.socketId) return; // боти
                 const s = io.sockets.sockets.get(rp.socketId);
                 if (s && mafiaIds.includes(rp.index)) s.join(`${room.code}_mafia`);
                 io.to(rp.socketId).emit('gameStarted', {
@@ -931,6 +942,7 @@ io.on('connection', (socket) => {
                 });
                 db.deleteRoom(room.code);
                 room.players.forEach(rp => {
+                    if (!rp.socketId) return;
                     io.to(rp.socketId).emit('gameOver', {
                         state: sanitizeMafia(state, rp.index),
                         gameType: 'mafia',
@@ -1141,7 +1153,12 @@ io.on('connection', (socket) => {
             _activeSessions.delete(socket.username);
         const room = roomStore.get(socket.roomCode);
         if (!room) return;
-        if (socket.isSpectator) return; // глядачі не впливають на стан гри
+        if (socket.isSpectator) {
+            socket.leave(socket.roomCode);
+            socket.roomCode = null;
+            socket.isSpectator = false;
+            return;
+        }
         // Прибираємо гравця з активного аукціону щоб не зависав
         if (room.state?.auctionState) {
             const a = room.state.auctionState;

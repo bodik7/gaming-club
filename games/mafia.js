@@ -132,6 +132,7 @@ function sanitizeMafia(state, forIdx) {
 
 function emitMafiaUpdate(room, sideEffect) {
     room.players.forEach(rp => {
+        if (!rp.socketId) return;
         _io.to(rp.socketId).emit('stateUpdate', {
             state: sanitizeMafia(room.state, rp.index),
             sideEffect: sideEffect || null,
@@ -286,14 +287,16 @@ function startMorningPhase(room, sheriffResult, newSheriffIdx = null, donResult 
     }
 
     if (checkMafiaWin(state)) {
-        room.players.forEach(rp => _io.to(rp.socketId).emit('gameOver', {
-            state: sanitizeMafia(state, rp.index), gameType: 'mafia',
-        }));
+        room.players.forEach(rp => {
+            if (!rp.socketId) return;
+            _io.to(rp.socketId).emit('gameOver', { state: sanitizeMafia(state, rp.index), gameType: 'mafia' });
+        });
         _onGameOver(room);
         return;
     }
 
     room.players.forEach(rp => {
+        if (!rp.socketId) return;
         const p = state.players[rp.index];
         let sideEffect = null;
         if (sheriffResult && (p.role === 'sheriff' || p.role === 'deputy'))
@@ -367,9 +370,10 @@ function resolveVoting(room) {
     }
 
     if (checkMafiaWin(state)) {
-        room.players.forEach(rp => _io.to(rp.socketId).emit('gameOver', {
-            state: sanitizeMafia(state, rp.index), gameType: 'mafia',
-        }));
+        room.players.forEach(rp => {
+            if (!rp.socketId) return;
+            _io.to(rp.socketId).emit('gameOver', { state: sanitizeMafia(state, rp.index), gameType: 'mafia' });
+        });
         _onGameOver(room);
         return;
     }

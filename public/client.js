@@ -1089,7 +1089,12 @@ socket.on('roomClosed', ({ reason }) => {
     clearSession();
     myPlayerIndex = null;
     _inviteCode = '';
-    document.getElementById('waiting-screen').classList.add('hidden');
+    _showEmojiBar(false);
+    _showSpectatorBar(false);
+    ['waiting-screen','game-screen','durak-screen','tysyacha-screen','mafia-screen'].forEach(id => {
+        document.getElementById(id)?.classList.add('hidden');
+    });
+    setQuitBtn(false);
     document.getElementById('lobby-screen').classList.remove('hidden');
     showRejoinError(`🚪 ${reason}`);
 });
@@ -1177,6 +1182,7 @@ socket.on('surrendered', () => {
     clearSession();
     myPlayerIndex = null;
     closeModal();
+    _showEmojiBar(false);
     document.getElementById('game-screen').classList.add('hidden');
     setQuitBtn(false);
     document.getElementById('lobby-screen').classList.remove('hidden');
