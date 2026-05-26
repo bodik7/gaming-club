@@ -21,13 +21,21 @@ function tCardPts(card) {
 }
 
 // ── Таймер ходу ───────────────────────────────
-function tStartTurnClock() {
+function tStartTurnClock(deadline) {
     clearInterval(tTurnTimer);
     tTurnStart = Date.now();
     tTurnTimer = setInterval(() => {
         const el = document.getElementById('t-turn-elapsed');
-        if (el) el.textContent = Math.floor((Date.now() - tTurnStart) / 1000) + 'с';
-    }, 1000);
+        if (!el) return;
+        if (deadline) {
+            const sec = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+            el.textContent = sec + 'с';
+            el.style.color = sec <= 10 ? '#ff7043' : 'rgba(245,230,200,0.35)';
+        } else {
+            el.textContent = Math.floor((Date.now() - tTurnStart) / 1000) + 'с';
+            el.style.color = '';
+        }
+    }, 500);
 }
 
 // ── Ініціалізація ─────────────────────────────
@@ -39,7 +47,7 @@ function initTysyacha(state, myIdx) {
     tTrickShowing      = false;
     tPendingTrick      = null;
     tPrevCurrentPlayer = state.currentPlayer;
-    tStartTurnClock();
+    tStartTurnClock(state.turnDeadline);
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('tysyacha-screen').classList.remove('hidden');
     setQuitBtn(true);
@@ -93,7 +101,7 @@ function updateTysyacha(state, sideEffect) {
     // Таймер — перезапускаємо при зміні ходу
     if (state.currentPlayer !== tPrevCurrentPlayer) {
         tPrevCurrentPlayer = state.currentPlayer;
-        tStartTurnClock();
+        tStartTurnClock(state.turnDeadline);
         // Спалах "Ваш хід" + звук
         if (state.currentPlayer === tMyIdx && state.phase === 'playing') {
             playSound('myTurn');
@@ -135,11 +143,12 @@ function renderTysyacha() {
 function renderTScores(s) {
     const el = document.getElementById('t-scores');
     if (!el) return;
-    el.innerHTML = s.players.map(p => {
+    el.innerHTML = s.players.map((p, i) => {
         const isActive    = p.id === s.currentPlayer;
         const isMe        = p.id === tMyIdx;
         const isBidder    = p.id === s.auction?.winner && s.phase !== 'auction';
         const isDealer    = p.id === s.dealer;
+        const offline     = typeof _offlinePlayers !== 'undefined' && _offlinePlayers.has(i);
         const scoreCls    = p.onBarrel ? 'barrel' : p.score >= 900 ? 'critical' : p.score >= 700 ? 'danger' : '';
         const pct         = Math.min(100, Math.max(0, Math.round(p.score / 10)));
         const marriagePts = s.phase === 'playing'
@@ -147,8 +156,9 @@ function renderTScores(s) {
         const totalPts    = p.trickPts + marriagePts;
         const inGame      = s.phase === 'playing' && totalPts > 0;
         return `
-        <div class="t-score-pill ${isActive ? 'active' : ''} ${isMe ? 'me' : ''} ${scoreCls}">
+        <div class="t-score-pill ${isActive ? 'active' : ''} ${isMe ? 'me' : ''} ${scoreCls} ${offline ? 'offline' : ''}">
             <div class="t-score-top">
+                ${offline ? '<span title="Офлайн" style="font-size:10px">📴</span>' : ''}
                 ${p.onBarrel ? `<span class="t-barrel-icon" title="Бочка ${p.barrelAttempts}/3">🛢️</span>` : ''}
                 ${isDealer ? `<span title="Роздає" style="font-size:11px">🃏</span>` : ''}
                 ${isBidder ? '👑&nbsp;' : ''}
@@ -550,6 +560,7 @@ function renderTActions(s) {
             el.dataset.gameoverProcessed = '1';
             playSound(iWon ? 'win' : 'lose');
             updateStats('tysyacha', iWon);
+            if (iWon) tSpawnConfetti();
         }
         const st = getStats('tysyacha');
         const isHost = tMyIdx === 0;
@@ -840,4 +851,19 @@ function tShowRoundResult(results, onClose) {
         if (cd) cd.textContent = `(${countdown})`;
         if (countdown <= 0) close();
     }, 1000);
+}
+
+function tSpawnConfetti() {
+    const colors = ['#e8c547','#e65100','#0d47a1','#c62828','#f5e6c8','#43a047'];
+    for (let i = 0; i < 80; i++) {
+        const el   = document.createElement('div');
+        const size = 6 + Math.random() * 8;
+        el.style.cssText = `position:fixed;top:-12px;left:${Math.random()*100}vw;width:${size}px;height:${size}px;
+            background:${colors[Math.floor(Math.random()*colors.length)]};
+            border-radius:${Math.random()>.5?'50%':'2px'};
+            animation:confetti-fall ${2+Math.random()*3}s linear ${Math.random()*1.5}s forwards;
+            z-index:9999;pointer-events:none`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 6000);
+    }
 }

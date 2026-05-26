@@ -672,6 +672,22 @@ function showToast(text, { color = '#333', duration = 3500 } = {}) {
     }, duration);
 }
 
+function mnSpawnCoins() {
+    playSound('coin');
+    const emojis = ['💰','💰','💵','✨','🪙'];
+    const count = 18;
+    for (let i = 0; i < count; i++) {
+        const el = document.createElement('div');
+        const x = 30 + Math.random() * 40; // концентруємо навколо центру
+        el.style.cssText = `position:fixed;top:40%;left:${x}vw;font-size:${18 + Math.random()*14}px;
+            animation:mnCoinFly ${0.9+Math.random()*0.7}s cubic-bezier(0.22,1,0.36,1) ${i*55}ms forwards;
+            z-index:9999;pointer-events:none;user-select:none`;
+        el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 2500);
+    }
+}
+
 // ── Таймер ходу ──────────────────────────────
 let _timerInterval = null;
 let _lastTickSec   = -1;
@@ -1557,9 +1573,39 @@ socket.on('gameOver', ({ winner, state }) => {
     applyState(state, false, null, () => announceWinner(winner, state.players));
 });
 
+let _offlinePlayers = new Set();
+
 socket.on('playerDisconnected', ({ playerIndex }) => {
-    log(`⚠️ Гравець ${playerIndex + 1} відключився`, 'warn');
+    _offlinePlayers.add(playerIndex);
+    const name = _getPlayerName(playerIndex);
+    const msg = name ? `📴 ${name} відключився` : `📴 Гравець ${playerIndex + 1} відключився`;
+    log(msg, 'warn');
+    showToast(msg, { color: '#616161', duration: 3500 });
+    _rerenderCurrentGame();
 });
+
+socket.on('playerReconnected', ({ playerIndex }) => {
+    _offlinePlayers.delete(playerIndex);
+    const name = _getPlayerName(playerIndex);
+    const msg = name ? `✅ ${name} повернувся` : `✅ Гравець ${playerIndex + 1} повернувся`;
+    showToast(msg, { color: '#2e7d32', duration: 2500 });
+    _rerenderCurrentGame();
+});
+
+function _getPlayerName(idx) {
+    if (dState?.players?.[idx]) return dState.players[idx].name;
+    if (tState?.players?.[idx]) return tState.players[idx].name;
+    if (mState?.players?.[idx]) return mState.players[idx].name;
+    if (players?.[idx]) return players[idx].name;
+    return null;
+}
+
+function _rerenderCurrentGame() {
+    if (dState && !document.getElementById('durak-screen')?.classList.contains('hidden')) renderDurak();
+    else if (tState && !document.getElementById('tysyacha-screen')?.classList.contains('hidden')) renderTysyacha();
+    else if (mState && !document.getElementById('mafia-screen')?.classList.contains('hidden')) renderMafia();
+    else if (players?.length) renderPlayers();
+}
 
 socket.on('error', (msg) => {
     log(`❌ ${msg}`, 'error');
@@ -1572,6 +1618,7 @@ let _prevPos      = {}; // { playerId → position }
 let _prevAuction          = null;
 let _prevPendingTrade     = null;
 let _prevCurrentPlayerIdx = null;
+let _prevTopLogText       = null;
 const STEP_MS     = 270; // мс між клітинками (як у локальній версії)
 
 // ── Покрокова анімація одного токена ─────────
@@ -1715,6 +1762,13 @@ function applyState(state, diceRolled, landingPos, onDone) {
             div.innerText = entry.text;
             logContent.appendChild(div);
         });
+        // Анімація проходу через СТАРТ
+        const topEntry = state.log[0];
+        if (topEntry?.text?.includes('через СТАРТ') && topEntry.text !== _prevTopLogText) {
+            const myPlayer = state.players[myPlayerIndex];
+            if (myPlayer && topEntry.text.includes(myPlayer.name)) mnSpawnCoins();
+        }
+        _prevTopLogText = topEntry?.text ?? null;
     }
 
     // Кнопки ходу — ховаємо "Завершити хід" поки йде аукціон або є pendingAction

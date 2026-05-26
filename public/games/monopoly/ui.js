@@ -271,11 +271,12 @@ function renderPlayers() {
                 <div style="height:3px;background:${g.color};width:100%;border-radius:2px"></div>
             </div>`;
         }).join('');
+        const isOffline = typeof _offlinePlayers !== 'undefined' && _offlinePlayers.has(i);
         card.innerHTML = `
             <div class="player-header">
                 <div class="player-token" style="background:${p.color}">${p.icon}</div>
                 <div>
-                    <div class="player-name">${p.name}</div>
+                    <div class="player-name">${p.name}${isOffline ? ' <span title="Офлайн" style="font-size:11px">📴</span>' : ''}</div>
                     ${i === currentPlayerIndex ? '<div class="turn-indicator">🎲 Ваш хід</div>' : ''}
                 </div>
             </div>

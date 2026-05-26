@@ -97,6 +97,7 @@ function updateMafia(state, sideEffect) {
         else if (state.phase === 'day_discussion') playSound('day');
         else if (state.phase === 'day_voting')   playSound('vote');
         else if (state.phase === 'morning' && state.lastDeaths?.length > 0) playSound('death');
+        mPhaseFlash(state.phase);
         // Return to players tab on phase change
         mSwitchTab('players');
     }
@@ -291,7 +292,8 @@ function mRenderPlayers() {
         ? s.players
         : [...s.players].sort((a, b) => (b.isAlive ? 1 : 0) - (a.isAlive ? 1 : 0));
 
-    el.innerHTML = displayPlayers.map(p => {
+    el.innerHTML = displayPlayers.map((p, _di) => {
+        const realIdx = s.players.indexOf(p);
         const isMe = p.id === mMyIdx;
         const rl   = p.role ? mRoleLabel(p.role) : null;
         const showRole = p.role && (
@@ -302,6 +304,7 @@ function mRenderPlayers() {
         const dyingCls   = newlyDead.includes(p.id) ? 'dying' : '';
         const deadCls    = !p.isAlive ? 'dead' : '';
         const meCls      = isMe ? 'me' : '';
+        const offlineCls = typeof _offlinePlayers !== 'undefined' && _offlinePlayers.has(realIdx) ? 'offline' : '';
 
         // Sheriff finding for this player (visible to sheriff+deputy only)
         const finding    = s.sheriffFindings?.find(f => f.id === p.id);
@@ -368,13 +371,13 @@ function mRenderPlayers() {
         }
 
         return `
-        <div class="m-player-card ${deadCls} ${meCls} ${factionCls} ${dyingCls}">
+        <div class="m-player-card ${deadCls} ${meCls} ${factionCls} ${dyingCls} ${offlineCls}">
             ${actionBtn}
             <div>
                 <div class="m-player-card-top">
                     <div class="m-player-card-name-wrap">
                         <span class="m-player-alive-dot ${p.isAlive ? 'alive' : 'dead'}"></span>
-                        <span class="m-player-card-name">${p.name}${isMe ? ' (Я)' : ''}</span>
+                        <span class="m-player-card-name">${p.name}${isMe ? ' (Я)' : ''}${offlineCls ? ' 📴' : ''}</span>
                     </div>
                     ${stateBadge}
                 </div>
@@ -716,6 +719,16 @@ function mGameoverUI(s) {
             })()}
             <button class="m-btn primary m-btn-wide" onclick="mReturnToLobby()">🏠 Нова гра</button>
         </div>`;
+}
+
+function mPhaseFlash(phase) {
+    const el = document.createElement('div');
+    const isNight = ['night','morning','resolving'].includes(phase);
+    el.style.cssText = `position:fixed;inset:0;z-index:195;pointer-events:none;
+        background:${isNight ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.12)'};
+        animation:mPhaseFlashAnim 0.7s ease forwards`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 750);
 }
 
 function mReturnToLobby() {

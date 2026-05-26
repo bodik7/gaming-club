@@ -615,6 +615,11 @@
 .t-card-table .t-rank { font-size: 15px; line-height: 1; }
 .t-card-table .t-suit { font-size: 24px; line-height: 1.1; }
 
+@keyframes confetti-fall {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+}
+
 /* ─ Анімація роздачі карт ─ */
 @keyframes dealCard {
     0%   { transform: translateY(-110px) rotate(-18deg) scale(0.55); opacity: 0; }
@@ -1087,6 +1092,8 @@
     #t-log { flex-shrink: 0; }
     .t-chat { flex-shrink: 0; }
 }
+
+.t-score-pill.offline { opacity: 0.55; }
 
 /* ─ Планшет / великий телефон ─ */
 @media (max-width: 700px) {

@@ -328,6 +328,7 @@ function sanitizeTysyacha(state, forIdx) {
         givenCards: state.givenCards,
         log: state.log.slice(0, 30),
         winner: state.winner,
+        turnDeadline: state.turnDeadline || null,
     };
 }
 
@@ -339,6 +340,7 @@ function startTysyachaTimer(room) {
     clearTysyachaTimer(room);
     const state = room.state;
     if (!room.started || !state || state.phase === 'gameover') return;
+    state.turnDeadline = Date.now() + 60 * 1000;
     room.tysyachaTimer = setTimeout(() => {
         if (!room.started || !room.state) return;
         const st = room.state;

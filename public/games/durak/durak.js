@@ -109,15 +109,17 @@ function renderDInfo(s){
         attack:'Атака', defend:'Захист', throw:'Підкидання', gameover:'Гра завершена'
     }[s.phase] || s.phase;
     const mode = s.mode==='perevodnoj' ? 'Перевідний' : 'Підкидний';
-    el.innerHTML = `<div id="d-timer" style="margin-right:4px"></div>` + s.players.map(p => {
-        const isAtk = p.id===s.attacker && s.phase!=='gameover';
-        const isDef = p.id===s.defender && s.phase!=='gameover';
-        const isMe  = p.id===dMyIdx;
-        const done  = p.finished;
-        const cls   = ['d-pill', isAtk?'atk':isDef?'def':'', isMe?'me':'', done?'done':''].filter(Boolean).join(' ');
-        const badge = isAtk ? '<span class="d-role-badge atk">⚔</span>' : isDef ? '<span class="d-role-badge def">🛡</span>' : '';
-        const cnt   = done ? '✓' : `${p.handCount}<span style="font-size:8px;opacity:.5">🂠</span>`;
-        return `<div class="${cls}">${badge}<b>${isMe?'👤 ':''}${p.name}</b><span class="d-pill-cnt">${cnt}</span></div>`;
+    el.innerHTML = `<div id="d-timer" style="margin-right:4px"></div>` + s.players.map((p, i) => {
+        const isAtk    = p.id===s.attacker && s.phase!=='gameover';
+        const isDef    = p.id===s.defender && s.phase!=='gameover';
+        const isMe     = p.id===dMyIdx;
+        const done     = p.finished;
+        const offline  = typeof _offlinePlayers !== 'undefined' && _offlinePlayers.has(i);
+        const cls      = ['d-pill', isAtk?'atk':isDef?'def':'', isMe?'me':'', done?'done':'', offline?'offline':''].filter(Boolean).join(' ');
+        const badge    = isAtk ? '<span class="d-role-badge atk">⚔</span>' : isDef ? '<span class="d-role-badge def">🛡</span>' : '';
+        const cnt      = done ? '✓' : `${p.handCount}<span style="font-size:8px;opacity:.5">🂠</span>`;
+        const offBadge = offline ? '<span class="d-offline-badge">📴</span>' : '';
+        return `<div class="${cls}">${badge}${offBadge}<b>${isMe?'👤 ':''}${p.name}</b><span class="d-pill-cnt">${cnt}</span></div>`;
     }).join('') +
     `<div class="d-pill info">${mode} · ${phaseLabel}</div>` +
     `<div class="d-pill trump-pill" style="color:${dSuitColor(s.trumpCard)}">${s.trump} козир <span style="opacity:.5;font-size:10px">(${s.deckCount}🂠)</span></div>`;
@@ -274,6 +276,7 @@ function renderDHand(s){
              draggable="${canAct && playable ? 'true' : 'false'}"
              ondragstart="dDragStart('${card}',event)"
              ondblclick="dDblClick('${card}')"
+             ontouchstart="dTouchStart('${card}',event)"
              onclick="dClickHandCard('${card}')">
             <div class="d-cr" style="color:${color}"><div class="d-crn">${dRank(card)}</div><div class="d-crs">${dSuit(card)}</div></div>
             <div class="d-cc" style="color:${color}">${dSuit(card)}</div>
@@ -335,7 +338,7 @@ function renderDHandActions(s){
         const loser = s.loser!==null ? s.players[s.loser]?.name : null;
         const iWon = s.loser !== dMyIdx;
         const isHost = dMyIdx===0;
-        if(!dGameoverProcessed){ dGameoverProcessed=true; updateStats('durak', iWon); playSound(iWon?'win':'lose'); }
+        if(!dGameoverProcessed){ dGameoverProcessed=true; updateStats('durak', iWon); playSound(iWon?'win':'lose'); if(iWon) dSpawnConfetti(); }
         const st = getStats('durak');
         el.innerHTML = `
             <span class="dab-title" style="font-size:15px;font-weight:900;color:#c9a227">${loser?`🤡 ${loser} — ДУРЕНЬ!`:'🏁 Нічия!'}</span>
@@ -507,6 +510,59 @@ function dGoLobby(){
     location.href='/';
 }
 
+// ── Touch drag ────────────────────────────────
+let dTouchCard  = null;
+let dTouchGhost = null;
+
+function dTouchStart(card, event) {
+    dTouchCard = card;
+    const touch = event.touches[0];
+    const src = event.currentTarget;
+    dTouchGhost = src.cloneNode(true);
+    const rect = src.getBoundingClientRect();
+    dTouchGhost.style.cssText += `;position:fixed;z-index:9100;opacity:0.75;pointer-events:none;
+        width:${rect.width}px;height:${rect.height}px;
+        top:${touch.clientY - rect.height / 2}px;left:${touch.clientX - rect.width / 2}px;transition:none`;
+    document.body.appendChild(dTouchGhost);
+    document.addEventListener('touchmove',  dTouchMove,  { passive: false });
+    document.addEventListener('touchend',   dTouchEnd,   { once: true });
+    document.addEventListener('touchcancel',dTouchEnd,   { once: true });
+    event.preventDefault();
+}
+
+function dTouchMove(event) {
+    if (!dTouchGhost) return;
+    const touch = event.touches[0];
+    const w = dTouchGhost.offsetWidth, h = dTouchGhost.offsetHeight;
+    dTouchGhost.style.top  = (touch.clientY - h / 2) + 'px';
+    dTouchGhost.style.left = (touch.clientX - w / 2) + 'px';
+    const table = document.getElementById('d-table');
+    if (table) {
+        const r = table.getBoundingClientRect();
+        table.classList.toggle('drag-over',
+            touch.clientX >= r.left && touch.clientX <= r.right &&
+            touch.clientY >= r.top  && touch.clientY <= r.bottom);
+    }
+    event.preventDefault();
+}
+
+function dTouchEnd(event) {
+    document.removeEventListener('touchmove', dTouchMove);
+    if (dTouchGhost) { dTouchGhost.remove(); dTouchGhost = null; }
+    const table = document.getElementById('d-table');
+    table?.classList.remove('drag-over');
+    if (!dTouchCard) return;
+    const touch = event.changedTouches[0];
+    if (table) {
+        const r = table.getBoundingClientRect();
+        if (touch.clientX >= r.left && touch.clientX <= r.right &&
+            touch.clientY >= r.top  && touch.clientY <= r.bottom) {
+            dActWithCard(dTouchCard);
+        }
+    }
+    dTouchCard = null;
+}
+
 // ── Drag & Drop ───────────────────────────────
 function dDragStart(card, event){
     dDragCard = card;
@@ -571,5 +627,20 @@ function dActWithCard(card){
             dSelCard = card;
             renderDHand(s); renderDActions(s);
         }
+    }
+}
+
+function dSpawnConfetti() {
+    const colors = ['#c9a227','#e53935','#43a047','#1565c0','#f5e6c8','#ffd700'];
+    for (let i = 0; i < 80; i++) {
+        const el   = document.createElement('div');
+        const size = 6 + Math.random() * 8;
+        el.style.cssText = `position:fixed;top:-12px;left:${Math.random()*100}vw;width:${size}px;height:${size}px;
+            background:${colors[Math.floor(Math.random()*colors.length)]};
+            border-radius:${Math.random()>.5?'50%':'2px'};
+            animation:confetti-fall ${2+Math.random()*3}s linear ${Math.random()*1.5}s forwards;
+            z-index:9999;pointer-events:none`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 6000);
     }
 }

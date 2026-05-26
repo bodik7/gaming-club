@@ -1001,7 +1001,8 @@ io.on('connection', (socket) => {
                 ? sanitizeBunker(room.state, playerIndex)
                 : sanitize(room.state);
             cb({ success: true, started: true, state: st, gameType: room.gameType });
-            // Для Бункера — сповіщаємо інших про повернення гравця
+            // Сповіщаємо інших про повернення гравця
+            io.to(code).emit('playerReconnected', { playerIndex });
             if (room.state.gameType === 'bunker') emitBunkerUpdate(room);
         } else {
             cb({ success: true, started: false, players: room.players.map(p => p.name), bots: room.players.map(p => p.isBot || false) });

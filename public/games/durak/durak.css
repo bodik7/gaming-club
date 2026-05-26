@@ -1,5 +1,10 @@
 /* ===== ДУРАК — стиль Тисячі ===== */
 
+@keyframes confetti-fall {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+}
+
 #durak-screen {
     height: 100vh;
     background:
@@ -741,6 +746,9 @@
     font-family: sans-serif;
     font-style: italic;
 }
+
+.d-pill.offline { opacity: 0.55; }
+.d-offline-badge { font-size: 10px; margin-right: 2px; }
 
 /* ─ Мобайл ─ */
 @media (max-width: 520px) {
