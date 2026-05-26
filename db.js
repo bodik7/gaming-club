@@ -26,10 +26,13 @@ async function init() {
     const c = getClient();
     await c.batch([
         { sql: `CREATE TABLE IF NOT EXISTS users (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            username   TEXT    NOT NULL UNIQUE COLLATE NOCASE,
-            hash       TEXT    NOT NULL,
-            created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            username     TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+            hash         TEXT    NOT NULL,
+            created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+            display_name TEXT,
+            avatar_color TEXT    DEFAULT '#1a56db',
+            is_admin     INTEGER DEFAULT 0
         )` },
         { sql: `CREATE TABLE IF NOT EXISTS game_stats (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,14 +52,21 @@ async function init() {
         { sql: `CREATE INDEX IF NOT EXISTS idx_rooms_updated   ON rooms_backup(updated_at)` },
     ], 'deferred');
 
-    // Міграції: нові колонки (ігноруємо помилку якщо вже існують)
+    // Міграції: нові колонки (ігнор "duplicate column" — норма при повторному старті)
     const migrations = [
         `ALTER TABLE users ADD COLUMN display_name TEXT`,
         `ALTER TABLE users ADD COLUMN avatar_color TEXT DEFAULT '#1a56db'`,
         `ALTER TABLE users ADD COLUMN is_admin    INTEGER DEFAULT 0`,
     ];
     for (const sql of migrations) {
-        try { await c.execute({ sql, args: [] }); } catch {}
+        try {
+            await c.execute(sql);
+            console.log('[db] migration ok:', sql.slice(0, 60));
+        } catch (e) {
+            if (!e.message?.includes('duplicate column')) {
+                console.error('[db] migration error:', e.message, '|', sql.slice(0, 60));
+            }
+        }
     }
     // Початковий адмін
     try {
