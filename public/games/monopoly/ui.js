@@ -17,8 +17,8 @@ function log(text, type = '') {
     div.innerText = text;
     const content = document.getElementById('log-content');
     content.insertBefore(div, content.firstChild);
-    // обмежимо до 30 записів
     while (content.children.length > 30) content.removeChild(content.lastChild);
+    if (typeof mnShowActionsBadge === 'function') mnShowActionsBadge();
 }
 
 function showModal({ title, body, buttons, wide = false, onClose = null, dismissable = true }) {
@@ -379,15 +379,13 @@ function renderActionButtons() {
         <button onclick="showRules()">📖 Правила</button>
         <button onclick="confirmAbandonGame()" style="border-color:#e53935;color:#e53935">🏳️ Здатись</button>
     `;
+    if (typeof mnShowActionsBadge === 'function') mnShowActionsBadge();
 }
 
 function updateCurrentPlayerInfo() {
     const el = document.getElementById('current-player-info');
     if (!el) return;
-    // На малих екранах (viewport width=1100, але фізично < 700px) ховаємо
-    if (window.innerWidth < 700) { el.style.display = 'none'; return; }
     const p = players[currentPlayerIndex];
-    el.style.display = '';
     el.innerHTML = `
         <div style="font-weight:700">Хід: ${p.name}</div>
         <div style="font-size:12px;opacity:0.9">${p.icon} ${p.money} ₴</div>

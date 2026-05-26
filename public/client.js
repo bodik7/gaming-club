@@ -738,6 +738,8 @@ socket.on('chatMessage', ({ playerIndex, icon, name, color, text }) => {
         container.appendChild(msg);
         container.scrollTop = container.scrollHeight;
         while (container.children.length > 60) container.removeChild(container.firstChild);
+        // Badge для чату монополії
+        if (id === 'chat-messages' && typeof mnBumpChatBadge === 'function') mnBumpChatBadge();
     });
 });
 
