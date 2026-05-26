@@ -31,6 +31,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
     const url = new URL(e.request.url);
 
+    // Ігноруємо не-HTTP схеми (chrome-extension://, etc.)
+    if (!url.protocol.startsWith('http')) return;
+
     // Socket.io та API — завжди мережа
     if (url.pathname.startsWith('/socket.io') || url.pathname.startsWith('/api')) return;
 
