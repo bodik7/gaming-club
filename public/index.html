@@ -605,28 +605,85 @@
     </div>
 
     <!-- ===== ОСОБИСТИЙ КАБІНЕТ ===== -->
-    <div id="cabinet-modal" class="cabinet-overlay" onclick="if(event.target===this)closeCabinet()">
-        <div class="cabinet-card">
-            <button class="cabinet-close" onclick="closeCabinet()">✕</button>
+    <div id="cabinet-screen" class="cab-screen hidden">
 
-            <div class="cabinet-header">
-                <div class="cabinet-avatar" id="cabinet-avatar-letter"></div>
-                <div>
-                    <div class="cabinet-username" id="cabinet-username-display"></div>
-                    <div class="cabinet-subtitle">Зареєстрований гравець</div>
-                </div>
-            </div>
-
-            <div class="cabinet-stats-list" id="cabinet-stats-list">
-                <div class="cabinet-loading">Завантаження…</div>
-            </div>
-
-            <div class="cabinet-total" id="cabinet-total"></div>
-
-            <button class="lobby-btn lobby-btn-outline cabinet-logout-btn" onclick="logOut()">
-                ↩ Вийти з акаунту
-            </button>
+        <!-- Шапка -->
+        <div class="cab-topbar">
+            <button class="cab-back-btn" onclick="closeCabinet()">← Назад</button>
+            <span class="cab-topbar-title">Особистий кабінет</span>
+            <span></span>
         </div>
+
+        <div class="cab-body">
+
+            <!-- ── Ліва панель: аватар + ім'я ── -->
+            <div class="cab-sidebar">
+                <div class="cab-avatar-wrap">
+                    <div class="cab-avatar" id="cab-avatar-circle">B</div>
+                    <div class="cab-color-picker" id="cab-color-picker">
+                        <button class="cab-color-dot" data-color="#1a56db" style="background:#1a56db" onclick="cabPickColor(this)"></button>
+                        <button class="cab-color-dot" data-color="#0e9f6e" style="background:#0e9f6e" onclick="cabPickColor(this)"></button>
+                        <button class="cab-color-dot" data-color="#e3a008" style="background:#e3a008" onclick="cabPickColor(this)"></button>
+                        <button class="cab-color-dot" data-color="#e02424" style="background:#e02424" onclick="cabPickColor(this)"></button>
+                        <button class="cab-color-dot" data-color="#7e3af2" style="background:#7e3af2" onclick="cabPickColor(this)"></button>
+                        <button class="cab-color-dot" data-color="#f05252" style="background:#f05252" onclick="cabPickColor(this)"></button>
+                        <button class="cab-color-dot" data-color="#057a55" style="background:#057a55" onclick="cabPickColor(this)"></button>
+                        <button class="cab-color-dot" data-color="#c27803" style="background:#c27803" onclick="cabPickColor(this)"></button>
+                    </div>
+                </div>
+                <div class="cab-sidebar-name" id="cab-sidebar-name">—</div>
+                <div class="cab-sidebar-username" id="cab-sidebar-username">@—</div>
+                <div id="cab-admin-badge" class="cab-admin-badge hidden">⚡ Адміністратор</div>
+                <div class="cab-sidebar-stats" id="cab-sidebar-stats"></div>
+                <button class="cab-logout-btn" onclick="logOut()">↩ Вийти</button>
+            </div>
+
+            <!-- ── Права панель: вкладки ── -->
+            <div class="cab-main">
+
+                <div class="cab-tabs">
+                    <button class="cab-tab active" data-tab="profile" onclick="cabSwitchTab('profile')">Профіль</button>
+                    <button class="cab-tab" data-tab="stats"   onclick="cabSwitchTab('stats')">Статистика</button>
+                    <button class="cab-tab cab-tab-admin hidden" data-tab="admin" onclick="cabSwitchTab('admin')">⚡ Адмін</button>
+                </div>
+
+                <!-- Профіль -->
+                <div id="cab-panel-profile" class="cab-panel">
+                    <div class="cab-section-title">Ім'я в іграх</div>
+                    <p class="cab-hint">Це ім'я автоматично підставляється в кожну гру. Логін залишається незмінним.</p>
+                    <input id="cab-display-name" class="cab-input" type="text" maxlength="20"
+                           placeholder="Відображуване ім'я (до 20 символів)">
+                    <div class="cab-section-title" style="margin-top:20px">Логін</div>
+                    <input class="cab-input" type="text" id="cab-login-display" readonly style="opacity:.5;cursor:default">
+                    <button class="cab-save-btn" onclick="cabSaveProfile()">💾 Зберегти зміни</button>
+                    <div id="cab-save-msg" class="cab-save-msg"></div>
+                </div>
+
+                <!-- Статистика -->
+                <div id="cab-panel-stats" class="cab-panel hidden">
+                    <div class="cab-section-title">Статистика по іграх</div>
+                    <div id="cab-stats-list" class="cab-stats-list">
+                        <div class="cab-loading">Завантаження…</div>
+                    </div>
+                    <div id="cab-stats-total" class="cab-stats-total"></div>
+                </div>
+
+                <!-- Адмін -->
+                <div id="cab-panel-admin" class="cab-panel hidden">
+                    <div class="cab-section-title">Активні кімнати</div>
+                    <div id="cab-admin-rooms" class="cab-admin-table-wrap">
+                        <div class="cab-loading">Завантаження…</div>
+                    </div>
+                    <div class="cab-section-title" style="margin-top:24px">Користувачі</div>
+                    <input id="cab-admin-search" class="cab-input" type="text" placeholder="Пошук…"
+                           oninput="cabAdminFilterUsers()" style="margin-bottom:12px">
+                    <div id="cab-admin-users" class="cab-admin-table-wrap">
+                        <div class="cab-loading">Завантаження…</div>
+                    </div>
+                </div>
+
+            </div><!-- /.cab-main -->
+        </div><!-- /.cab-body -->
     </div>
 
     <!-- Socket.io (автоматично підключається до сервера) -->

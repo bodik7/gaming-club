@@ -144,17 +144,90 @@ app.get('/api/rooms/count', (req, res) => {
     res.json(counts);
 });
 
-app.get('/api/me', async (req, res) => {
+// Middleware: перевірка JWT → req.authUser
+function requireAuth(req, res, next) {
     const auth = req.headers.authorization;
     if (!auth?.startsWith('Bearer '))
         return res.status(401).json({ error: 'Не авторизовано' });
     try {
-        const payload = jwt.verify(auth.slice(7), JWT_SECRET);
-        const stats   = await db.getStats(payload.username);
-        res.json({ username: payload.username, stats });
+        req.authUser = jwt.verify(auth.slice(7), JWT_SECRET);
+        next();
     } catch {
         res.status(401).json({ error: 'Токен недійсний або прострочений' });
     }
+}
+
+function requireAdmin(req, res, next) {
+    requireAuth(req, res, async () => {
+        const user = await db.getUser(req.authUser.username);
+        if (!user?.is_admin) return res.status(403).json({ error: 'Немає доступу' });
+        req.dbUser = user;
+        next();
+    });
+}
+
+app.get('/api/me', requireAuth, async (req, res) => {
+    try {
+        const user  = await db.getUser(req.authUser.username);
+        const stats = await db.getStats(req.authUser.username);
+        res.json({
+            username:    req.authUser.username,
+            displayName: user?.display_name || null,
+            avatarColor: user?.avatar_color || '#1a56db',
+            isAdmin:     user?.is_admin === 1,
+            stats,
+        });
+    } catch {
+        res.status(500).json({ error: 'Помилка сервера' });
+    }
+});
+
+// Оновлення профілю
+app.patch('/api/profile', requireAuth, async (req, res) => {
+    const { displayName, avatarColor } = req.body;
+    const dn = typeof displayName === 'string'
+        ? displayName.trim().slice(0, 20).replace(/[<>"']/g, '') : null;
+    const color = /^#[0-9a-fA-F]{6}$/.test(avatarColor) ? avatarColor : null;
+    try {
+        await db.updateProfile(req.authUser.username, { displayName: dn || null, avatarColor: color });
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ── Адмін-маршрути ───────────────────────────
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+    try { res.json(await db.getAllUsers()); }
+    catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/users/:username', requireAdmin, async (req, res) => {
+    const target = req.params.username;
+    if (target.toLowerCase() === 'bodik')
+        return res.status(403).json({ error: 'Неможливо видалити адміна' });
+    try {
+        await db.deleteUser(target);
+        res.json({ ok: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.patch('/api/admin/users/:username/admin', requireAdmin, async (req, res) => {
+    try {
+        await db.setAdmin(req.params.username, req.body.value);
+        res.json({ ok: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/admin/rooms', requireAdmin, (req, res) => {
+    // rooms оголошується нижче, але до моменту виклику маршруту вже ініціалізований
+    const list = Object.values(rooms).map(r => ({
+        code:     r.code,
+        gameType: r.gameType,
+        players:  r.players?.length || 0,
+        started:  !!r.gameStarted,
+    }));
+    res.json(list);
 });
 
 // Статистика конкретного гравця

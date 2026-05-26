@@ -100,6 +100,9 @@ function clearAuth() { localStorage.removeItem(AUTH_KEY); }
 
 let _isGuest       = false;
 let _authUsername  = '';
+let _displayName   = '';   // ім'я в іграх (з профілю)
+let _avatarColor   = '#1a56db';
+let _isAdmin       = false;
 
 async function checkAuth() {
     const joinCode = new URLSearchParams(window.location.search).get('join');
@@ -111,10 +114,13 @@ async function checkAuth() {
                 headers: { Authorization: `Bearer ${auth.token}` }
             });
             if (res.ok) {
-                const { username } = await res.json();
-                _authUsername = username;
+                const data = await res.json();
+                _authUsername = data.username;
+                _displayName  = data.displayName || '';
+                _avatarColor  = data.avatarColor  || '#1a56db';
+                _isAdmin      = !!data.isAdmin;
                 _isGuest = false;
-                _enterLobby(username, joinCode);
+                _enterLobby(data.username, joinCode);
                 return;
             }
         } catch {}
@@ -134,21 +140,25 @@ function _enterLobby(username, joinCode) {
 
     const nameInput = document.getElementById('lobby-name');
     if (username) {
-        // Авторизований — ім'я заблоковано
+        // Авторизований — підставляємо display_name або логін
+        const nameInGame = _displayName || username;
         if (nameInput) {
-            nameInput.value    = username;
+            nameInput.value    = nameInGame;
             nameInput.readOnly = true;
             nameInput.style.opacity = '0.65';
-            nameInput.title = 'Ім\'я прив\'язане до акаунту';
+            nameInput.title = 'Ім\'я прив\'язане до акаунту · змінити в кабінеті';
         }
-        // Показуємо рядок акаунту (тільки для авторизованих)
+        // Показуємо рядок акаунту
         const bar = document.getElementById('account-bar');
         const nameEl = document.getElementById('account-name');
         const avatarEl = document.getElementById('account-avatar');
         const logoutBtn = document.getElementById('account-logout-btn');
         if (bar) bar.classList.remove('hidden');
-        if (nameEl) nameEl.textContent = username;
-        if (avatarEl) avatarEl.textContent = username[0].toUpperCase();
+        if (nameEl) nameEl.textContent = nameInGame;
+        if (avatarEl) {
+            avatarEl.textContent = nameInGame[0].toUpperCase();
+            avatarEl.style.background = _avatarColor;
+        }
         if (logoutBtn) logoutBtn.style.display = '';
         document.getElementById('lobby-login-btn')?.classList.add('hidden');
     } else {
@@ -266,6 +276,9 @@ function logOut() {
     clearAuth();
     _isGuest = false;
     _authUsername = '';
+    _displayName  = '';
+    _avatarColor  = '#1a56db';
+    _isAdmin      = false;
     closeCabinet();
     document.getElementById('lobby-screen').classList.add('hidden');
     document.getElementById('account-bar')?.classList.add('hidden');
@@ -284,61 +297,215 @@ const GAME_LABELS = {
     bunker:   '🏚️ Бункер',
 };
 
-async function openCabinet() {
-    const modal = document.getElementById('cabinet-modal');
-    if (!modal) return;
-    modal.style.display = 'flex';
+// ── Стан кабінету ──────────────────────────────
+let _cabColor = _avatarColor;
+let _cabAllUsers = [];
 
-    const letter  = (_authUsername || '?')[0].toUpperCase();
-    const avatarEl = document.getElementById('cabinet-avatar-letter');
-    const nameEl  = document.getElementById('cabinet-username-display');
-    const listEl  = document.getElementById('cabinet-stats-list');
-    const totalEl = document.getElementById('cabinet-total');
+function openCabinet() {
+    const screen = document.getElementById('cabinet-screen');
+    if (!screen) return;
+    screen.classList.remove('hidden');
 
-    if (avatarEl) avatarEl.textContent = letter;
-    if (nameEl)   nameEl.textContent   = _authUsername;
-    if (listEl)   listEl.innerHTML     = '<div class="cabinet-loading">Завантаження…</div>';
-    if (totalEl)  totalEl.textContent  = '';
+    // Заповнюємо sidebar
+    const nameInGame = _displayName || _authUsername;
+    const avatarEl = document.getElementById('cab-avatar-circle');
+    if (avatarEl) {
+        avatarEl.textContent = nameInGame[0]?.toUpperCase() || '?';
+        avatarEl.style.background = _avatarColor;
+    }
+    document.getElementById('cab-sidebar-name').textContent     = nameInGame;
+    document.getElementById('cab-sidebar-username').textContent = '@' + _authUsername;
+
+    const adminBadge = document.getElementById('cab-admin-badge');
+    if (adminBadge) adminBadge.classList.toggle('hidden', !_isAdmin);
+
+    // Профіль inputs
+    const dnInput = document.getElementById('cab-display-name');
+    if (dnInput) dnInput.value = _displayName || '';
+    const loginEl = document.getElementById('cab-login-display');
+    if (loginEl) loginEl.value = _authUsername;
+
+    // Позначити активний колір
+    _cabColor = _avatarColor;
+    document.querySelectorAll('.cab-color-dot').forEach(d => {
+        d.classList.toggle('active', d.dataset.color === _cabColor);
+    });
+
+    // Адмін-вкладка
+    document.querySelectorAll('.cab-tab-admin').forEach(t => t.classList.toggle('hidden', !_isAdmin));
+
+    // Загружаємо статистику
+    cabSwitchTab('profile');
+    cabLoadStats();
+}
+
+function closeCabinet() {
+    document.getElementById('cabinet-screen')?.classList.add('hidden');
+}
+
+function cabSwitchTab(tab) {
+    document.querySelectorAll('.cab-tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.tab === tab));
+    ['profile', 'stats', 'admin'].forEach(p => {
+        const el = document.getElementById(`cab-panel-${p}`);
+        if (el) el.classList.toggle('hidden', p !== tab);
+    });
+    if (tab === 'admin') cabLoadAdmin();
+}
+
+function cabPickColor(btn) {
+    _cabColor = btn.dataset.color;
+    document.querySelectorAll('.cab-color-dot').forEach(d =>
+        d.classList.toggle('active', d.dataset.color === _cabColor));
+    const av = document.getElementById('cab-avatar-circle');
+    if (av) av.style.background = _cabColor;
+}
+
+async function cabSaveProfile() {
+    const displayName = document.getElementById('cab-display-name')?.value.trim() || '';
+    const msg = document.getElementById('cab-save-msg');
+    if (msg) { msg.textContent = ''; msg.className = 'cab-save-msg'; }
+
+    const auth = loadAuth();
+    try {
+        const res = await fetch('/api/profile', {
+            method:  'PATCH',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth?.token}` },
+            body:    JSON.stringify({ displayName, avatarColor: _cabColor }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || 'Помилка');
+        // Зберігаємо локально
+        _displayName  = displayName;
+        _avatarColor  = _cabColor;
+        // Оновлюємо sidebar і account-bar
+        const nameInGame = _displayName || _authUsername;
+        document.getElementById('cab-sidebar-name').textContent = nameInGame;
+        document.getElementById('cab-avatar-circle').style.background = _avatarColor;
+        document.getElementById('cab-avatar-circle').textContent = nameInGame[0]?.toUpperCase() || '?';
+        const accAv = document.getElementById('account-avatar');
+        if (accAv) { accAv.textContent = nameInGame[0]?.toUpperCase() || '?'; accAv.style.background = _avatarColor; }
+        const accName = document.getElementById('account-name');
+        if (accName) accName.textContent = nameInGame;
+        const nameInput = document.getElementById('lobby-name');
+        if (nameInput && nameInput.readOnly) nameInput.value = nameInGame;
+        if (msg) { msg.textContent = '✅ Збережено!'; msg.className = 'cab-save-msg ok'; }
+        setTimeout(() => { if (msg) msg.textContent = ''; }, 3000);
+    } catch (e) {
+        if (msg) { msg.textContent = '❌ ' + e.message; msg.className = 'cab-save-msg err'; }
+    }
+}
+
+async function cabLoadStats() {
+    const auth = loadAuth();
+    const listEl  = document.getElementById('cab-stats-list');
+    const totalEl = document.getElementById('cab-stats-total');
+    if (listEl) listEl.innerHTML = '<div class="cab-loading">Завантаження…</div>';
 
     try {
-        const auth = loadAuth();
-        const res  = await fetch('/api/me', {
-            headers: auth?.token ? { Authorization: `Bearer ${auth.token}` } : {}
-        });
-        if (!res.ok) throw new Error('not ok');
-        const data = await res.json();
-        const stats = data.stats || {};
+        const res = await fetch('/api/me', { headers: { Authorization: `Bearer ${auth?.token}` } });
+        if (!res.ok) throw new Error();
+        const { stats = {} } = await res.json();
 
         let totalGames = 0, totalWins = 0;
         const rows = Object.entries(GAME_LABELS).map(([key, label]) => {
             const s = stats[key] || { g: 0, w: 0 };
-            totalGames += s.g;
-            totalWins  += s.w;
+            totalGames += s.g; totalWins += s.w;
             const pct = s.g > 0 ? Math.round(s.w / s.g * 100) : 0;
-            return `<div class="cabinet-stat-row">
-                <span class="cabinet-stat-label">${label}</span>
-                <div class="cabinet-stat-bar-wrap">
-                    <div class="cabinet-stat-bar" style="width:${pct}%"></div>
+            return `<div class="cab-stat-row">
+                <div class="cab-stat-header">
+                    <span class="cab-stat-label">${label}</span>
+                    <span class="cab-stat-nums">${s.w}/${s.g} · ${pct}%</span>
                 </div>
-                <span class="cabinet-stat-nums">${s.w}/${s.g} (${pct}%)</span>
+                <div class="cab-stat-bar-wrap"><div class="cab-stat-bar" style="width:${pct}%"></div></div>
             </div>`;
         });
-
         if (listEl) listEl.innerHTML = rows.join('');
-        if (totalEl) {
-            const tpct = totalGames > 0 ? Math.round(totalWins / totalGames * 100) : 0;
-            totalEl.textContent = totalGames > 0
-                ? `Загалом: ${totalWins} перемог з ${totalGames} ігор (${tpct}%)`
-                : 'Ще не зіграно жодної гри';
-        }
+
+        // Sidebar stats
+        const sideStats = document.getElementById('cab-sidebar-stats');
+        if (sideStats) sideStats.innerHTML = `Ігор: ${totalGames}<br>Перемог: ${totalWins}`;
+
+        const tpct = totalGames > 0 ? Math.round(totalWins / totalGames * 100) : 0;
+        if (totalEl) totalEl.textContent = totalGames > 0
+            ? `Загалом: ${totalWins} з ${totalGames} ігор · ${tpct}%`
+            : 'Ще не зіграно жодної гри';
     } catch {
-        if (listEl) listEl.innerHTML = '<div class="cabinet-loading">Не вдалося завантажити статистику</div>';
+        if (listEl) listEl.innerHTML = '<div class="cab-loading">Помилка завантаження</div>';
     }
 }
 
-function closeCabinet() {
-    const modal = document.getElementById('cabinet-modal');
-    if (modal) modal.style.display = 'none';
+async function cabLoadAdmin() {
+    const auth = loadAuth();
+    const roomsEl = document.getElementById('cab-admin-rooms');
+    const usersEl = document.getElementById('cab-admin-users');
+
+    // Кімнати
+    try {
+        const res = await fetch('/api/admin/rooms', { headers: { Authorization: `Bearer ${auth?.token}` } });
+        const rooms = await res.json();
+        if (!rooms.length) {
+            roomsEl.innerHTML = '<div class="cab-loading">Немає активних кімнат</div>';
+        } else {
+            roomsEl.innerHTML = `<table class="cab-admin-table">
+                <tr><th>Код</th><th>Гра</th><th>Гравці</th><th>Статус</th></tr>
+                ${rooms.map(r => `<tr>
+                    <td><b>${r.code}</b></td>
+                    <td>${GAME_LABELS[r.gameType] || r.gameType}</td>
+                    <td>${r.players}</td>
+                    <td>${r.started ? '▶ Гра' : '⏳ Чекає'}</td>
+                </tr>`).join('')}
+            </table>`;
+        }
+    } catch { roomsEl.innerHTML = '<div class="cab-loading">Помилка</div>'; }
+
+    // Користувачі
+    try {
+        const res = await fetch('/api/admin/users', { headers: { Authorization: `Bearer ${auth?.token}` } });
+        _cabAllUsers = await res.json();
+        cabRenderUsers(_cabAllUsers);
+    } catch { usersEl.innerHTML = '<div class="cab-loading">Помилка</div>'; }
+}
+
+function cabRenderUsers(list) {
+    const usersEl = document.getElementById('cab-admin-users');
+    if (!list.length) { usersEl.innerHTML = '<div class="cab-loading">Немає користувачів</div>'; return; }
+    usersEl.innerHTML = `<table class="cab-admin-table">
+        <tr><th>Логін</th><th>Ім'я в іграх</th><th>Ігор</th><th>Перемог</th><th>Роль</th><th></th></tr>
+        ${list.map(u => `<tr>
+            <td><b>${u.username}</b></td>
+            <td>${u.displayName || '—'}</td>
+            <td>${u.games}</td>
+            <td>${u.wins}</td>
+            <td><span class="${u.isAdmin ? 'cab-badge-admin' : 'cab-badge-user'}">${u.isAdmin ? '⚡ Адмін' : 'Гравець'}</span></td>
+            <td>${u.username.toLowerCase() !== 'bodik'
+                ? `<button class="cab-admin-del-btn" onclick="cabDeleteUser('${u.username}')">Видалити</button>`
+                : ''}</td>
+        </tr>`).join('')}
+    </table>`;
+}
+
+function cabAdminFilterUsers() {
+    const q = document.getElementById('cab-admin-search')?.value.toLowerCase() || '';
+    cabRenderUsers(_cabAllUsers.filter(u =>
+        u.username.toLowerCase().includes(q) || (u.displayName || '').toLowerCase().includes(q)
+    ));
+}
+
+async function cabDeleteUser(username) {
+    if (!confirm(`Видалити користувача "${username}"? Це видалить і всю його статистику.`)) return;
+    const auth = loadAuth();
+    try {
+        const res = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${auth?.token}` },
+        });
+        if (!res.ok) throw new Error((await res.json()).error);
+        _cabAllUsers = _cabAllUsers.filter(u => u.username !== username);
+        cabRenderUsers(_cabAllUsers);
+        showToast(`✅ Користувача ${username} видалено`, { color: '#1b5e20', duration: 3000 });
+    } catch (e) {
+        showToast('❌ ' + e.message, { color: '#b71c1c', duration: 3000 });
+    }
 }
 
 // ── Лічильник кімнат ─────────────────────────

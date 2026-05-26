@@ -1920,123 +1920,7 @@ body {
     color: #ef5350 !important;
 }
 
-/* ── Особистий кабінет ───────────────────────────── */
-.cabinet-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.65);
-    z-index: 1200;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-}
-.cabinet-card {
-    position: relative;
-    background: linear-gradient(160deg, #1e2235 0%, #151824 100%);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 18px;
-    padding: 28px 28px 24px;
-    width: 100%;
-    max-width: 420px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
-}
-.cabinet-close {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    background: none;
-    border: none;
-    color: rgba(255,255,255,0.35);
-    font-size: 18px;
-    cursor: pointer;
-    line-height: 1;
-    transition: color 0.2s;
-}
-.cabinet-close:hover { color: #fff; }
-.cabinet-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 22px;
-}
-.cabinet-avatar {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #ffd700, #ff8c00);
-    color: #1a1a1a;
-    font-size: 22px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-.cabinet-username {
-    font-size: 18px;
-    font-weight: 700;
-    color: #fff;
-}
-.cabinet-subtitle {
-    font-size: 12px;
-    color: rgba(255,255,255,0.4);
-    margin-top: 2px;
-}
-.cabinet-stats-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 18px;
-}
-.cabinet-loading {
-    color: rgba(255,255,255,0.4);
-    font-size: 13px;
-    text-align: center;
-    padding: 16px 0;
-}
-.cabinet-stat-row {
-    display: grid;
-    grid-template-columns: 110px 1fr 90px;
-    align-items: center;
-    gap: 10px;
-}
-.cabinet-stat-label {
-    font-size: 13px;
-    color: rgba(255,255,255,0.75);
-    white-space: nowrap;
-}
-.cabinet-stat-bar-wrap {
-    height: 6px;
-    border-radius: 3px;
-    background: rgba(255,255,255,0.1);
-    overflow: hidden;
-}
-.cabinet-stat-bar {
-    height: 100%;
-    border-radius: 3px;
-    background: linear-gradient(90deg, #ffd700, #ff8c00);
-    transition: width 0.5s ease;
-    min-width: 2px;
-}
-.cabinet-stat-nums {
-    font-size: 12px;
-    color: rgba(255,255,255,0.5);
-    text-align: right;
-    white-space: nowrap;
-}
-.cabinet-total {
-    font-size: 13px;
-    color: rgba(255,255,255,0.5);
-    text-align: center;
-    margin-bottom: 18px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(255,255,255,0.08);
-}
-.cabinet-logout-btn {
-    width: 100%;
-    justify-content: center;
-}
+/* Старі стилі кабінету видалено — використовується .cab-* */
 
 /* ── Чат у залі очікування ────────────────────── */
 .lobby-chat-box {
@@ -2120,4 +2004,296 @@ body {
     background: rgba(255,215,0,0.12);
     border-color: rgba(255,215,0,0.35);
     color: #ffd700;
+}
+
+/* ════════════════════════════════════════════
+   ОСОБИСТИЙ КАБІНЕТ
+════════════════════════════════════════════ */
+.cab-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background-color: #060c1a;
+    background-image:
+        radial-gradient(ellipse 80% 60% at 10% 10%, rgba(0,87,183,0.45) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 50% at 90% 90%, rgba(255,215,0,0.22) 0%, transparent 55%),
+        radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 28px 28px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+/* Topbar */
+.cab-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+}
+.cab-back-btn {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    color: rgba(255,255,255,0.7);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.2s, color 0.2s;
+}
+.cab-back-btn:hover { border-color: rgba(255,215,0,0.5); color: #ffd700; }
+.cab-topbar-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 0.5px;
+}
+
+/* Body split */
+.cab-body {
+    display: flex;
+    flex: 1;
+    gap: 0;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 32px 24px;
+    gap: 32px;
+    box-sizing: border-box;
+}
+
+/* Sidebar */
+.cab-sidebar {
+    width: 200px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+.cab-avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.cab-avatar {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 900;
+    color: #fff;
+    background: #1a56db;
+    box-shadow: 0 0 0 4px rgba(255,215,0,0.18), 0 4px 20px rgba(0,0,0,0.5);
+    transition: background 0.3s;
+    text-transform: uppercase;
+    user-select: none;
+}
+.cab-color-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+}
+.cab-color-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s;
+}
+.cab-color-dot:hover   { transform: scale(1.2); }
+.cab-color-dot.active  { border-color: #fff; transform: scale(1.15); }
+.cab-sidebar-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    text-align: center;
+    word-break: break-word;
+}
+.cab-sidebar-username {
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+    text-align: center;
+}
+.cab-admin-badge {
+    background: rgba(255,215,0,0.15);
+    border: 1px solid rgba(255,215,0,0.4);
+    border-radius: 20px;
+    color: #ffd700;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+}
+.cab-sidebar-stats {
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+    text-align: center;
+    line-height: 1.7;
+}
+.cab-logout-btn {
+    margin-top: auto;
+    width: 100%;
+    padding: 9px;
+    background: none;
+    border: 1px solid rgba(229,57,53,0.4);
+    border-radius: 8px;
+    color: rgba(239,154,154,0.8);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s, border-color 0.2s;
+}
+.cab-logout-btn:hover { background: rgba(229,57,53,0.12); border-color: rgba(229,57,53,0.7); }
+
+/* Main area */
+.cab-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.cab-tabs {
+    display: flex;
+    gap: 6px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 4px;
+}
+.cab-tab {
+    flex: 1;
+    padding: 9px 8px;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    background: none;
+    color: rgba(255,255,255,0.4);
+    font-family: inherit;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.cab-tab.active { background: rgba(255,215,0,0.15); color: #ffd700; }
+.cab-tab:not(.active):hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.05); }
+.cab-tab-admin.active { background: rgba(255,215,0,0.2); color: #ffd700; }
+.cab-panel {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 14px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.cab-section-title {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 2px;
+}
+.cab-hint {
+    font-size: 12px;
+    color: rgba(255,255,255,0.35);
+    line-height: 1.6;
+    margin: 0;
+}
+.cab-input {
+    width: 100%;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 9px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 13px;
+    outline: none;
+    box-sizing: border-box;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+.cab-input:focus { border-color: rgba(255,215,0,0.45); }
+.cab-input::placeholder { color: rgba(255,255,255,0.25); }
+.cab-save-btn {
+    padding: 11px 20px;
+    background: rgba(255,215,0,0.15);
+    border: 1px solid rgba(255,215,0,0.35);
+    border-radius: 9px;
+    color: #ffd700;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s, border-color 0.2s;
+    align-self: flex-start;
+}
+.cab-save-btn:hover { background: rgba(255,215,0,0.25); border-color: rgba(255,215,0,0.6); }
+.cab-save-msg { font-size: 13px; min-height: 18px; }
+.cab-save-msg.ok  { color: #6ee7b7; }
+.cab-save-msg.err { color: #fca5a5; }
+
+/* Stats panel */
+.cab-stats-list { display: flex; flex-direction: column; gap: 14px; }
+.cab-stat-row { display: flex; flex-direction: column; gap: 5px; }
+.cab-stat-header { display: flex; justify-content: space-between; align-items: center; }
+.cab-stat-label { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.8); }
+.cab-stat-nums  { font-size: 12px; color: rgba(255,255,255,0.4); }
+.cab-stat-bar-wrap { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+.cab-stat-bar { height: 100%; background: linear-gradient(90deg, #1a56db, #ffd700); border-radius: 3px; transition: width 0.6s ease; }
+.cab-stats-total { font-size: 12px; color: rgba(255,255,255,0.35); padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.07); }
+.cab-loading { font-size: 13px; color: rgba(255,255,255,0.3); text-align: center; padding: 20px 0; }
+
+/* Admin panel */
+.cab-admin-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
+.cab-admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cab-admin-table th {
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.4);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 12px;
+    text-align: left;
+    white-space: nowrap;
+}
+.cab-admin-table td {
+    padding: 10px 12px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.8);
+    vertical-align: middle;
+}
+.cab-admin-table tr:hover td { background: rgba(255,255,255,0.03); }
+.cab-admin-del-btn {
+    background: none;
+    border: 1px solid rgba(229,57,53,0.4);
+    border-radius: 6px;
+    color: rgba(239,154,154,0.8);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s;
+}
+.cab-admin-del-btn:hover { background: rgba(229,57,53,0.15); }
+.cab-badge-admin { background: rgba(255,215,0,0.15); color: #ffd700; border-radius: 4px; padding: 2px 7px; font-size: 11px; font-weight: 700; }
+.cab-badge-user  { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.5); border-radius: 4px; padding: 2px 7px; font-size: 11px; font-weight: 700; }
+
+/* Mobile */
+@media (max-width: 680px) {
+    .cab-body { flex-direction: column; padding: 16px; gap: 20px; }
+    .cab-sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 12px; }
+    .cab-avatar { width: 64px; height: 64px; font-size: 26px; }
+    .cab-sidebar-name, .cab-sidebar-username { text-align: left; }
+    .cab-logout-btn { margin-top: 0; width: auto; }
+    .cab-topbar { padding: 12px 16px; }
 }

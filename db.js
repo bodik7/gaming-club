@@ -42,6 +42,23 @@ async function init() {
         { sql: `CREATE INDEX IF NOT EXISTS idx_stats_game_type ON game_stats(game_type)` },
         { sql: `CREATE INDEX IF NOT EXISTS idx_rooms_updated   ON rooms_backup(updated_at)` },
     ], 'deferred');
+
+    // Міграції: нові колонки (ігноруємо помилку якщо вже існують)
+    const migrations = [
+        `ALTER TABLE users ADD COLUMN display_name TEXT`,
+        `ALTER TABLE users ADD COLUMN avatar_color TEXT DEFAULT '#1a56db'`,
+        `ALTER TABLE users ADD COLUMN is_admin    INTEGER DEFAULT 0`,
+    ];
+    for (const sql of migrations) {
+        try { await c.execute({ sql, args: [] }); } catch {}
+    }
+    // Початковий адмін
+    try {
+        await c.execute({
+            sql:  `UPDATE users SET is_admin = 1 WHERE username = 'bodik' COLLATE NOCASE`,
+            args: [],
+        });
+    } catch {}
 }
 
 // ── Users ─────────────────────────────────────
@@ -57,6 +74,45 @@ async function createUser(username, hash) {
     await getClient().execute({
         sql:  'INSERT INTO users (username, hash) VALUES (?, ?)',
         args: [username, hash],
+    });
+}
+
+async function updateProfile(username, { displayName, avatarColor }) {
+    await getClient().execute({
+        sql:  `UPDATE users SET display_name = ?, avatar_color = ? WHERE username = ? COLLATE NOCASE`,
+        args: [displayName ?? null, avatarColor ?? '#1a56db', username],
+    });
+}
+
+async function getAllUsers() {
+    const result = await getClient().execute({
+        sql: `SELECT u.username, u.display_name, u.avatar_color, u.is_admin, u.created_at,
+                     COUNT(s.id) AS games, SUM(s.won) AS wins
+              FROM users u LEFT JOIN game_stats s ON s.username = u.username COLLATE NOCASE
+              GROUP BY u.username ORDER BY u.created_at DESC`,
+        args: [],
+    });
+    return result.rows.map(r => ({
+        username:     r.username,
+        displayName:  r.display_name,
+        avatarColor:  r.avatar_color || '#1a56db',
+        isAdmin:      r.is_admin === 1,
+        createdAt:    r.created_at,
+        games:        Number(r.games || 0),
+        wins:         Number(r.wins  || 0),
+    }));
+}
+
+async function deleteUser(username) {
+    const c = getClient();
+    await c.execute({ sql: `DELETE FROM game_stats WHERE username = ? COLLATE NOCASE`, args: [username] });
+    await c.execute({ sql: `DELETE FROM users WHERE username = ? COLLATE NOCASE`,      args: [username] });
+}
+
+async function setAdmin(username, value) {
+    await getClient().execute({
+        sql:  `UPDATE users SET is_admin = ? WHERE username = ? COLLATE NOCASE`,
+        args: [value ? 1 : 0, username],
     });
 }
 
@@ -183,7 +239,7 @@ async function cleanGhostUsers() {
 
 module.exports = {
     init,
-    getUser, createUser,
+    getUser, createUser, updateProfile, getAllUsers, deleteUser, setAdmin,
     addStat, getStats, getLeaderboard, saveGameStats,
     saveRoom, getRoom, deleteRoom, getAllRooms, cleanOldRooms,
     cleanOldStats, cleanGhostUsers,
