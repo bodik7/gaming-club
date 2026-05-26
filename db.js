@@ -54,11 +54,12 @@ async function init() {
     }
     // Початковий адмін
     try {
-        await c.execute({
-            sql:  `UPDATE users SET is_admin = 1 WHERE username = 'bodik' COLLATE NOCASE`,
+        const r = await c.execute({
+            sql:  `UPDATE users SET is_admin = 1 WHERE LOWER(username) = 'bodik'`,
             args: [],
         });
-    } catch {}
+        if (r.rowsAffected > 0) console.log('[db] bodik promoted to admin');
+    } catch (e) { console.error('[db] admin init:', e.message); }
 }
 
 // ── Users ─────────────────────────────────────
@@ -96,7 +97,7 @@ async function getAllUsers() {
         username:     r.username,
         displayName:  r.display_name,
         avatarColor:  r.avatar_color || '#1a56db',
-        isAdmin:      r.is_admin === 1,
+        isAdmin:      Number(r.is_admin) === 1,
         createdAt:    r.created_at,
         games:        Number(r.games || 0),
         wins:         Number(r.wins  || 0),

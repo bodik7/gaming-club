@@ -160,7 +160,7 @@ function requireAuth(req, res, next) {
 function requireAdmin(req, res, next) {
     requireAuth(req, res, async () => {
         const user = await db.getUser(req.authUser.username);
-        if (!user?.is_admin) return res.status(403).json({ error: 'Немає доступу' });
+        if (Number(user?.is_admin) !== 1) return res.status(403).json({ error: 'Немає доступу' });
         req.dbUser = user;
         next();
     });
@@ -174,7 +174,7 @@ app.get('/api/me', requireAuth, async (req, res) => {
             username:    req.authUser.username,
             displayName: user?.display_name || null,
             avatarColor: user?.avatar_color || '#1a56db',
-            isAdmin:     user?.is_admin === 1,
+            isAdmin:     Number(user?.is_admin) === 1,
             stats,
         });
     } catch {
