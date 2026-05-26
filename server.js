@@ -1054,7 +1054,8 @@ io.on('connection', (socket) => {
             if (a.active.length === 0) {
                 addLog(room.state, '🔨 Аукціон скасовано — всі відключились', 'warn');
                 room.state.auctionState = null;
-            } else if (a.active.length === 1 && a.currentBidder !== null) {
+            } else if (a.active.length === 1) {
+                if (a.currentBidder === null) a.currentBidder = a.active[0];
                 awardAuction(room.state, a);
             }
             io.to(socket.roomCode).emit('stateUpdate', { state: sanitize(room.state), sideEffect: null });
