@@ -1717,11 +1717,12 @@ function applyState(state, diceRolled, landingPos, onDone) {
         });
     }
 
-    // Кнопки ходу — ховаємо "Завершити хід" поки йде аукціон
+    // Кнопки ходу — ховаємо "Завершити хід" поки йде аукціон або є pendingAction
     const isMyTurn      = myPlayerIndex === state.currentPlayerIndex;
     const auctionActive = !!state.auctionState;
+    const hasPending    = !!state.pendingAction;
     document.getElementById('roll-btn').classList.toggle('hidden', state.hasRolled || !isMyTurn || auctionActive);
-    document.getElementById('end-turn-btn').classList.toggle('hidden', !state.hasRolled || !isMyTurn || auctionActive);
+    document.getElementById('end-turn-btn').classList.toggle('hidden', !state.hasRolled || !isMyTurn || auctionActive || hasPending);
     const actionBtns = document.getElementById('action-buttons');
     if (actionBtns) actionBtns.style.opacity = isMyTurn ? '1' : '0.5';
     actionBtns?.querySelectorAll('button').forEach(btn => btn.disabled = !isMyTurn);
@@ -1967,8 +1968,8 @@ function showRentModalOnline(player, cell, rent, owner) {
                 btn.onclick = () => {
                     playSound('rent');
                     sendAction('payRent');
-                    pendingRent = null;
                     closeModal();
+                    // pendingRent очищається через applyState коли сервер підтвердить
                 };
             }
         });

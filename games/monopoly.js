@@ -586,6 +586,9 @@ function startTurnTimer(room) {
                 processAction(state, 'auctionPass', {}, room);
             } else if (state.pendingAction === 'coverDebt') {
                 processAction(state, 'declareBankrupt', {}, room);
+            } else if (state.pendingAction === 'casino') {
+                processAction(state, 'casinoSkip', {}, room);
+                processAction(state, 'endTurn', {}, room);
             } else if (!state.hasRolled) {
                 processAction(state, 'rollDice', {}, room);
                 if (state.pendingAction === 'payRent') {
@@ -593,9 +596,11 @@ function startTurnTimer(room) {
                     processAction(state, canPay ? 'payRent' : 'declareBankrupt', {}, room);
                 } else if (state.pendingAction === 'offerPurchase') {
                     processAction(state, 'startAuction', {}, room);
+                } else if (state.pendingAction === 'casino') {
+                    processAction(state, 'casinoSkip', {}, room);
                 }
-                if (state.hasRolled && !state.auctionState) processAction(state, 'endTurn', {}, room);
-            } else if (!state.auctionState) {
+                if (state.hasRolled && !state.auctionState && !state.pendingAction) processAction(state, 'endTurn', {}, room);
+            } else if (!state.auctionState && !state.pendingAction) {
                 processAction(state, 'endTurn', {}, room);
             }
         } catch(e) { console.error('Auto-turn error:', e.message); }
