@@ -480,17 +480,31 @@
                         <span class="mono m-phase-block-timer" id="m-phase-block-timer"></span>
                     </div>
                 </div>
-                <div class="m-chat-area">
+                <!-- Day chat — always visible, read-only at night -->
+                <div class="m-chat-area m-day-chat-area" id="m-day-chat-area">
                     <div class="m-chat-area-hdr">
-                        <span class="mono m-chat-area-title" id="m-chat-title">Загальний чат 💬</span>
-                        <span class="m-chat-live-dot"></span>
+                        <span class="mono m-chat-area-title" id="m-day-chat-title">Денний чат 💬</span>
+                        <span class="m-chat-live-dot" id="m-day-chat-dot"></span>
                     </div>
-                    <div class="m-chat-msgs" id="m-chat-msgs"></div>
-                    <div class="m-chat-area-input" id="m-chat-area-input" style="display:none">
-                        <input id="m-chat-input" class="m-chat-inp" type="text"
+                    <div class="m-chat-msgs" id="m-day-chat-msgs"></div>
+                    <div class="m-chat-area-input" id="m-day-chat-input-wrap" style="display:none">
+                        <input id="m-day-chat-input" class="m-chat-inp" type="text"
                             placeholder="Написати..." maxlength="200"
-                            onkeydown="if(event.key==='Enter')mSendActiveChat()">
-                        <button class="m-chat-send-btn" onclick="mSendActiveChat()">➔</button>
+                            onkeydown="if(event.key==='Enter')mSendDayChat()">
+                        <button class="m-chat-send-btn" onclick="mSendDayChat()">➔</button>
+                    </div>
+                </div>
+                <!-- Mafia night chat — only for mafia/don, persists across all nights -->
+                <div class="m-chat-area m-mafia-night-chat" id="m-mafia-chat-area" style="display:none">
+                    <div class="m-chat-area-hdr">
+                        <span class="mono m-chat-area-title">🌙 Нічний чат</span>
+                    </div>
+                    <div class="m-chat-msgs" id="m-mafia-chat-msgs"></div>
+                    <div class="m-chat-area-input" id="m-mafia-chat-input-wrap">
+                        <input id="m-mafia-chat-input" class="m-chat-inp" type="text"
+                            placeholder="Тільки мафія..." maxlength="200"
+                            onkeydown="if(event.key==='Enter')mSendMafiaChat()">
+                        <button class="m-chat-send-btn" onclick="mSendMafiaChat()">➔</button>
                     </div>
                 </div>
                 <div class="m-quick-replies" id="m-quick-replies" style="display:none">

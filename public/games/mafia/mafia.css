@@ -247,14 +247,30 @@
 
 /* Chat area */
 .m-chat-area {
-    flex: 1;
     display: flex;
     flex-direction: column;
     background: rgba(24,24,27,0.3);
     border: 1px solid var(--m-border);
     border-radius: 10px;
     overflow: hidden;
-    min-height: 120px;
+    min-height: 80px;
+}
+/* Day chat takes all available vertical space */
+.m-day-chat-area {
+    flex: 1;
+}
+/* Mafia night chat is fixed-height, shown below day chat */
+.m-mafia-night-chat {
+    flex-shrink: 0;
+    max-height: 200px;
+    border-color: rgba(185,28,28,0.45);
+    background: rgba(185,28,28,0.04);
+}
+.m-mafia-night-chat .m-chat-area-hdr {
+    border-bottom-color: rgba(185,28,28,0.25);
+}
+.m-mafia-night-chat .m-chat-area-title {
+    color: var(--m-red-l);
 }
 .m-chat-area-hdr {
     display: flex;

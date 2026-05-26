@@ -35,9 +35,9 @@ function initMafia(state, myIdx) {
     document.getElementById('mafia-screen').classList.add('visible');
     if (typeof switchViewport === 'function') switchViewport('mafia');
     setQuitBtn(true);
-    // Clear chat area on init
-    const chatMsgs = document.getElementById('m-chat-msgs');
-    if (chatMsgs) chatMsgs.innerHTML = '';
+    // Clear only day chat on game init; mafia chat persists across nights
+    const dayChatMsgs = document.getElementById('m-day-chat-msgs');
+    if (dayChatMsgs) dayChatMsgs.innerHTML = '';
     renderMafia();
 }
 
@@ -45,14 +45,8 @@ function updateMafia(state, sideEffect) {
     const prevPhase = mState?.phase;
     if (state.phase === 'night' && prevPhase !== 'night') {
         _mNightSelections = {};
-        // Clear chat for new night
-        const chatMsgs = document.getElementById('m-chat-msgs');
-        if (chatMsgs) chatMsgs.innerHTML = '';
     }
     if (state.phase === 'day_discussion' && prevPhase !== 'day_discussion') {
-        // Clear chat when day starts
-        const chatMsgs = document.getElementById('m-chat-msgs');
-        if (chatMsgs) chatMsgs.innerHTML = '';
         _mChatRound = 0;
     }
     mState = state;
@@ -66,7 +60,8 @@ function updateMafia(state, sideEffect) {
         }
         if (sideEffect.event === 'donResult') {
             const r = sideEffect;
-            const chatMsgs = document.getElementById('m-chat-msgs');
+            // Don result goes to mafia night chat (don is mafia faction)
+            const chatMsgs = document.getElementById('m-mafia-chat-msgs');
             if (chatMsgs) {
                 const msg = document.createElement('div');
                 msg.className = 'm-chat-msg system';
@@ -76,13 +71,12 @@ function updateMafia(state, sideEffect) {
                     </span>`;
                 chatMsgs.appendChild(msg);
                 chatMsgs.scrollTop = chatMsgs.scrollHeight;
-                mBumpChatBadge();
             }
         }
-        // Sheriff check result shown in chat area
+        // Sheriff check result goes to day chat (always visible, sheriff is town)
         if (sideEffect.event === 'sheriffResult') {
             const r = sideEffect;
-            const chatMsgs = document.getElementById('m-chat-msgs');
+            const chatMsgs = document.getElementById('m-day-chat-msgs');
             if (chatMsgs) {
                 const msg = document.createElement('div');
                 msg.className = 'm-chat-msg system';
@@ -236,34 +230,40 @@ function mUpdateChatUI() {
     const me = mState.players[mMyIdx];
     if (!me) return;
 
-    const chatTitleEl = document.getElementById('m-chat-title');
-    const chatInputEl = document.getElementById('m-chat-area-input');
-    const quickEl     = document.getElementById('m-quick-replies');
+    const dayTitleEl      = document.getElementById('m-day-chat-title');
+    const dayInputWrap    = document.getElementById('m-day-chat-input-wrap');
+    const dayInput        = document.getElementById('m-day-chat-input');
+    const mafiaChatArea   = document.getElementById('m-mafia-chat-area');
+    const quickEl         = document.getElementById('m-quick-replies');
 
-    let title    = 'Чат 💬';
-    let canChat  = false;
-    let showQuick = false;
+    const isNight     = mState.phase === 'night';
+    const isDay       = mState.phase === 'day_discussion' || mState.phase === 'day_voting';
+    const isMafia     = me.role === 'mafia' || me.role === 'don';
 
+    // Day chat: always visible
     if (!me.isAlive) {
-        title    = 'Чат Привидів 👻';
-        canChat  = true;
-    } else if (mState.phase === 'night') {
-        if (me.role === 'mafia' || me.role === 'don') {
-            title   = 'Чат Мафії 🍷';
-            canChat = true;
-        } else {
-            title   = 'Місто спить 🌙';
-            canChat = false;
-        }
-    } else if (mState.phase === 'day_discussion' || mState.phase === 'day_voting') {
-        title     = 'Загальний чат 💬';
-        canChat   = !me.isSilenced;
-        showQuick = !me.isSilenced;
+        if (dayTitleEl)   dayTitleEl.textContent    = 'Денний чат 💬 (привид)';
+        if (dayInputWrap) dayInputWrap.style.display = '';
+        if (dayInput)     dayInput.placeholder       = '👻 Написати як привид...';
+    } else if (isNight) {
+        if (dayTitleEl)   dayTitleEl.textContent    = '🌙 Місто спить — аналізуйте чат';
+        if (dayInputWrap) dayInputWrap.style.display = 'none';
+    } else if (isDay) {
+        if (dayTitleEl)   dayTitleEl.textContent    = 'Денний чат 💬';
+        if (dayInputWrap) dayInputWrap.style.display = me.isSilenced ? 'none' : '';
+        if (dayInput)     dayInput.placeholder       = 'Написати...';
+    } else {
+        if (dayTitleEl)   dayTitleEl.textContent    = 'Денний чат 💬';
+        if (dayInputWrap) dayInputWrap.style.display = 'none';
     }
 
-    if (chatTitleEl) chatTitleEl.textContent = title;
-    if (chatInputEl) chatInputEl.style.display = canChat  ? '' : 'none';
-    if (quickEl)     quickEl.style.display     = showQuick ? '' : 'none';
+    // Mafia night chat: only for mafia/don at night
+    if (mafiaChatArea) {
+        mafiaChatArea.style.display = (me.isAlive && isMafia && isNight) ? 'flex' : 'none';
+    }
+
+    // Quick replies: alive, day phase, not silenced
+    if (quickEl) quickEl.style.display = (me.isAlive && isDay && !me.isSilenced) ? '' : 'none';
 }
 
 // ── Player grid ───────────────────────────────
@@ -757,7 +757,7 @@ function mSpawnConfetti(winner) {
 
 // ── Chat ──────────────────────────────────────
 socket.on('mafiaChat', ({ playerId, name, text }) => {
-    const msgs = document.getElementById('m-chat-msgs');
+    const msgs = document.getElementById('m-mafia-chat-msgs');
     if (!msgs) return;
     const msg = document.createElement('div');
     msg.className = 'm-chat-msg mafia' + (playerId === mMyIdx ? ' me' : '');
@@ -767,10 +767,8 @@ socket.on('mafiaChat', ({ playerId, name, text }) => {
     mBumpChatBadge();
 });
 
-function mSendMafiaChat() { /* legacy — use mSendActiveChat */ }
-
 socket.on('dayChatMsg', ({ playerId, name, text, round }) => {
-    const msgs = document.getElementById('m-chat-msgs');
+    const msgs = document.getElementById('m-day-chat-msgs');
     if (!msgs) return;
     if (round && round !== _mChatRound) {
         _mChatRound = round;
@@ -789,7 +787,7 @@ socket.on('dayChatMsg', ({ playerId, name, text, round }) => {
 
 socket.on('deadChat', ({ name, text }) => {
     mDeadChatLog.push({ name, text });
-    const msgs = document.getElementById('m-chat-msgs');
+    const msgs = document.getElementById('m-day-chat-msgs');
     if (!msgs) return;
     const msg = document.createElement('div');
     msg.className = 'm-chat-msg ghost';
@@ -799,23 +797,43 @@ socket.on('deadChat', ({ name, text }) => {
     mBumpChatBadge();
 });
 
-// ── Unified chat send ─────────────────────────
-function mSendActiveChat() {
-    const input = document.getElementById('m-chat-input');
+// ── Chat send functions ───────────────────────
+function mSendDayChat() {
+    const input = document.getElementById('m-day-chat-input');
     if (!input) return;
     const text = input.value.trim();
     if (!text) return;
     const me = mState?.players[mMyIdx];
     if (!me) return;
-
     if (!me.isAlive) {
         socket.emit('deadChat', { text });
-    } else if (mState?.phase === 'night' && (me.role === 'mafia' || me.role === 'don')) {
-        socket.emit('mafiaChat', { text });
     } else if (mState?.phase === 'day_discussion' || mState?.phase === 'day_voting') {
         socket.emit('dayChatMsg', { text });
     }
     input.value = '';
+}
+
+function mSendMafiaChat() {
+    const input = document.getElementById('m-mafia-chat-input');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    const me = mState?.players[mMyIdx];
+    if (!me) return;
+    if (me.isAlive && mState?.phase === 'night' && (me.role === 'mafia' || me.role === 'don')) {
+        socket.emit('mafiaChat', { text });
+    }
+    input.value = '';
+}
+
+function mSendActiveChat() {
+    const me = mState?.players[mMyIdx];
+    if (!me) return;
+    if (me.isAlive && mState?.phase === 'night' && (me.role === 'mafia' || me.role === 'don')) {
+        mSendMafiaChat();
+    } else {
+        mSendDayChat();
+    }
 }
 
 function mQuickReply(prefix) {
@@ -829,10 +847,10 @@ function mQuickReply(prefix) {
             text = prefix.replace('...', ` ${rnd.name}`);
         }
     }
-    const input = document.getElementById('m-chat-input');
+    const input = document.getElementById('m-day-chat-input');
     if (input) {
         input.value = text;
-        mSendActiveChat();
+        mSendDayChat();
     }
 }
 
@@ -958,7 +976,7 @@ function mStartNightFlavor(deadline) {
     const remaining = Math.max(500, deadline - Date.now());
     NIGHT_FLAVOR.forEach(({ pct, icon, text }) => {
         const t = setTimeout(() => {
-            const msgs = document.getElementById('m-chat-msgs');
+            const msgs = document.getElementById('m-day-chat-msgs');
             if (!msgs) return;
             const msg = document.createElement('div');
             msg.className = 'm-flavor-msg';
@@ -1023,5 +1041,3 @@ function mShowMyRole() {
     showToast(`${rl.icon} ${rl.ua}${desc ? ' — ' + desc.slice(0, 60) : ''}`, { color: rl.color || '#333', duration: 4000 });
 }
 
-function mSendDayChat() { mSendActiveChat(); }
-function mSendDeadChat() { mSendActiveChat(); }
