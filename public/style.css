@@ -1610,6 +1610,37 @@ body {
         background: rgba(255,255,255,0.05);
     }
 
+/* ── Плаваюча кнопка входу ────────────────────── */
+.lobby-login-float {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    z-index: 500;
+    padding: 9px 18px;
+    background: rgba(10, 20, 38, 0.75);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 215, 0, 0.35);
+    border-radius: 10px;
+    color: #ffd700;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+.lobby-login-float:hover {
+    background: rgba(255, 215, 0, 0.12);
+    border-color: rgba(255, 215, 0, 0.7);
+    transform: translateY(-1px);
+}
+.lobby-login-float:active {
+    transform: translateY(0);
+}
+
+
     /* Dropdown вибору гри — тільки мобільний */
     .game-select-mobile {
         display: none;

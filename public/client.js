@@ -150,6 +150,7 @@ function _enterLobby(username, joinCode) {
         if (nameEl) nameEl.textContent = username;
         if (avatarEl) avatarEl.textContent = username[0].toUpperCase();
         if (logoutBtn) logoutBtn.style.display = '';
+        document.getElementById('lobby-login-btn')?.classList.add('hidden');
     } else {
         // Гість — поле вільне, кнопка виходу прихована
         if (nameInput) {
@@ -159,6 +160,7 @@ function _enterLobby(username, joinCode) {
             nameInput.removeAttribute('title');
         }
         document.getElementById('account-logout-btn')?.style.setProperty('display', 'none');
+        document.getElementById('lobby-login-btn')?.classList.remove('hidden');
     }
 
     // Показуємо банер запрошення якщо є код у URL або sessionStorage
@@ -733,6 +735,7 @@ function showHowToPlay() {
 function showLobbyWaiting(code) {
     _inviteCode = code;
     document.getElementById('lobby-screen').classList.add('hidden');
+    document.getElementById('lobby-login-btn')?.classList.add('hidden');
     document.getElementById('waiting-screen').classList.remove('hidden');
     const linkEl = document.getElementById('room-link-display');
     if (linkEl) linkEl.textContent = `${location.origin}${location.pathname}?join=${code}`;
@@ -755,6 +758,7 @@ function leaveRoom() {
     _inviteCode = '';
     document.getElementById('waiting-screen').classList.add('hidden');
     document.getElementById('lobby-screen').classList.remove('hidden');
+    if (_isGuest) document.getElementById('lobby-login-btn')?.classList.remove('hidden');
 }
 
 socket.on('roomClosed', ({ reason }) => {
