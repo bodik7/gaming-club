@@ -385,51 +385,12 @@
 
     <!-- ===== ІГРОВИЙ ЕКРАН ===== -->
     <div id="game-screen" class="game-screen hidden">
-
-        <!-- Топбар -->
-        <header class="mn-topbar">
-            <div class="mn-topbar-left">
-                <span class="mn-logo">🇺🇦</span>
-                <span class="mn-title">МОНОПОЛІЯ</span>
-                <span class="mn-room-code" id="mn-room-code"></span>
-            </div>
-            <div class="mn-topbar-center" id="current-player-info"></div>
-            <div class="mn-topbar-right">
-                <div id="turn-timer" class="mn-timer"></div>
-                <span id="connection-status" style="display:none;font-size:10px;font-weight:700;
-                    padding:2px 7px;border-radius:12px;background:#e8f5e9;color:#2e7d32">🟢</span>
-                <div id="quit-btn-monopoly" class="hidden"></div>
-            </div>
-        </header>
-
-        <!-- Таб-body -->
-        <div class="mn-body tab-board" id="mn-body">
-
-            <!-- ── Вкладка: Поле ── -->
-            <div class="mn-col mn-col-board">
-                <aside class="mn-players-strip" id="players-panel"></aside>
-                <main class="board-wrapper">
-                    <div class="board" id="board">
-                        <div class="board-center">
-                            <div class="logo">🇺🇦</div>
-                            <div class="logo-text">МОНОПОЛІЯ<br>УКРАЇНИ</div>
-                            <div class="dice-area">
-                                <div class="die" id="die1">?</div>
-                                <div class="die" id="die2">?</div>
-                            </div>
-                            <button id="roll-btn"     class="big-btn" onclick="rollDice()">🎲 Кинути кубики</button>
-                            <button id="end-turn-btn" class="big-btn hidden" onclick="endTurn()">Завершити хід</button>
-                        </div>
-                    </div>
-                </main>
-            </div>
-
-            <!-- ── Вкладка: Чат ── -->
-            <div class="mn-col mn-col-chat">
-                <div class="mn-chat-area">
-                    <div class="mn-chat-hdr">
-                        <span class="mn-chat-title">💬 Чат гравців</span>
-                    </div>
+        <div class="game-layout">
+            <!-- Ліва панель: гравці + чат -->
+            <div class="left-panel">
+                <aside class="players-panel" id="players-panel"></aside>
+                <div class="chat-panel">
+                    <h3 class="chat-title">💬 Чат гравців</h3>
                     <div class="chat-messages" id="chat-messages"></div>
                     <div class="chat-input-row">
                         <input type="text" id="chat-input" class="chat-input"
@@ -440,35 +401,38 @@
                 </div>
             </div>
 
-            <!-- ── Вкладка: Дії ── -->
-            <div class="mn-col mn-col-actions">
+            <!-- Центр: дошка -->
+            <main class="board-wrapper">
+                <div class="board" id="board">
+                    <div class="board-center">
+                        <div class="logo">🇺🇦</div>
+                        <div class="logo-text">МОНОПОЛІЯ<br>УКРАЇНИ</div>
+                        <div class="dice-area">
+                            <div class="die" id="die1">?</div>
+                            <div class="die" id="die2">?</div>
+                        </div>
+                        <button id="roll-btn"    class="big-btn" onclick="rollDice()">🎲 Кинути кубики</button>
+                        <button id="end-turn-btn" class="big-btn hidden" onclick="endTurn()">Завершити хід</button>
+                        <div id="turn-timer" style="min-height:28px;margin:2px 0"></div>
+                        <div class="current-player" id="current-player-info"></div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Права панель: дії та лог -->
+            <aside class="actions-panel">
+                <div id="quit-btn-monopoly" class="hidden"></div>
                 <div class="action-buttons" id="action-buttons"></div>
                 <div class="log" id="log">
-                    <h3>Хід гри</h3>
+                    <h3 style="display:flex;justify-content:space-between;align-items:center">
+                        Хід гри
+                        <span id="connection-status" style="display:none;font-size:11px;font-weight:700;
+                            padding:2px 8px;border-radius:12px;background:#e8f5e9;color:#2e7d32">🟢</span>
+                    </h3>
                     <div id="log-content"></div>
                 </div>
-            </div>
-
-        </div><!-- /.mn-body -->
-
-        <!-- Мобільні вкладки -->
-        <nav class="mn-bottom-tabs" id="mn-bottom-tabs">
-            <button class="mn-tab-btn active" data-tab="board" onclick="mnSwitchTab('board')">
-                <span class="mn-tab-icon">🏦</span>
-                <span class="mn-tab-label">Поле</span>
-            </button>
-            <button class="mn-tab-btn" data-tab="chat" onclick="mnSwitchTab('chat')">
-                <span class="mn-tab-icon">💬</span>
-                <span class="mn-tab-label">Чат</span>
-                <span class="mn-tab-badge hidden" id="mn-badge-chat">0</span>
-            </button>
-            <button class="mn-tab-btn" data-tab="actions" onclick="mnSwitchTab('actions')">
-                <span class="mn-tab-icon">⚙️</span>
-                <span class="mn-tab-label">Дії</span>
-                <span class="mn-tab-badge mn-badge-alert hidden" id="mn-badge-actions">!</span>
-            </button>
-        </nav>
-
+            </aside>
+        </div>
     </div>
 
     <!-- Модальне вікно -->

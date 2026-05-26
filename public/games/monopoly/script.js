@@ -148,49 +148,9 @@ function startGame() {
     saveGame();
 }
 
-// ── Таб-навігація ────────────────────────────
-let _mnActiveTab = 'board';
-let _mnChatBadge = 0;
-
-function mnSwitchTab(tab) {
-    _mnActiveTab = tab;
-    const body = document.getElementById('mn-body');
-    if (body) {
-        body.classList.remove('tab-board', 'tab-chat', 'tab-actions');
-        body.classList.add('tab-' + tab);
-    }
-    document.querySelectorAll('.mn-tab-btn').forEach(btn =>
-        btn.classList.toggle('active', btn.dataset.tab === tab));
-
-    if (tab === 'chat') {
-        _mnChatBadge = 0;
-        const b = document.getElementById('mn-badge-chat');
-        if (b) { b.textContent = '0'; b.classList.add('hidden'); }
-    }
-    if (tab === 'actions') {
-        const b = document.getElementById('mn-badge-actions');
-        if (b) b.classList.add('hidden');
-    }
-}
-
-function mnBumpChatBadge() {
-    if (_mnActiveTab === 'chat') return;
-    _mnChatBadge++;
-    const b = document.getElementById('mn-badge-chat');
-    if (b) { b.textContent = _mnChatBadge > 9 ? '9+' : _mnChatBadge; b.classList.remove('hidden'); }
-}
-
-function mnShowActionsBadge() {
-    if (_mnActiveTab === 'actions') return;
-    const b = document.getElementById('mn-badge-actions');
-    if (b) b.classList.remove('hidden');
-}
-
 function showGameScreen() {
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('game-screen').classList.remove('hidden');
-    _mnActiveTab = 'board';
-    mnSwitchTab('board');
     buildBoard();
     renderPlayers();
     renderActionButtons();
