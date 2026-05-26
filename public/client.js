@@ -393,11 +393,12 @@ function closeCabinet() {
 function cabSwitchTab(tab) {
     document.querySelectorAll('.cab-tab').forEach(t =>
         t.classList.toggle('active', t.dataset.tab === tab));
-    ['profile', 'stats', 'admin'].forEach(p => {
+    ['profile', 'stats', 'history', 'admin'].forEach(p => {
         const el = document.getElementById(`cab-panel-${p}`);
         if (el) el.classList.toggle('hidden', p !== tab);
     });
-    if (tab === 'admin') cabLoadAdmin();
+    if (tab === 'admin')   cabLoadAdmin();
+    if (tab === 'history') cabLoadHistory();
 }
 
 function cabPickColor(btn) {
@@ -543,6 +544,54 @@ async function cabLoadStats() {
             : 'Ще не зіграно жодної гри';
     } catch {
         if (listEl) listEl.innerHTML = '<div class="cab-loading">Помилка завантаження</div>';
+    }
+}
+
+async function cabLoadHistory() {
+    const el = document.getElementById('cab-panel-history');
+    if (!el) return;
+    const auth = loadAuth();
+    const TITLE = '<div class="cab-section-title">Останні матчі</div>';
+    el.innerHTML = TITLE + '<div class="cab-loading">Завантаження…</div>';
+    try {
+        const res = await fetch('/api/history', { headers: { Authorization: `Bearer ${auth?.token}` } });
+        if (!res.ok) throw new Error();
+        const history = await res.json();
+        if (!history.length) {
+            el.innerHTML = TITLE + '<div class="cab-loading" style="opacity:.5">Ще немає зіграних ігор</div>';
+            return;
+        }
+        const ROLE_UA = { citizen:'Мирний', sheriff:'Комісар', deputy:'Помічник', doctor:'Лікар',
+            roleblocker:'Повія', mafia:'Мафія', don:'Дон', maniac:'Маньяк' };
+        const WINNER_UA = { town:'Місто', mafia:'Мафія', maniac:'Маньяк' };
+        el.innerHTML = TITLE + history.map(h => {
+            const me = (h.players || []).find(p => p.username === _authUsername);
+            const won = me?.won;
+            const role = me?.role ? (ROLE_UA[me.role] || me.role) : null;
+            const winnerLabel = WINNER_UA[h.winner] || h.winner || '—';
+            const date = h.playedAt ? new Date(h.playedAt + 'Z').toLocaleDateString('uk-UA', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
+            const badge = won === true
+                ? `<span style="background:#1b5e20;color:#a5d6a7;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">✅ Перемога</span>`
+                : won === false
+                ? `<span style="background:#4a1616;color:#ef9a9a;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">❌ Поразка</span>`
+                : `<span style="background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.4);padding:2px 8px;border-radius:6px;font-size:11px">—</span>`;
+            const players = (h.players || []).map(p => _esc(p.name)).join(', ');
+            return `<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:10px 14px;margin-bottom:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                    <span style="font-weight:700;color:rgba(255,255,255,0.9)">${GAME_LABELS[h.gameType]||h.gameType}</span>
+                    ${badge}
+                </div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.45);display:flex;gap:12px;flex-wrap:wrap">
+                    ${role ? `<span>👤 ${role}</span>` : ''}
+                    ${h.winner ? `<span>🏆 ${winnerLabel}</span>` : ''}
+                    ${h.rounds ? `<span>🔄 ${h.rounds} раундів</span>` : ''}
+                    <span>📅 ${date}</span>
+                </div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.25);margin-top:4px">${players}</div>
+            </div>`;
+        }).join('');
+    } catch {
+        el.innerHTML = TITLE + '<div class="cab-loading">Помилка завантаження</div>';
     }
 }
 
@@ -1574,11 +1623,12 @@ function _spectateCode(code) {
     socket.emit('spectatorJoin', { code }, ({ success, error, state, gameType }) => {
         if (error) { showModal({ title: '❌ Помилка', body: `<p style="text-align:center;padding:12px;color:#f88">${_esc(error)}</p>`, buttons: [{ text: 'OK', class: 'btn-secondary', action: closeModal }] }); return; }
         _isSpectator = true;
-        myPlayerIndex = -1;
+        myPlayerIndex = null;
         document.getElementById('lobby-screen').classList.add('hidden');
         _showSpectatorBar();
         _showEmojiBar(true);
-        if (gameType === 'durak') { initDurak(state, -1); return; }
+        if (gameType === 'mafia')   { initMafia(state, null); return; }
+        if (gameType === 'durak')   { initDurak(state, -1); return; }
         if (gameType === 'tysyacha') { initTysyacha(state, -1); return; }
         showGameScreen();
         applyState(state, false, null, null);
@@ -2386,11 +2436,12 @@ function spectateRoom() {
     socket.emit('spectatorJoin', { code }, ({ success, error, state, gameType }) => {
         if (error) { _lobbyError(error); return; }
         _isSpectator = true;
-        myPlayerIndex = -1;
+        myPlayerIndex = null;
         document.getElementById('lobby-screen').classList.add('hidden');
         _showSpectatorBar();
         _showEmojiBar(true);
-        if (gameType === 'durak') { initDurak(state, -1); return; }
+        if (gameType === 'mafia')   { initMafia(state, null); return; }
+        if (gameType === 'durak')   { initDurak(state, -1); return; }
         if (gameType === 'tysyacha') { initTysyacha(state, -1); return; }
         showGameScreen();
         applyState(state, false, null, null);
@@ -2403,7 +2454,7 @@ function leaveSpectate() {
     myPlayerIndex = null;
     _showSpectatorBar(false);
     _showEmojiBar(false);
-    ['game-screen','durak-screen','tysyacha-screen'].forEach(id => {
+    ['game-screen','durak-screen','tysyacha-screen','mafia-screen'].forEach(id => {
         document.getElementById(id)?.classList.add('hidden');
     });
     document.getElementById('lobby-screen').classList.remove('hidden');

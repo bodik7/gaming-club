@@ -208,18 +208,31 @@ function mRenderPhaseInfo() {
 
     // Action prompt
     const promptEl = document.getElementById('m-action-prompt');
-    if (promptEl && me) {
-        const actionType = mGetActionTypeForRole(me.role);
-        const prompts = {
-            night:          me.isAlive ? (actionType ? 'Нічна дія: оберіть ціль' : 'Ви спите...') : 'Ви загинули',
-            day_discussion: 'Обговорення: шукайте мафію',
-            day_voting:     'Голосуйте проти підозрюваного',
-            morning:        'Місто прокидається...',
-            role_reveal:    'Ознайомтесь зі своєю роллю',
-            resolving:      'Підраховуємо голоси...',
-            gameover:       'Гра завершена',
-        };
-        promptEl.textContent = prompts[mState.phase] || '';
+    if (promptEl) {
+        if (!me) {
+            const spectatorPrompts = {
+                night:          '👁 Ніч — спостерігаєте',
+                day_discussion: '👁 Обговорення — спостерігаєте',
+                day_voting:     '👁 Голосування — спостерігаєте',
+                morning:        '👁 Ранок',
+                role_reveal:    '👁 Режим глядача',
+                resolving:      '👁 Підраховуємо голоси...',
+                gameover:       '👁 Гра завершена',
+            };
+            promptEl.textContent = spectatorPrompts[mState.phase] || '👁 Спостерігаєте';
+        } else {
+            const actionType = mGetActionTypeForRole(me.role);
+            const prompts = {
+                night:          me.isAlive ? (actionType ? 'Нічна дія: оберіть ціль' : 'Ви спите...') : 'Ви загинули',
+                day_discussion: 'Обговорення: шукайте мафію',
+                day_voting:     'Голосуйте проти підозрюваного',
+                morning:        'Місто прокидається...',
+                role_reveal:    'Ознайомтесь зі своєю роллю',
+                resolving:      'Підраховуємо голоси...',
+                gameover:       'Гра завершена',
+            };
+            promptEl.textContent = prompts[mState.phase] || '';
+        }
     }
 
     // Alive count
@@ -232,7 +245,19 @@ function mRenderPhaseInfo() {
 }
 
 function mUpdateChatUI() {
-    if (!mState || mMyIdx === null) return;
+    if (!mState) return;
+    if (mMyIdx === null) {
+        // Spectator: read-only day chat
+        const dayTitleEl   = document.getElementById('m-day-chat-title');
+        const dayInputWrap = document.getElementById('m-day-chat-input-wrap');
+        const mafiaChatArea = document.getElementById('m-mafia-chat-area');
+        const quickEl      = document.getElementById('m-quick-replies');
+        if (dayTitleEl)   dayTitleEl.textContent    = '👁 Денний чат (глядач)';
+        if (dayInputWrap) dayInputWrap.style.display = 'none';
+        if (mafiaChatArea) mafiaChatArea.style.display = 'none';
+        if (quickEl) quickEl.style.display = 'none';
+        return;
+    }
     const me = mState.players[mMyIdx];
     if (!me) return;
 
@@ -417,6 +442,14 @@ function mRenderActions() {
     const actionsEl  = document.getElementById('m-actions');
     const playersSec = document.getElementById('m-players-section');
     const panelEl    = document.getElementById('m-action-panel');
+
+    // Spectator: always show players, no actions
+    if (!me) {
+        if (actionsEl)  actionsEl.style.display  = 'none';
+        if (playersSec) playersSec.style.display = 'flex';
+        if (panelEl)    panelEl.style.display    = 'none';
+        return;
+    }
 
     const fullScreenPhases = ['role_reveal', 'morning', 'resolving', 'gameover'];
     const isFullScreen = fullScreenPhases.includes(s.phase);

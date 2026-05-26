@@ -48,9 +48,18 @@ async function init() {
             state_json TEXT NOT NULL,
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         )` },
+        { sql: `CREATE TABLE IF NOT EXISTS game_history (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_type    TEXT NOT NULL,
+            winner       TEXT,
+            rounds       INTEGER DEFAULT 0,
+            played_at    TEXT NOT NULL DEFAULT (datetime('now')),
+            players_json TEXT NOT NULL DEFAULT '[]'
+        )` },
         { sql: `CREATE INDEX IF NOT EXISTS idx_stats_username  ON game_stats(username)` },
         { sql: `CREATE INDEX IF NOT EXISTS idx_stats_game_type ON game_stats(game_type)` },
         { sql: `CREATE INDEX IF NOT EXISTS idx_rooms_updated   ON rooms_backup(updated_at)` },
+        { sql: `CREATE INDEX IF NOT EXISTS idx_history_played  ON game_history(played_at)` },
     ], 'deferred');
 
     // Міграції: нові колонки (ігнор "duplicate column" — норма при повторному старті)
@@ -195,6 +204,40 @@ async function getLeaderboard(gameType) {
     }));
 }
 
+async function saveGameHistory(gameType, winner, rounds, players) {
+    // players: [{ username, name, role, won }]
+    const withUsername = (players || []).filter(p => p.username);
+    if (!withUsername.length) return;
+    try {
+        await getClient().execute({
+            sql:  `INSERT INTO game_history (game_type, winner, rounds, players_json) VALUES (?, ?, ?, ?)`,
+            args: [gameType, winner || null, rounds || 0, JSON.stringify(players || [])],
+        });
+    } catch (e) { console.error('[db] saveGameHistory:', e.message); }
+}
+
+async function getHistory(username, limit = 20) {
+    const result = await getClient().execute({
+        sql:  `SELECT id, game_type, winner, rounds, played_at, players_json
+               FROM game_history
+               WHERE players_json LIKE ?
+               ORDER BY played_at DESC LIMIT ?`,
+        args: [`%"username":"${username}"%`, limit],
+    });
+    return result.rows.map(r => {
+        let players = [];
+        try { players = JSON.parse(r.players_json); } catch {}
+        return {
+            id:       r.id,
+            gameType: r.game_type,
+            winner:   r.winner,
+            rounds:   r.rounds,
+            playedAt: r.played_at,
+            players,
+        };
+    });
+}
+
 // ── Rooms (crash recovery) ────────────────────
 async function saveRoom(code, gameType, state) {
     try {
@@ -271,6 +314,7 @@ module.exports = {
     init, getClient,
     getUser, createUser, updateProfile, getAllUsers, deleteUser, setAdmin,
     addStat, getStats, getLeaderboard, saveGameStats,
+    saveGameHistory, getHistory,
     saveRoom, getRoom, deleteRoom, getAllRooms, cleanOldRooms,
     cleanOldStats, cleanGhostUsers,
 };

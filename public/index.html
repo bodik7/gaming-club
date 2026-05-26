@@ -666,6 +666,7 @@
                 <div class="cab-tabs">
                     <button class="cab-tab active" data-tab="profile" onclick="cabSwitchTab('profile')">Профіль</button>
                     <button class="cab-tab" data-tab="stats"   onclick="cabSwitchTab('stats')">Статистика</button>
+                    <button class="cab-tab" data-tab="history" onclick="cabSwitchTab('history')">🕹 Матчі</button>
                     <button class="cab-tab cab-tab-admin hidden" data-tab="admin" onclick="cabSwitchTab('admin')">⚡ Адмін</button>
                 </div>
 
@@ -687,6 +688,9 @@
                     <button class="cab-save-btn" onclick="cabSaveProfile()">💾 Зберегти зміни</button>
                     <div id="cab-save-msg" class="cab-save-msg"></div>
                 </div>
+
+                <!-- Матчі (історія ігор) -->
+                <div id="cab-panel-history" class="cab-panel hidden"></div>
 
                 <!-- Статистика -->
                 <div id="cab-panel-stats" class="cab-panel hidden">

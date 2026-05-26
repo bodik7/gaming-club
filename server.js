@@ -277,6 +277,12 @@ app.get('/api/leaderboard/:gameType', async (req, res) => {
     res.json(rows);
 });
 
+// Історія матчів поточного юзера
+app.get('/api/history', requireAuth, async (req, res) => {
+    const history = await db.getHistory(req.authUser.username, 20);
+    res.json(history);
+});
+
 // ── Кімнати: { [code]: Room } ───────────────
 const rooms = {};
 const roomStore = {
@@ -346,10 +352,18 @@ tysyachaMod.init(io);
 durakMod.init(io);
 bunkerMod.init(io, db);
 mafiaMod.init(io, db, roomStore, (room) => {
+    const mWinner = room.state?.winner;
     db.saveGameStats(room, rp => {
         const p = room.state?.players[rp.index];
-        return p ? MAFIA_ROLE_LABELS[p.role]?.faction === room.state.winner : false;
+        return p ? MAFIA_ROLE_LABELS[p.role]?.faction === mWinner : false;
     });
+    db.saveGameHistory('mafia', mWinner, room.state?.round || 0,
+        room.players.filter(p => p.username).map(rp => {
+            const p = room.state?.players[rp.index];
+            return { username: rp.username, name: rp.name, role: p?.role || null,
+                     won: p ? MAFIA_ROLE_LABELS[p.role]?.faction === mWinner : false };
+        })
+    );
     db.deleteRoom(room.code);
     cleanupRoom(room.code);
 });
@@ -422,6 +436,7 @@ io.on('connection', (socket) => {
             state: null,
             gameType: gtype,
             ready: new Set(),
+            spectators: new Set(),
             createdAt: Date.now(),
             lastActivityAt: Date.now(),
         };
@@ -469,6 +484,7 @@ io.on('connection', (socket) => {
 
         // Глядач просто виходить з socket-кімнати
         if (socket.isSpectator) {
+            room.spectators?.delete(socket.id);
             socket.leave(socket.roomCode);
             socket.roomCode = null;
             socket.isSpectator = false;
@@ -579,6 +595,12 @@ io.on('connection', (socket) => {
         if (alive.length === 1) {
             addLog(state, `🏆 ${alive[0].name} — переможець!`, 'success');
             db.saveGameStats(room, rp => alive[0].name === state.players[rp.index]?.name);
+            db.saveGameHistory('monopoly', alive[0].name, state.round || 0,
+                room.players.filter(p => p.username).map(rp => ({
+                    username: rp.username, name: rp.name,
+                    won: alive[0].name === state.players[rp.index]?.name,
+                }))
+            );
             db.deleteRoom(room.code);
             io.to(code).emit('gameOver', { winner: alive[0], state: sanitize(state) });
             cleanupRoom(code);
@@ -663,7 +685,7 @@ io.on('connection', (socket) => {
                 playerCount: r.players.filter(p => !p.isBot).length,
                 playerNames: r.players.filter(p => !p.isBot).map(p => p.name),
                 avatars:     r.players.filter(p => !p.isBot).map(p => ({ avatarId: p.avatarId || null, avatarColor: p.avatarColor || '#1a56db' })),
-                canSpectate: r.gameType !== 'mafia',
+                canSpectate: true,
             }));
         cb({ rooms: active });
     });
@@ -909,6 +931,11 @@ io.on('connection', (socket) => {
             const result = processDurakAction(state, type, data||{}, socket.playerIndex);
             if (result?.event === 'dGameOver') {
                 db.saveGameStats(room, rp => state.loser !== rp.index);
+                db.saveGameHistory('durak', null, state.round || 0,
+                    room.players.filter(p => p.username).map(rp => ({
+                        username: rp.username, name: rp.name, won: state.loser !== rp.index,
+                    }))
+                );
                 db.deleteRoom(room.code);
                 room.players.forEach(rp => {
                     io.to(rp.socketId).emit('gameOver', {
@@ -950,6 +977,11 @@ io.on('connection', (socket) => {
                         gameType: 'mafia',
                     });
                 });
+                // Spectators also get gameover
+                if (room.spectators?.size) {
+                    const specState = sanitizeMafia(state, -1);
+                    room.spectators.forEach(sid => io.to(sid).emit('gameOver', { state: specState, gameType: 'mafia' }));
+                }
                 cleanupRoom(room.code);
             } else {
                 emitMafiaUpdate(room, null);
@@ -964,6 +996,11 @@ io.on('connection', (socket) => {
             const result = processTysyachaAction(state, type, data || {}, socket.playerIndex);
             if (result?.event === 'tGameOver') {
                 db.saveGameStats(room, rp => state.winner === rp.index);
+                db.saveGameHistory('tysyacha', state.players[state.winner]?.name || null, state.round || 0,
+                    room.players.filter(p => p.username).map(rp => ({
+                        username: rp.username, name: rp.name, won: state.winner === rp.index,
+                    }))
+                );
                 db.deleteRoom(room.code);
                 room.players.forEach(rp => {
                     io.to(rp.socketId).emit('gameOver', {
@@ -1016,6 +1053,12 @@ io.on('connection', (socket) => {
             clearTradeTimer(room);
             addLog(state, `🏆 ${alive[0].name} — переможець!`, 'success');
             db.saveGameStats(room, rp => alive[0].name === state.players[rp.index]?.name);
+            db.saveGameHistory('monopoly', alive[0].name, state.round || 0,
+                room.players.filter(p => p.username).map(rp => ({
+                    username: rp.username, name: rp.name,
+                    won: alive[0].name === state.players[rp.index]?.name,
+                }))
+            );
             db.deleteRoom(room.code);
             io.to(socket.roomCode).emit('gameOver', { winner: alive[0], state: sanitize(state) });
             cleanupRoom(socket.roomCode);
@@ -1086,14 +1129,17 @@ io.on('connection', (socket) => {
         const room = roomStore.get(code.toUpperCase());
         if (!room) return cb({ error: 'not_found' });
         if (!room.started || !room.state) return cb({ error: 'Гра ще не почалась' });
-        if (room.gameType === 'mafia') return cb({ error: 'Глядачі в Мафії недоступні' });
 
         socket.join(code.toUpperCase());
         socket.roomCode    = code.toUpperCase();
         socket.playerIndex = null;
         socket.isSpectator = true;
+        if (!room.spectators) room.spectators = new Set();
+        room.spectators.add(socket.id);
 
-        const st = room.gameType === 'tysyacha'
+        const st = room.gameType === 'mafia'
+            ? sanitizeMafia(room.state, -1)
+            : room.gameType === 'tysyacha'
             ? sanitizeTysyacha(room.state, -1)
             : room.gameType === 'durak'
             ? sanitizeDurak(room.state, -1)
@@ -1156,6 +1202,7 @@ io.on('connection', (socket) => {
         const room = roomStore.get(socket.roomCode);
         if (!room) return;
         if (socket.isSpectator) {
+            room.spectators?.delete(socket.id);
             socket.leave(socket.roomCode);
             socket.roomCode = null;
             socket.isSpectator = false;

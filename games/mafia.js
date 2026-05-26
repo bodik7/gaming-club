@@ -85,9 +85,12 @@ function createMafiaState(roomPlayers, settings = {}) {
 }
 
 function sanitizeMafia(state, forIdx) {
-    const me = state.players[forIdx];
+    const isSpectator = forIdx === -1;
+    const me = isSpectator ? null : state.players[forIdx];
     const myRole = me?.role;
     const myFaction = MAFIA_ROLE_LABELS[myRole]?.faction;
+    // Dead players and spectators see all roles (they have nothing to hide)
+    const seeAll = isSpectator || (me && !me.isAlive) || state.phase === 'gameover';
 
     return {
         gameType:   'mafia',
@@ -103,20 +106,22 @@ function sanitizeMafia(state, forIdx) {
             isSilenced: p.isSilenced,
             avatarId:   p.avatarId   || null,
             avatarColor: p.avatarColor || '#1a56db',
-            role: (p.id === forIdx || state.phase === 'gameover' ||
+            role: (seeAll ||
+                   p.id === forIdx ||
                    (myFaction === 'mafia' && MAFIA_ROLE_LABELS[p.role]?.faction === 'mafia') ||
                    (myRole === 'sheriff' && p.role === 'deputy') ||
                    (myRole === 'deputy'  && p.role === 'sheriff'))
                 ? p.role : null,
         })),
         myId:        forIdx,
-        myRole,
-        myFaction,
-        myRoleLabel: MAFIA_ROLE_LABELS[myRole] || null,
-        mafiaIds:        myFaction === 'mafia' ? state.mafiaIds : null,
-        sheriffFindings: (myRole === 'sheriff' || myRole === 'deputy') ? state.sheriffFindings : null,
-        donFindings:     myRole === 'don' ? state.donFindings : null,
-        myVote:    state.votes?.[forIdx] ?? null,
+        myRole:      isSpectator ? null : myRole,
+        myFaction:   isSpectator ? null : myFaction,
+        myRoleLabel: isSpectator ? null : (MAFIA_ROLE_LABELS[myRole] || null),
+        isSpectator,
+        mafiaIds:        (myFaction === 'mafia' || isSpectator || seeAll) ? state.mafiaIds : null,
+        sheriffFindings: (myRole === 'sheriff' || myRole === 'deputy' || seeAll) ? state.sheriffFindings : null,
+        donFindings:     (myRole === 'don' || seeAll) ? state.donFindings : null,
+        myVote:    isSpectator ? null : (state.votes?.[forIdx] ?? null),
         allVotes:  state.phase === 'day_voting' ? { ...state.votes } : {},
         voteCount: state.phase === 'day_voting'
             ? state.players.filter(p => p.isAlive && !p.isSilenced && state.votes[p.id] !== undefined).length
@@ -138,6 +143,26 @@ function emitMafiaUpdate(room, sideEffect) {
             sideEffect: sideEffect || null,
         });
     });
+    // Emit to spectators (read-only view with all roles revealed)
+    if (room.spectators?.size) {
+        const spectatorState = sanitizeMafia(room.state, -1);
+        room.spectators.forEach(sid => {
+            _io.to(sid).emit('stateUpdate', { state: spectatorState, sideEffect: null });
+        });
+    }
+}
+
+function emitMafiaGameOver(room) {
+    room.players.forEach(rp => {
+        if (!rp.socketId) return;
+        _io.to(rp.socketId).emit('gameOver', { state: sanitizeMafia(room.state, rp.index), gameType: 'mafia' });
+    });
+    if (room.spectators?.size) {
+        const spectatorState = sanitizeMafia(room.state, -1);
+        room.spectators.forEach(sid => {
+            _io.to(sid).emit('gameOver', { state: spectatorState, gameType: 'mafia' });
+        });
+    }
 }
 
 function checkMafiaWin(state) {
@@ -287,10 +312,7 @@ function startMorningPhase(room, sheriffResult, newSheriffIdx = null, donResult 
     }
 
     if (checkMafiaWin(state)) {
-        room.players.forEach(rp => {
-            if (!rp.socketId) return;
-            _io.to(rp.socketId).emit('gameOver', { state: sanitizeMafia(state, rp.index), gameType: 'mafia' });
-        });
+        emitMafiaGameOver(room);
         _onGameOver(room);
         return;
     }
@@ -370,10 +392,7 @@ function resolveVoting(room) {
     }
 
     if (checkMafiaWin(state)) {
-        room.players.forEach(rp => {
-            if (!rp.socketId) return;
-            _io.to(rp.socketId).emit('gameOver', { state: sanitizeMafia(state, rp.index), gameType: 'mafia' });
-        });
+        emitMafiaGameOver(room);
         _onGameOver(room);
         return;
     }

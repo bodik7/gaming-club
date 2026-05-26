@@ -488,6 +488,11 @@ function eliminatePlayers(room, toEliminate) {
         });
         addBunkerLog(s, `🏆 Бункер зачиняється! Виживають: ${remaining.map(p => p.name).join(', ')}`);
         _db.saveGameStats(room, rp => s.winner.includes(rp.index));
+        _db.saveGameHistory('bunker', null, s.round || 0,
+            room.players.filter(p => p.username).map(rp => ({
+                username: rp.username, name: rp.name, won: s.winner.includes(rp.index),
+            }))
+        );
         _db.deleteRoom(room.code);
         emitBunkerUpdate(room);
         generateBunkerEpilogue(s).then(text => {
