@@ -439,7 +439,24 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
 
         socket.on('restartGame', () => {
             const room = roomStore.get(socket.roomCode);
-            if (!room || socket.playerIndex !== 0) return;
+            if (!room) return;
+
+            // Voting: host can restart immediately; others add a vote
+            if (socket.playerIndex !== 0) {
+                if (!room.restartVotes) room.restartVotes = new Set();
+                room.restartVotes.add(socket.playerIndex);
+                const needed = Math.ceil(room.players.length / 2);
+                io.to(socket.roomCode).emit('restartVoteUpdate', {
+                    votes: room.restartVotes.size,
+                    total: room.players.length,
+                    needed,
+                });
+                if (room.restartVotes.size < needed) return;
+                room.restartVotes.clear();
+            } else {
+                if (room.restartVotes) room.restartVotes.clear();
+            }
+
             const gameType = room.state?.gameType || room.gameType;
             if (gameType === 'durak') {
                 room.state = createDurakState(room.players, room.settings || {});

@@ -55,21 +55,44 @@ function updateDurak(state, sideEffect){
     }
 }
 
+let _dTimerTotal = 45; // DURAK_TURN_MS / 1000
+
 function dStartClientTimer(){
     if(dTimerInterval) clearInterval(dTimerInterval);
+    const bar = document.getElementById('d-timer-bar');
     dTimerInterval = setInterval(()=>{
         const el = document.getElementById('d-timer');
-        if(!el || !dState?.turnDeadline){ if(el) el.textContent=''; return; }
-        const sec = Math.max(0, Math.ceil((dState.turnDeadline - Date.now()) / 1000));
+        if(!el || !dState?.turnDeadline){
+            if(el) el.innerHTML = '';
+            if(bar) bar.style.width = '0%';
+            return;
+        }
+        const remaining = Math.max(0, dState.turnDeadline - Date.now());
+        const sec = Math.ceil(remaining / 1000);
+        const pct = Math.min(100, (remaining / (_dTimerTotal * 1000)) * 100);
         const urgent = sec <= 10;
-        el.textContent = `⏱ ${sec}с`;
-        el.style.cssText = `display:inline-block;padding:2px 10px;border-radius:12px;font-size:13px;
-            font-weight:900;font-family:sans-serif;
-            background:${urgent?'rgba(178,34,34,0.9)':'rgba(0,0,0,0.5)'};
-            color:${urgent?'#fff':'rgba(245,230,200,0.7)'};
-            ${urgent?'animation:dTimerPulse 0.5s ease-in-out infinite alternate':''}`;
+        const color = urgent ? '#ef5350' : sec <= 20 ? '#ffa726' : '#c9a227';
+
+        // SVG mini-ring
+        const R = 10, C = 2 * Math.PI * R;
+        const dash = (pct / 100) * C;
+        el.innerHTML = `<svg width="28" height="28" viewBox="0 0 28 28" style="transform:rotate(-90deg);flex-shrink:0">
+            <circle cx="14" cy="14" r="${R}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3"/>
+            <circle cx="14" cy="14" r="${R}" fill="none" stroke="${color}" stroke-width="3"
+                stroke-dasharray="${C}" stroke-dashoffset="${C - dash}"
+                style="transition:stroke-dashoffset 0.5s linear,stroke 0.3s"/>
+        </svg>
+        <span style="font-size:12px;font-weight:900;font-family:sans-serif;color:${color};
+            ${urgent ? 'animation:dTimerPulse 0.4s ease-in-out infinite alternate' : ''}">${sec}</span>`;
+        el.style.cssText = `display:flex;align-items:center;gap:2px;margin-right:4px`;
+
+        if(bar){
+            bar.style.width = pct + '%';
+            bar.style.background = color;
+            bar.style.opacity = urgent ? '0.9' : '0.6';
+        }
         if(sec === 0) clearInterval(dTimerInterval);
-    }, 500);
+    }, 250);
 }
 
 function renderDurak(){
@@ -348,14 +371,18 @@ function renderDHandActions(s){
     if(ph==='gameover'){
         const loser = s.loser!==null ? s.players[s.loser]?.name : null;
         const iWon = s.loser !== dMyIdx;
-        const isHost = dMyIdx===0;
+        const rounds = s.log ? s.log.filter(l => l.includes('Хід ')).length : 0;
         if(!dGameoverProcessed){ dGameoverProcessed=true; updateStats('durak', iWon); playSound(iWon?'win':'lose'); if(iWon) dSpawnConfetti(); }
         const st = getStats('durak');
+        const rematchBtn = `<button class="dha-btn gold" id="d-rematch-btn" onclick="dRequestRematch()">${dMyIdx===0?'🔄 Реванш':'🔄 Хочу реванш'}</button>`;
         el.innerHTML = `
             <span class="dab-title" style="font-size:15px;font-weight:900;color:#c9a227">${loser?`🤡 ${loser} — ДУРЕНЬ!`:'🏁 Нічия!'}</span>
+            ${rounds>0?`<span class="dab-stat">⚔️ ${rounds} ходів</span>`:''}
             ${st.g>0?`<span class="dab-stat">${st.w}/${st.g} перемог</span>`:''}
-            ${isHost?`<button class="dha-btn gold" onclick="dRequestRematch()">🔄 Реванш</button>`:`<span class="dab-wait">Чекаємо реваншу...</span>`}
+            <span id="d-rematch-vote-label" style="display:none;font-size:11px;color:#c9a227;font-family:sans-serif"></span>
+            ${rematchBtn}
             <button class="dha-btn secondary" onclick="dGoLobby()">🏠 Нова гра</button>`;
+        dStartAutoLobbyTimer(90);
         return;
     }
     if(isAtk){
@@ -515,11 +542,35 @@ function dPass(){
     socket.emit('action',{type:'dPass',data:{}});
 }
 
-function dRequestRematch(){ socket.emit('restartGame'); }
+let _dAutoLobbyTimer = null;
+function dStartAutoLobbyTimer(sec) {
+    if (_dAutoLobbyTimer) clearInterval(_dAutoLobbyTimer);
+    let left = sec;
+    const tick = () => {
+        left--;
+        const btn = document.querySelector('#d-hand-actions .dha-btn.secondary');
+        if (btn && btn.textContent.startsWith('🏠')) btn.textContent = `🏠 Нова гра (${left}с)`;
+        if (left <= 0) { clearInterval(_dAutoLobbyTimer); dGoLobby(); }
+    };
+    _dAutoLobbyTimer = setInterval(tick, 1000);
+}
+
+function dRequestRematch(){
+    socket.emit('restartGame');
+    const btn = document.getElementById('d-rematch-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Проголосовано'; }
+}
 function dGoLobby(){
+    if (_dAutoLobbyTimer) clearInterval(_dAutoLobbyTimer);
     if(typeof clearSession==='function') clearSession();
     location.href='/';
 }
+
+// Vote update from server
+socket.on('restartVoteUpdate', ({ votes, needed }) => {
+    const lbl = document.getElementById('d-rematch-vote-label');
+    if (lbl) { lbl.style.display = ''; lbl.textContent = `${votes}/${needed} за реванш`; }
+});
 
 // ── Touch drag ────────────────────────────────
 let dTouchCard  = null;

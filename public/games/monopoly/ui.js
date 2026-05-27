@@ -280,10 +280,16 @@ function renderPlayers() {
         const avatarHtml = window.renderAvatarEl
             ? window.renderAvatarEl(p.avatarId, p.avatarColor || p.color, p.name[0], 32)
             : `<div class="player-token" style="background:${p.color}">${p.icon}</div>`;
+        // Net-worth bar
+        const allNetWorths = players.filter(pl => !pl.bankrupt).map(pl => calcNetWorth ? calcNetWorth(pl) : pl.money);
+        const maxNW = Math.max(...allNetWorths, 1);
+        const myNW  = calcNetWorth ? calcNetWorth(p) : p.money;
+        const nwPct = p.bankrupt ? 0 : Math.round((myNW / maxNW) * 100);
+        const nwColor = nwPct >= 70 ? '#4caf50' : nwPct >= 40 ? '#ffa726' : '#e53935';
         card.innerHTML = `
             <div class="player-header">
                 ${avatarHtml}
-                <div>
+                <div style="flex:1;min-width:0">
                     <div class="player-name" style="display:flex;align-items:center;gap:4px">
                         <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};flex-shrink:0"></span>
                         ${p.name}${isOffline ? ' <span title="Офлайн" style="font-size:11px">📴</span>' : ''}
@@ -291,7 +297,13 @@ function renderPlayers() {
                     ${i === currentPlayerIndex ? '<div class="turn-indicator">🎲 Ваш хід</div>' : ''}
                 </div>
             </div>
-            <div class="player-money">${p.money}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:3px">
+                <div class="player-money">${p.money}</div>
+                ${!p.bankrupt ? `<div style="font-size:10px;color:#888" title="Капітал (гроші + нерухомість)">₴${myNW} cap</div>` : ''}
+            </div>
+            ${!p.bankrupt ? `<div style="height:3px;background:#eee;border-radius:2px;margin-bottom:4px;overflow:hidden">
+                <div style="height:100%;width:${nwPct}%;background:${nwColor};border-radius:2px;transition:width 0.6s ease"></div>
+            </div>` : ''}
             <div style="font-size:11px;color:#666;margin-bottom:4px">
                 ${p.inJail ? '🔒 У в\'язниці' : ''}
                 ${p.bankrupt ? '💀 Банкрут' : ''}
@@ -1380,12 +1392,18 @@ function announceWinner(player, allPlayers) {
                 <tbody>${statsRows}</tbody>
             </table>`,
         buttons: [
-            ...(typeof myPlayerIndex !== 'undefined' && myPlayerIndex === 0
-                ? [{ text: '🔄 Реванш', class: 'btn-primary', action: () => { closeModal(); socket.emit('restartGame'); } }]
-                : [{ text: '⏳ Чекаємо реваншу...', class: 'btn-secondary', action: () => {} }]
-            ),
+            { text: typeof myPlayerIndex !== 'undefined' && myPlayerIndex === 0 ? '🔄 Реванш' : '🔄 Хочу реванш',
+              class: 'btn-primary',
+              action: () => { socket.emit('restartGame'); closeModal(); }
+            },
             { text: '🏠 Нова гра', class: 'btn-secondary', action: () => { if(typeof clearSession==='function') clearSession(); location.href='/'; } }
-        ]
+        ],
+        dismissable: false,
+    });
+    // Listen for rematch votes
+    socket.off('restartVoteUpdate.monopoly');
+    socket.on('restartVoteUpdate', ({ votes, needed }) => {
+        showToast(`🔄 Реванш: ${votes}/${needed} голосів`, { color: '#1565c0', duration: 3000 });
     });
 }
 

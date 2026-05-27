@@ -380,8 +380,24 @@ function animateStepByStep(playerId, fromPos, toPos, onDone) {
 }
 
 // ── Застосування стану ────────────────────────
+let _prevBankruptFlags = {};
 function applyState(state, diceRolled, landingPos, onDone) {
     const [d1, d2] = state.lastDiceRoll;
+
+    // Detect newly bankrupt players → show toast
+    if (state.players && Object.keys(_prevBankruptFlags).length > 0) {
+        state.players.forEach((p, i) => {
+            if (p.bankrupt && !_prevBankruptFlags[i]) {
+                const isMe = i === myPlayerIndex;
+                const worth = calcNetWorth ? calcNetWorth(p) : p.money;
+                showToast(
+                    isMe ? '💀 Ви збанкрутували' : `💀 ${p.name} збанкрутував(ла)`,
+                    { color: '#b71c1c', duration: 5000 }
+                );
+            }
+        });
+    }
+    _prevBankruptFlags = Object.fromEntries((state.players || []).map((p, i) => [i, !!p.bankrupt]));
 
     const prevAuctionSnapshot  = _prevAuction;
     const prevPendingTrade     = _prevPendingTrade;

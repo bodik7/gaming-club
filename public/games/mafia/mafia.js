@@ -550,13 +550,21 @@ function mRenderFullScreen(s, me, el) {
         if (!s.lastDeaths?.length) {
             html += `<div class="m-morning-title">🌅 Місто прокинулось</div>
                      <div class="m-morning-sub">Цієї ночі ніхто не загинув</div>`;
+            if (s.lastSaved) {
+                html += `<div class="m-morning-sub" style="color:#6ee7b7;margin-top:6px">💉 Лікар врятував гравця</div>`;
+            }
         } else {
             html += `<div class="m-morning-title">💀 Вночі загинули</div>`;
             s.lastDeaths.forEach(id => {
                 const p = s.players[id];
                 if (p) html += `<div class="m-morning-victim">${p.name} — ${mRoleLabel(p.role)?.ua || p.role}</div>`;
             });
+            if (s.lastSaved) {
+                html += `<div class="m-morning-sub" style="color:#6ee7b7;margin-top:6px">💉 Лікар теж когось врятував</div>`;
+            }
         }
+        const alive = s.players.filter(p => p.isAlive).length;
+        html += `<div style="font-size:11px;color:rgba(161,161,170,0.5);margin-top:8px">👥 Залишилось гравців: ${alive}</div>`;
         if (!me.isAlive) html += `<div class="m-wait" style="margin-top:10px">💀 Ви загинули</div>`;
         else             html += `<div class="m-wait" style="margin-top:10px">⏳ Переходимо до дня...</div>`;
         html += `</div>`;
@@ -568,6 +576,7 @@ function mRenderFullScreen(s, me, el) {
     if (s.phase === 'gameover') {
         el.innerHTML = mGameoverUI(s);
         mSpawnConfetti(s.winner);
+        if (!_mAutoLobbyTimer) mStartAutoLobbyTimer(120);
     }
 }
 
@@ -778,9 +787,12 @@ function mGameoverUI(s) {
                 const statsHtml = st.g > 0
                     ? `<div style="font-size:10px;color:rgba(161,161,170,0.5);font-family:'Share Tech Mono',monospace;margin-bottom:6px">Статистика: ${st.w}/${st.g} перемог</div>`
                     : '';
-                const rematch = isHost
-                    ? `<button class="m-btn primary m-btn-wide" onclick="socket.emit('restartGame')" style="background:linear-gradient(135deg,#b91c1c,#7f1d1d);color:white;margin-bottom:6px">🔄 Реванш</button>`
-                    : `<div class="m-wait" style="margin-bottom:8px">Очікуємо реваншу від хоста...</div>`;
+                const rematch = `<button class="m-btn primary m-btn-wide" id="m-rematch-btn"
+                    onclick="mRequestRematch()"
+                    style="background:linear-gradient(135deg,#b91c1c,#7f1d1d);color:white;margin-bottom:6px">
+                    ${isHost ? '🔄 Реванш' : '🔄 Хочу реванш'}
+                </button>
+                <div id="m-rematch-vote" style="font-size:11px;color:rgba(161,161,170,0.5);font-family:\'Share Tech Mono\',monospace;text-align:center;margin-bottom:4px;display:none"></div>`;
                 return statsHtml + rematch;
             })()}
             <button class="m-btn primary m-btn-wide" onclick="mReturnToLobby()">🏠 Нова гра</button>
@@ -812,7 +824,32 @@ function mPhaseFlash(phase) {
     setTimeout(() => { el.remove(); }, 1950);
 }
 
+let _mAutoLobbyTimer = null;
+function mStartAutoLobbyTimer(sec) {
+    if (_mAutoLobbyTimer) clearInterval(_mAutoLobbyTimer);
+    let left = sec;
+    const tick = () => {
+        left--;
+        const btn = document.querySelector('.m-gameover-ui .m-btn.primary.m-btn-wide:last-child');
+        if (btn && btn.textContent.includes('Нова гра')) btn.textContent = `🏠 Нова гра (${left}с)`;
+        if (left <= 0) { clearInterval(_mAutoLobbyTimer); mReturnToLobby(); }
+    };
+    _mAutoLobbyTimer = setInterval(tick, 1000);
+}
+
+function mRequestRematch() {
+    socket.emit('restartGame');
+    const btn = document.getElementById('m-rematch-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Проголосовано'; }
+}
+
+socket.on('restartVoteUpdate', ({ votes, needed }) => {
+    const el = document.getElementById('m-rematch-vote');
+    if (el) { el.style.display = ''; el.textContent = `${votes}/${needed} хочуть реваншу`; }
+});
+
 function mReturnToLobby() {
+    if (_mAutoLobbyTimer) clearInterval(_mAutoLobbyTimer);
     clearSession();
     document.querySelectorAll('[style*="confetti-fall"]').forEach(el => el.remove());
     _mFlavorTimeouts.forEach(clearTimeout);

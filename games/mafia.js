@@ -73,6 +73,7 @@ function createMafiaState(roomPlayers, settings = {}) {
         nightActions:    {},
         votes:           {},
         lastDeaths:      [],
+        lastSaved:       false,  // чи лікар врятував когось цієї ночі (без імені)
         sheriffFindings: [],   // { id, role } — видно тільки комісару+помічнику
         donFindings:     [],   // { id, isSheriff } — видно тільки дону
         winner:     null,
@@ -99,6 +100,7 @@ function sanitizeMafia(state, forIdx) {
         round:      state.round,
         winner:     state.winner,
         lastDeaths: state.lastDeaths,
+        lastSaved:  state.lastSaved || false,
         log:        state.log.slice(0, 30),
         players: state.players.map(p => ({
             id:         p.id,
@@ -280,6 +282,7 @@ function resolveNight(room) {
     }
 
     state.lastDeaths = [];
+    state.lastSaved = mafiaTarget !== null && mafiaTarget !== undefined && protected_.has(mafiaTarget);
     if (mafiaTarget !== null && mafiaTarget !== undefined && !protected_.has(mafiaTarget)) {
         ps[mafiaTarget].isAlive = false;
         state.lastDeaths.push(mafiaTarget);
