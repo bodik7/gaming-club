@@ -1235,7 +1235,7 @@ body {
         border-right: none;
     }
 
-    /* ════════════ ВАБ: ЧАТ + ХІД ГРИ (2 колонки) ════════════ */
+    /* ════════════ ВАБ: ЧАТ + КНОПКИ ДІЙ (2 колонки) ════════════ */
     .game-screen.mn-tab-chat .game-layout {
         display: grid !important;
         grid-template-columns: 1fr 1fr;
@@ -1243,7 +1243,6 @@ body {
         padding: 8px 8px 0;
         overflow: hidden;
     }
-    /* Показуємо ліву панель, але тільки чат */
     .game-screen.mn-tab-chat .game-layout .left-panel {
         display: flex !important;
         flex-direction: column;
@@ -1257,24 +1256,31 @@ body {
         min-height: 0;
         max-height: none;
     }
-    /* Показуємо праву панель, але тільки лог */
+    /* Права колонка: тільки кнопки дій, лог прихований */
     .game-screen.mn-tab-chat .game-layout .actions-panel {
         display: flex !important;
         flex-direction: column;
         height: 100%;
         min-height: 0;
         padding: 0;
+        overflow-y: auto;
+        gap: 6px;
     }
-    .game-screen.mn-tab-chat .game-layout .actions-panel #action-buttons,
+    .game-screen.mn-tab-chat .game-layout .actions-panel .log,
     .game-screen.mn-tab-chat .game-layout .actions-panel #quit-btn-monopoly { display: none !important; }
-    .game-screen.mn-tab-chat .game-layout .actions-panel .log {
+    .game-screen.mn-tab-chat .game-layout .actions-panel #action-buttons {
+        display: flex !important;
+        flex-direction: column;
+        gap: 6px;
         flex: 1;
-        min-height: 0;
-        max-height: none;
-        margin: 0;
+    }
+    .game-screen.mn-tab-chat .game-layout .actions-panel #action-buttons button {
+        width: 100%;
+        min-height: 44px;
+        font-size: 13px;
     }
 
-    /* ════════════ ВАБ: ГРАВЦІ + КНОПКИ ════════════ */
+    /* ════════════ ВАБ: ГРАВЦІ + ХІД ГРИ ════════════ */
     .game-screen.mn-tab-players .game-layout {
         display: flex !important;
         flex-direction: column;
@@ -1283,6 +1289,7 @@ body {
         gap: 8px;
         overflow-y: auto;
     }
+    /* Список гравців зверху */
     .game-screen.mn-tab-players .game-layout .left-panel {
         display: flex !important;
         flex-direction: column;
@@ -1291,6 +1298,7 @@ body {
     }
     .game-screen.mn-tab-players .game-layout .left-panel .chat-panel { display: none !important; }
     .game-screen.mn-tab-players .game-layout .left-panel .players-panel {
+        display: flex !important;
         flex-direction: column;
         flex-wrap: nowrap;
         overflow-y: visible;
@@ -1301,6 +1309,7 @@ body {
         max-width: none;
         width: 100%;
     }
+    /* Лог знизу, кнопки дій приховані */
     .game-screen.mn-tab-players .game-layout .actions-panel {
         display: flex !important;
         flex-direction: column;
@@ -1308,15 +1317,14 @@ body {
         flex-shrink: 0;
         padding: 0;
     }
-    .game-screen.mn-tab-players .game-layout .actions-panel .log { display: none !important; }
-    .game-screen.mn-tab-players .game-layout .actions-panel .action-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-    }
-    .game-screen.mn-tab-players .game-layout .actions-panel .action-buttons button {
-        flex: 1 1 45%;
-        min-height: 44px;
+    .game-screen.mn-tab-players .game-layout .actions-panel #action-buttons,
+    .game-screen.mn-tab-players .game-layout .actions-panel #quit-btn-monopoly { display: none !important; }
+    .game-screen.mn-tab-players .game-layout .actions-panel .log {
+        display: flex !important;
+        flex-direction: column;
+        max-height: 40vh;
+        overflow-y: auto;
+        margin: 0;
     }
 
     /* Тости — вище таб-бара */
