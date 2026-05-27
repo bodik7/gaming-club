@@ -252,10 +252,15 @@ function updateTradeOpponent() {
         || '<p style="color:#aaa;font-size:12px;margin:4px 0">Немає ділянок</p>';
 }
 
+let _tradeSubmitting = false;
 function submitTradeOffer() {
+    if (_tradeSubmitting) return;
     const sel         = document.getElementById('trade-opponent');
     const oppId       = parseInt(sel?.value);
     const toIdx       = players.findIndex(p => p.id === oppId);
+    if (toIdx === -1) {
+        showToast('Оберіть гравця для обміну', { color: '#c62828' }); return;
+    }
     const offerMoney  = parseInt(document.getElementById('offer-money')?.value)   || 0;
     const requestMoney= parseInt(document.getElementById('request-money')?.value) || 0;
     const offerProps  = [...document.querySelectorAll('.offer-prop:checked')].map(cb => parseInt(cb.value));
@@ -263,9 +268,11 @@ function submitTradeOffer() {
     if (offerProps.length === 0 && offerMoney === 0 && requestProps.length === 0 && requestMoney === 0) {
         showToast('Угода порожня — додайте ділянки або готівку', { color: '#c62828' }); return;
     }
+    _tradeSubmitting = true;
     sendAction('offerTrade', { toIdx, offerMoney, offerProps, requestMoney, requestProps });
     closeModal();
     showToast('Пропозицію відправлено!', { color: '#1565c0' });
+    setTimeout(() => { _tradeSubmitting = false; }, 2000);
 }
 
 function showTradeOfferModal(state, trade) {

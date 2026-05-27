@@ -18,6 +18,7 @@ function dSuitColor(card){ return D_SUIT_COLORS[card.slice(-1)] || '#333'; }
 function dRank(card){ return card.slice(0,-1); }
 function dSuit(card){ return card.slice(-1); }
 function dCanBeat(atk, def, trump){
+    if(!atk || !def || !trump) return false;
     const as=dSuit(atk), ds=dSuit(def);
     if(ds===trump && as!==trump) return true;
     if(ds===as) return D_RANK_IDX[dRank(def)] > D_RANK_IDX[dRank(atk)];
