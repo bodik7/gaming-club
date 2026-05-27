@@ -388,7 +388,11 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
 
         socket.on('startGame', ({ settings } = {}) => {
             const room = roomStore.get(socket.roomCode);
-            if (!room || socket.playerIndex !== 0) return;
+            console.log(`[startGame] roomCode=${socket.roomCode} playerIndex=${socket.playerIndex} roomFound=${!!room}`);
+            if (!room || socket.playerIndex !== 0) {
+                console.log(`[startGame] BLOCKED: !room=${!room} playerIndex=${socket.playerIndex}`);
+                return;
+            }
 
             if (room.gameType === 'mafia') {
                 const n = room.players.length;

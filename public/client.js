@@ -1426,7 +1426,9 @@ function updateGameSettings(gameType) {
 
 function startGame() {
     const btn = document.getElementById('start-btn');
-    if (btn && btn.disabled) return; // захист від подвійного кліку / race condition
+    console.log('[startGame] called, btn.disabled=', btn?.disabled, 'socket.connected=', socket.connected);
+    if (btn && btn.disabled) { console.log('[startGame] BLOCKED — button is disabled'); return; }
+    console.log('[startGame] emitting startGame...');
     socket.emit('startGame', { settings: _gameSettings });
 }
 
@@ -1596,6 +1598,7 @@ socket.on('duplicateSession', () => {
 });
 
 socket.on('gameStarted', ({ state, gameType, myPlayerIndex: mpi }) => {
+    console.log('[gameStarted] received! gameType=', gameType);
     if (mpi !== undefined) myPlayerIndex = mpi;
     // Бункер — React SPA на /bunker; редіректимо туди зі збереженою сесією
     if (gameType === 'bunker' || state?.gameType === 'bunker') {
