@@ -1610,6 +1610,13 @@ body {
         box-shadow: 0 6px 20px rgba(0,87,183,0.4);
     }
     .lobby-btn:active { transform: translateY(0) !important; }
+    .lobby-btn:disabled {
+        cursor: not-allowed;
+        pointer-events: auto; /* щоб cursor: not-allowed спрацював */
+        transform: none !important;
+        filter: none !important;
+        box-shadow: none !important;
+    }
 
     /* ── Роздільник ── */
     .lobby-divider {

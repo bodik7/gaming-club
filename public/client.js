@@ -1390,6 +1390,8 @@ function updateGameSettings(gameType) {
 }
 
 function startGame() {
+    const btn = document.getElementById('start-btn');
+    if (btn && btn.disabled) return; // захист від подвійного кліку / race condition
     socket.emit('startGame', { settings: _gameSettings });
 }
 
@@ -1471,16 +1473,16 @@ socket.on('lobbyUpdate', ({ players, bots, gameType, avatars, ready }) => {
     const canStart = players.length >= min && notReadyCount === 0;
     const hint = document.getElementById('waiting-hint');
     if (hint) {
-        if (players.length < min) hint.textContent = `Потрібно ще ${min - players.length} гравців для старту`;
-        else if (notReadyCount > 0) hint.textContent = `Очікуємо готовності ${notReadyCount} гравців`;
-        else hint.textContent = 'Хост бачить кнопку старту';
+        if (players.length < min) hint.textContent = `⚠️ Потрібно ще ${min - players.length} гравців для старту`;
+        else if (notReadyCount > 0) hint.textContent = `⏳ Чекаємо підтвердження від ${notReadyCount} гравців`;
+        else hint.textContent = isHost ? '✅ Всі готові — натисніть «Почати гру»' : '✅ Всі готові — хост стартує гру';
     }
     const startBtn = document.getElementById('start-btn');
-    const isHost = myPlayerIndex === 0;
     if (startBtn) {
         startBtn.classList.toggle('hidden', !isHost);
         startBtn.disabled = !canStart;
         startBtn.style.opacity = canStart ? '1' : '0.4';
+        startBtn.title = canStart ? '' : (notReadyCount > 0 ? `Чекаємо готовності ${notReadyCount} гравців` : `Потрібно мінімум ${min} гравців`);
     }
 
     // Велика кнопка "Готовий" — для не-хоста
