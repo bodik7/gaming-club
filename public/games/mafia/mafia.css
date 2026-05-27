@@ -1524,4 +1524,36 @@
     .m-vote-targets { flex-direction: column; gap: 8px; }
     .m-vote-target-btn, .m-vote-skip-btn { width: 100%; text-align: left; min-height: 48px; }
     .m-day-chat-log { max-height: 120px; }
+
+    /* m-actions overlay: відступ знизу щоб контент не ховався за таб-бар */
+    .m-actions {
+        padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px);
+    }
+
+    /* iOS auto-zoom: чат-інпут ≥ 16px */
+    .m-chat-inp { font-size: 16px !important; }
+}
+
+/* ─ Ландшафтний режим на телефоні ─ */
+@media (max-height: 500px) and (orientation: landscape) {
+    /* Компактний топбар */
+    .m-topbar { padding: 4px 10px; gap: 6px; }
+    .m-title   { font-size: 10px; }
+    .m-topbar-timer { font-size: 11px; }
+
+    /* Колонки: вужчий чат і пасспорт */
+    .m-col-chat    { width: 220px; padding: 8px; }
+    .m-col-passport{ width: 220px; padding: 8px; }
+
+    /* Компактні картки гравців */
+    .m-player-card { padding: 6px 8px; }
+    .m-player-name { font-size: 11px; }
+    .m-player-role { font-size: 9px; }
+
+    /* m-actions: компактніший скрол */
+    .m-actions { padding: 12px 16px calc(60px + 12px); }
+
+    /* Таб-бар: компактніший */
+    .m-tab-btn { padding: 4px 4px 6px; min-height: 42px; }
+    .m-tab-icon { font-size: 16px; }
 }

@@ -1322,11 +1322,35 @@ body {
         padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px) + 16px);
     }
 
+    /* modal-card: вираховуємо таб-бар Монополії (58px) зі max-height */
+    .modal-card {
+        max-height: calc(100dvh - 32px - 58px - env(safe-area-inset-bottom, 0px));
+    }
+
     /* Waiting room: кнопки налаштувань — більші таргети для торкання */
     .wait-setting-btn {
         padding: 10px 14px;
         font-size: 13px;
         min-height: 44px;
+    }
+
+    /* iOS auto-zoom: усі інпути в монополії/лобі ≥ 16px */
+    .chat-input,
+    .lobby-chat-input,
+    .lobby-input,
+    #lobby-name {
+        font-size: 16px !important;
+    }
+
+    /* Монополія чат-таб: на дуже вузьких (≤ 400px) стек вертикально замість grid */
+    @media (max-width: 400px) {
+        .game-screen.mn-tab-chat .game-layout {
+            grid-template-columns: 1fr !important;
+            overflow-y: auto;
+        }
+        .game-screen.mn-tab-chat .game-layout .actions-panel {
+            max-height: 200px;
+        }
     }
 }
 

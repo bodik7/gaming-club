@@ -768,6 +768,15 @@
     .dha-btn { min-height: 44px; padding: 10px 16px; font-size: 13px; }
     #d-action-bar { padding: 5px 8px; gap: 4px; }
     #d-hand-actions { gap: 6px; padding: 6px 10px; }
+    /* iOS auto-zoom: чат-інпут ≥ 16px */
+    .d-chat-input-row input { font-size: 16px !important; padding: 6px 8px; }
+}
+
+/* ─ Дуже маленький екран (≤ 480px): ховаємо праву панель ─ */
+@media (max-width: 480px) {
+    .d-right-panel { display: none; }
+    .d-table-zone  { flex: 1; max-height: none; }
+    #d-table       { border-radius: 16px; }
 }
 
 /* ─ Ландшафтний режим на телефоні ─ */

@@ -1105,6 +1105,8 @@
         max-height: none;
         overflow-y: auto;
     }
+    /* iOS auto-zoom: чат-інпут ≥ 16px */
+    .t-chat-input-row input { font-size: 16px !important; }
 }
 
 /* ─ Планшет / великий телефон ─ */
