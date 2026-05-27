@@ -396,7 +396,7 @@
         display:flex;flex-direction:column-reverse;align-items:flex-end"></div>
 
     <!-- ===== ІГРОВИЙ ЕКРАН ===== -->
-    <div id="game-screen" class="game-screen hidden">
+    <div id="game-screen" class="game-screen hidden mn-tab-board">
         <div class="game-layout">
             <!-- Ліва панель: гравці + чат -->
             <div class="left-panel">
@@ -445,6 +445,23 @@
                 </div>
             </aside>
         </div>
+
+        <!-- Мобільна навігація (тільки на телефоні) -->
+        <nav class="mn-tabs" id="mn-tabs">
+            <button class="mn-tab-btn mn-tab-active" id="mn-tab-btn-board" onclick="mnSwitchTab('board')">
+                <span class="mn-tab-icon">🗺️</span>
+                <span class="mn-tab-label">Дошка</span>
+            </button>
+            <button class="mn-tab-btn" id="mn-tab-btn-chat" onclick="mnSwitchTab('chat')">
+                <span class="mn-tab-icon">💬</span>
+                <span class="mn-tab-label">Чат</span>
+                <span class="mn-tab-badge" id="mn-chat-badge"></span>
+            </button>
+            <button class="mn-tab-btn" id="mn-tab-btn-players" onclick="mnSwitchTab('players')">
+                <span class="mn-tab-icon">👥</span>
+                <span class="mn-tab-label">Гравці</span>
+            </button>
+        </nav>
     </div>
 
     <!-- Модальне вікно -->
@@ -826,13 +843,62 @@
                 : 'width=device-width, initial-scale=1, maximum-scale=1';
         }
 
+        // ── Мобільна навігація Монополії ──────────────────────
+        let _mnCurrentTab = 'board';
+        let _mnChatUnread = 0;
+
+        function mnSwitchTab(tab) {
+            _mnCurrentTab = tab;
+            const gs = document.getElementById('game-screen');
+            gs.classList.remove('mn-tab-board', 'mn-tab-chat', 'mn-tab-players');
+            gs.classList.add('mn-tab-' + tab);
+            ['board', 'chat', 'players'].forEach(t => {
+                const btn = document.getElementById('mn-tab-btn-' + t);
+                if (btn) btn.classList.toggle('mn-tab-active', t === tab);
+            });
+            // Очищаємо бейдж при відкритті чату
+            if (tab === 'chat') {
+                _mnChatUnread = 0;
+                const badge = document.getElementById('mn-chat-badge');
+                if (badge) badge.textContent = '';
+            }
+            // Прокручуємо лог вниз при відкритті чату
+            if (tab === 'chat') {
+                const msgs = document.getElementById('chat-messages');
+                if (msgs) msgs.scrollTop = msgs.scrollHeight;
+                const logContent = document.getElementById('log-content');
+                if (logContent) logContent.scrollTop = logContent.scrollHeight;
+            }
+        }
+
+        function mnMarkChatUnread() {
+            // Не рахуємо якщо чат вже відкритий або ми на десктопі
+            if (_mnCurrentTab === 'chat') return;
+            if (!document.querySelector('.mn-tabs')) return;
+            const tabs = document.getElementById('mn-tabs');
+            if (!tabs || getComputedStyle(tabs).display === 'none') return;
+            _mnChatUnread++;
+            const badge = document.getElementById('mn-chat-badge');
+            if (badge) badge.textContent = _mnChatUnread > 9 ? '9+' : _mnChatUnread;
+        }
+
         // Ініціалізація дошки при старті Монополії
         function showGameScreen() {
-            switchViewport('monopoly');
+            // На мобільних — device-width viewport, на desktop — 1100px
+            const isMobile = window.screen.width < 900;
+            if (!isMobile) {
+                switchViewport('monopoly');
+            } else {
+                switchViewport('mobile'); // device-width
+            }
             document.getElementById('game-screen').classList.remove('hidden');
             setQuitBtn(true);
             buildBoard();
             renderActionButtons();
+            // На мобільних ініціалізуємо таб-навігацію
+            if (isMobile) {
+                mnSwitchTab('board');
+            }
         }
     </script>
 

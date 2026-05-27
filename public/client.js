@@ -885,6 +885,8 @@ socket.on('chatMessage', ({ playerIndex, icon, name, color, text }) => {
         container.appendChild(msg);
         container.scrollTop = container.scrollHeight;
         while (container.children.length > 60) container.removeChild(container.firstChild);
+        // Бейдж непрочитаних для мобільного чату Монополії
+        if (id === 'chat-messages' && typeof mnMarkChatUnread === 'function') mnMarkChatUnread();
     });
 });
 
