@@ -462,7 +462,7 @@ function applyState(state, diceRolled, landingPos, onDone) {
         && state.currentPlayerIndex === myPlayerIndex;
     if (justMyTurn) {
         playSound('myturn');
-        showToast('🎯 Ваш хід!', { color: '#004494', duration: 2500 });
+        showToast('🎯 Ваш хід!', { color: '#004494', duration: 4500 });
         const activeCard = document.querySelector('.player-card.active');
         if (activeCard) {
             activeCard.classList.add('my-turn-flash');

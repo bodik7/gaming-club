@@ -224,7 +224,7 @@ function mRenderPhaseInfo() {
         } else {
             const actionType = mGetActionTypeForRole(me.role);
             const prompts = {
-                night:          me.isAlive ? (actionType ? 'Нічна дія: оберіть ціль' : 'Ви спите...') : 'Ви загинули',
+                night:          me.isAlive ? (actionType ? 'Нічна дія: оберіть ціль' : '💤 Ви спите — чекайте ранку') : 'Ви загинули',
                 day_discussion: 'Обговорення: шукайте мафію',
                 day_voting:     'Голосуйте проти підозрюваного',
                 morning:        'Місто прокидається...',

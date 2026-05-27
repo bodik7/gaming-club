@@ -176,7 +176,10 @@ function dDeckIndicator(s){
             ${stackCards}
             ${cntBadge}
         </div>
-        ${trumpCard}
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+            ${trumpCard}
+            <div style="font-size:9px;font-weight:700;letter-spacing:1px;color:${tColor};opacity:0.75;text-transform:uppercase;font-family:sans-serif">козир</div>
+        </div>
     </div>`;
 }
 

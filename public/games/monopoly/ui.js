@@ -793,6 +793,15 @@ function showPropertyCard(pos) {
 
     // --- Панель будівництва (тільки для монополії) ---
     let buildPanel = '';
+    if (isMyProperty && c.type === 'property' && !hasMonopoly && !s.mortgaged) {
+        const group = BOARD.filter(b => b.type === 'property' && b.color === c.color);
+        const owned = group.filter(b => cellState[b.pos]?.owner === currentPlayerIndex).length;
+        buildPanel = `
+            <div style="border-top:1px solid #eee;margin-top:10px;padding-top:10px;text-align:center">
+                <div style="font-size:11px;color:#888;margin-bottom:2px">🏗️ Будівництво недоступне</div>
+                <div style="font-size:12px;color:#1565c0;font-weight:600">Зберіть монополь: ${owned}/${group.length} ділянок</div>
+            </div>`;
+    }
     if (hasMonopoly) {
         const btnBuild = `<button class="big-btn green" style="flex:1;font-size:13px;padding:10px 6px"
             ${canBuild ? `onclick="buildHouseFromCard(${pos})"` : 'disabled'}>
@@ -802,9 +811,15 @@ function showPropertyCard(pos) {
             ${canSell ? `onclick="sellHouseFromCard(${pos})"` : 'disabled'}>
             🔻 Продати<br><small>+₴${Math.floor(c.housePrice * 0.9)}</small>
         </button>`;
-        const hint = !canBuild && !canSell && s.houses < 5
+        const needsEvenBuild = !canBuild && !canSell && s.houses < 5 && player.money >= c.housePrice;
+        const noMoney       = !canBuild && s.houses < 5 && player.money < c.housePrice;
+        const hint = needsEvenBuild
             ? `<div style="font-size:11px;color:#888;text-align:center;margin-top:4px">
                 Будуйте рівномірно — спочатку побудуйте на інших ділянках групи
+               </div>`
+            : noMoney
+            ? `<div style="font-size:11px;color:#c62828;text-align:center;margin-top:4px">
+                Не вистачає ₴${c.housePrice - player.money} для будівництва
                </div>` : '';
         buildPanel = `
             <div style="border-top:1px solid #eee;margin-top:10px;padding-top:10px">

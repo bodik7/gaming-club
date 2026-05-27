@@ -1391,6 +1391,12 @@ socket.on('lobbyUpdate', ({ players, bots, gameType, avatars, ready }) => {
     if (gameType) _selectedGame = gameType; // синхронізуємо з типом кімнати
     const list = document.getElementById('lobby-players-list');
     if (!list) return;
+    if (!players || players.length === 0) {
+        list.innerHTML = `<div style="text-align:center;color:rgba(255,255,255,0.25);font-size:13px;padding:12px 0;font-style:italic">
+            🎮 Поки що нікого немає — запроси друзів!
+        </div>`;
+        return;
+    }
     const prevCount = list.querySelectorAll(':scope > div').length;
     const readySet = new Set(ready || []);
     list.innerHTML = players.map((name, i) => {
