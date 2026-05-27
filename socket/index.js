@@ -655,6 +655,12 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
         socket.on('chatMessage', ({ text, icon, name, color }) => {
             if (!socket.roomCode) return;
             if (!rateLimit(`chat:${socket.id}`, 5, 8_000)) return;
+            // Сервер-сайд перевірка заглушення (захист від обходу через DevTools)
+            const _room = roomStore.get(socket.roomCode);
+            if (_room?.state?.gameType === 'bunker') {
+                const _p = _room.state.players[socket.playerIndex];
+                if (_p?.isSilenced) return;
+            }
             const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
             io.to(socket.roomCode).emit('chatMessage', {
                 playerIndex: socket.playerIndex,
@@ -762,12 +768,13 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
                         const attr = Object.keys(player.attributes).find(k => !player.attributes[k].isRevealed);
                         if (attr) {
                             player.attributes[attr].isRevealed = true;
-                            player.hasRevealed = true;
                             addBunkerLog(st, `⏱️ ${player.name} розкриває ${BUNKER_ATTR_LABELS[attr]} (AFK)`);
-                            const allRevealed = st.players.filter(pl => pl.isAlive).every(pl => pl.hasRevealed);
-                            if (allRevealed) { clearBunkerTimer(r); startBunkerPhase(r, 'discussion'); }
-                            else emitBunkerUpdate(r);
                         }
+                        // Завжди позначаємо готовим — навіть якщо всі атрибути вже були відкриті
+                        player.hasRevealed = true;
+                        const allRevealed = st.players.filter(pl => pl.isAlive).every(pl => pl.hasRevealed);
+                        if (allRevealed) { clearBunkerTimer(r); startBunkerPhase(r, 'discussion'); }
+                        else emitBunkerUpdate(r);
                     } else if (st.phase === 'game_start' && !player.hasRevealed) {
                         player.hasRevealed = true;
                         addBunkerLog(st, `✅ ${player.name} готовий (AFK)`);

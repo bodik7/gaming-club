@@ -97,6 +97,10 @@ export function GameScreen() {
     const topIds = gameState.players.filter(p => p.isAlive && (counts[p.id] || 0) === maxVotes).map(p => p.id)
     if (!topIds.includes(myIndex)) return
 
+    // Якщо нічия (2+ людей) і це ПЕРША нічия (tiebreaker = null) — вони підуть на повторне
+    // голосування, а не виганяються. Не показуємо попап марно.
+    if (topIds.length > 1 && !gameState.tiebreaker) return
+
     // Запускаємо відлік 4 секунди
     setRefutCountdown(4)
     haptic('heavy')

@@ -686,10 +686,14 @@ function applyBunkerCard(room, card, pidx, target) {
         case 'act_lustr': {
             const t = s.players[target];
             if (!t) break;
-            const hidden = ['health', 'trait'].find(k => !t.attributes[k].isRevealed);
+            // Спочатку health/trait, якщо обидва вже відкриті — будь-який прихований атрибут
+            const hidden = ['health', 'trait'].find(k => !t.attributes[k].isRevealed)
+                        || Object.keys(t.attributes).find(k => !t.attributes[k].isRevealed);
             if (hidden) {
                 t.attributes[hidden].isRevealed = true;
                 addBunkerLog(s, `🔍 ${p.name} — Люстрація: розкрито ${BUNKER_ATTR_LABELS[hidden]} гравця ${t.name}`);
+            } else {
+                addBunkerLog(s, `🔍 ${p.name} — Люстрація: у ${t.name} вже все відкрито`);
             }
             break;
         }
