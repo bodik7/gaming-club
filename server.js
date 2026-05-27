@@ -2,6 +2,15 @@
 // ІГРОВИЙ КЛУБ — server.js (entry point)
 // Node.js + Express + Socket.io + SQLite
 // ============================================
+
+// Глобальні обробники помилок — не дають серверу впасти
+process.on('uncaughtException', (err) => {
+    console.error('💥 uncaughtException:', err.stack || err);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('💥 unhandledRejection:', reason?.stack || reason);
+});
+
 const express = require('express');
 const http    = require('http');
 const { Server } = require('socket.io');

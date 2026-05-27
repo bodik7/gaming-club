@@ -1504,6 +1504,7 @@ socket.on('lobbyUpdate', ({ players, bots, gameType, avatars, ready }) => {
     const min = minMap[_selectedGame] || 2;
     const counter = document.getElementById('lobby-player-count');
     if (counter) counter.textContent = `${players.length}/${maxMap[_selectedGame] || 6}`;
+    const isHost = myPlayerIndex === 0;
     const notReadyCount = players.filter((_, i) => i !== 0 && !(bots && bots[i]) && !readySet.has(i)).length;
     const canStart = players.length >= min && notReadyCount === 0;
     const hint = document.getElementById('waiting-hint');
