@@ -20,7 +20,7 @@ export function GameStartPhase() {
 
   return (
     <div className="phase-fixed-panel">
-      <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
 
         {/* Деталі сценарію */}
         <div className="phase-scenario-block rounded-xl overflow-hidden text-xs leading-relaxed"
