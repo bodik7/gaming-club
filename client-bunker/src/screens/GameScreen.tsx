@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { AnimatePresence, motion } from 'framer-motion'
+import { ACTION_CARD_PHASES } from '../constants/cardPhases'
 import { GameStartPhase }    from '../components/phases/GameStartPhase'
 import { RoundRevealPhase }  from '../components/phases/RoundRevealPhase'
 import { DiscussionPhase }   from '../components/phases/DiscussionPhase'
@@ -64,7 +65,11 @@ export function GameScreen() {
   const me    = myIndex !== null ? players[myIndex] : null
   const pm    = PHASE_META[phase] || PHASE_META['game_start']
 
-  const unreadChat = mobileTab !== 'chat' ? Math.max(0, chatCount - lastSeenChat) : 0
+  const unreadChat      = mobileTab !== 'chat' ? Math.max(0, chatCount - lastSeenChat) : 0
+  const availableCards  = me && !me.isBot
+    ? me.actionCards.filter(c => !c.used && ((ACTION_CARD_PHASES as Record<string,string[]>)[c.id] || []).includes(phase)).length
+    : 0
+  const cardBadge = mobileTab !== 'me' ? availableCards : 0
 
   const revealAttr = useCallback((attr: string) => {
     getSocket().emit('action', { type: 'b_revealAttr', data: { attr } })
@@ -438,7 +443,7 @@ export function GameScreen() {
           {([
             { id: 'players'  as MobileTab, icon: '👥', label: 'Гравці' },
             { id: 'chat'     as MobileTab, icon: '💬', label: 'Чат',      badge: unreadChat },
-            { id: 'me'       as MobileTab, icon: '👤', label: 'Я' },
+            { id: 'me'       as MobileTab, icon: '👤', label: 'Я',        badge: cardBadge },
             { id: 'scenario' as MobileTab, icon: '📋', label: 'Сценарій' },
           ]).map(tab => {
             const active = mobileTab === tab.id
@@ -460,7 +465,8 @@ export function GameScreen() {
                 {'badge' in tab && tab.badge! > 0 && (
                   <span style={{
                     position: 'absolute', top: 4, right: 'calc(50% - 18px)',
-                    background: 'var(--bunker-red)', color: '#fff',
+                    background: tab.id === 'me' ? '#c8a000' : 'var(--bunker-red)',
+                    color: tab.id === 'me' ? '#0b0d0c' : '#fff',
                     fontSize: 9, fontWeight: 900, borderRadius: 999,
                     padding: '1px 5px', minWidth: 16, textAlign: 'center',
                     lineHeight: '14px',
