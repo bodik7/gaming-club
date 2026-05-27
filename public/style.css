@@ -1411,33 +1411,27 @@ body {
     .cell.left .cell-color-bar,
     .cell.right .cell-color-bar { width: 8px; height: 100%; }
 
-    /* Клітинки — вимикаємо iOS hyphens, обмежуємо 2 рядками */
+    /* Клітинки — назви прибираємо, лишаємо іконку + ціну */
+    .cell-name { display: none !important; }
     .cell-content {
         font-size: 7px !important;
         hyphens: none !important;
         -webkit-hyphens: none !important;
-        word-break: break-word;
         padding: 1px;
+        gap: 1px;
     }
-    .cell-name {
-        font-size: 7px !important;
-        hyphens: none !important;
-        -webkit-hyphens: none !important;
-        word-break: break-word;
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        margin-bottom: 1px;
+    .cell-price {
+        font-size: 8px !important;
+        font-weight: 800 !important;
+        line-height: 1;
     }
-    .cell-price { font-size: 7px !important; }
 
-    /* Іконки в клітинках (SVG) — менші */
-    .cell-content svg { width: 12px !important; height: 12px !important; }
+    /* Іконки в клітинках (SVG) — трохи більші без назв */
+    .cell-content svg { width: 14px !important; height: 14px !important; }
 
     /* Кутові клітинки */
     .cell.corner .cell-content { font-size: 7px !important; padding: 2px; }
-    .cell.corner .cell-icon { font-size: 16px; margin-bottom: 2px; }
+    .cell.corner .cell-icon { font-size: 18px; margin-bottom: 2px; }
 
     /* Токени */
     .token { width: 18px; height: 18px; font-size: 10px; }
