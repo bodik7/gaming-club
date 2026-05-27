@@ -54,10 +54,12 @@ export function GameScreen() {
   const [mobileTab, setMobileTab]         = useState<MobileTab>('players')
   const [lastSeenChat, setLastSeenChat]   = useState(0)
   const [confirmAttr, setConfirmAttr]     = useState<string | null>(null)
-  const [showSplash, setShowSplash]       = useState(false)
+  const [showSplash, setShowSplash]         = useState(false)
+  const [roundBanner, setRoundBanner]       = useState<number | null>(null)
   const [refutCountdown, setRefutCountdown] = useState<number | null>(null)
-  const refutTimerRef                     = useRef<ReturnType<typeof setInterval> | null>(null)
-  const splashShownRef                    = useRef(false)
+  const refutTimerRef                       = useRef<ReturnType<typeof setInterval> | null>(null)
+  const splashShownRef                      = useRef(false)
+  const prevRoundRef                        = useRef(0)
   const playersScrollRef = useRef<HTMLDivElement>(null)
 
   if (!gameState) return null
@@ -79,6 +81,19 @@ export function GameScreen() {
     haptic('success')
     sounds.reveal()
   }, [])
+
+  // Банер «РАУНД N» при кожному новому раунді
+  useEffect(() => {
+    if (phase !== 'round_reveal' || !gameState) return
+    const round = gameState.round
+    if (round > 0 && round !== prevRoundRef.current) {
+      prevRoundRef.current = round
+      setRoundBanner(round)
+      haptic('medium')
+      const t = setTimeout(() => setRoundBanner(null), 2400)
+      return () => clearTimeout(t)
+    }
+  }, [phase, gameState?.round])
 
   // Попап «Спростування» — якщо гравець виганяється і має act_refut
   useEffect(() => {
@@ -345,7 +360,9 @@ export function GameScreen() {
         {/* Десктоп: окремо фаза і таймер */}
         <div className="topbar-phase px-2.5 py-1 rounded-md text-xs font-black tracking-widest flex-shrink-0"
              style={{ background: pm.bg, color: pm.color, border: `1px solid ${pm.color}40` }}>
-          {pm.label}
+          <motion.span key={phase} style={{ display: 'inline-block', animation: 'phase-pop 0.32s cubic-bezier(.22,.68,0,1.2)' }}>
+            {pm.label}
+          </motion.span>
         </div>
         <div className="topbar-timer">
           <PhaseTimer deadline={gameState.timeDeadline} />
@@ -355,7 +372,9 @@ export function GameScreen() {
         <div className="topbar-phase-mobile flex items-center gap-1.5 flex-shrink-0">
           <span className="text-xs font-black px-2 py-0.5 rounded"
                 style={{ background: pm.bg, color: pm.color }}>
-            {pm.label}
+            <motion.span key={phase} style={{ display: 'inline-block', animation: 'phase-pop 0.32s cubic-bezier(.22,.68,0,1.2)' }}>
+              {pm.label}
+            </motion.span>
           </span>
           <PhaseTimer deadline={gameState.timeDeadline} />
         </div>
@@ -592,6 +611,45 @@ export function GameScreen() {
                 </div>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Банер нового раунду */}
+      <AnimatePresence>
+        {roundBanner !== null && (
+          <motion.div
+            key={`round-${roundBanner}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.5 } }}
+            className="fixed inset-0 z-40 flex flex-col items-center justify-center pointer-events-none"
+            style={{ background: 'rgba(9,11,10,0.75)', backdropFilter: 'blur(3px)' }}
+          >
+            <div className="hazard-stripe absolute top-0 left-0 right-0" style={{ height: 4, opacity: 0.9 }} />
+            <div className="flex flex-col items-center gap-2">
+              <div className="text-xs font-black uppercase tracking-[0.35em]"
+                   style={{ color: 'rgba(204,34,0,0.7)', letterSpacing: '0.4em' }}>
+                ☢ ВИЖИВАННЯ
+              </div>
+              <div style={{
+                fontSize: 'clamp(64px, 18vw, 120px)',
+                fontWeight: 900,
+                color: '#fff',
+                lineHeight: 1,
+                animation: 'round-slam 0.55s cubic-bezier(.22,.68,0,1.2) forwards',
+                textShadow: '0 0 40px rgba(204,34,0,0.6), 0 4px 30px rgba(0,0,0,0.8)',
+                fontVariantNumeric: 'tabular-nums',
+                letterSpacing: '-0.02em',
+              }}>
+                {roundBanner}
+              </div>
+              <div className="text-sm font-black uppercase tracking-[0.25em]"
+                   style={{ color: 'var(--bunker-muted2)', letterSpacing: '0.3em' }}>
+                РАУНД
+              </div>
+            </div>
+            <div className="hazard-stripe absolute bottom-0 left-0 right-0" style={{ height: 4, opacity: 0.9 }} />
           </motion.div>
         )}
       </AnimatePresence>

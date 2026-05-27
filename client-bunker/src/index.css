@@ -75,13 +75,75 @@ body {
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+@keyframes emergency-glow {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(204,34,0,0.9)) drop-shadow(0 0 2px rgba(204,34,0,0.5)); }
+  50%       { filter: drop-shadow(0 0 1px rgba(204,34,0,0.2)); }
+}
+
+/* Hazard stripe scrolling */
+@keyframes hazard-scroll {
+  from { background-position: 0 0; }
+  to   { background-position: 17px 0; }
+}
+
+/* Timer heartbeat — bounce on each tick */
+@keyframes tick-bounce {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.22); }
+  70%  { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
+/* Elimination flash — red strobe overlay */
+@keyframes elim-flash {
+  0%   { opacity: 0; }
+  15%  { opacity: 0.85; }
+  40%  { opacity: 0.55; }
+  65%  { opacity: 0.75; }
+  100% { opacity: 0; }
+}
+
+/* Vote confirm shake */
+@keyframes vote-shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-4px) rotate(-1deg); }
+  40%       { transform: translateX(4px) rotate(1deg); }
+  60%       { transform: translateX(-3px); }
+  80%       { transform: translateX(3px); }
+}
+
+/* Phase badge pop */
+@keyframes phase-pop {
+  0%   { transform: scale(0.78); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* Round banner number slam */
+@keyframes round-slam {
+  0%   { transform: scale(3.5) translateY(-20px); opacity: 0; filter: blur(6px); }
+  55%  { transform: scale(0.95) translateY(0); opacity: 1; filter: blur(0); }
+  75%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+/* Scan line — ambient effect on cards */
+@keyframes scan-line {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 0.06; }
+  90%  { opacity: 0.06; }
+  100% { transform: translateY(200%); opacity: 0; }
+}
+
 .animate-pulse-urgent   { animation: pulse-urgent 0.65s ease-in-out infinite; }
 .animate-fade-up        { animation: fade-in-up 0.3s ease-out; }
 .animate-float-up       { animation: float-up 0.28s cubic-bezier(.22,.68,0,1.2); }
 .animate-glow-red       { animation: glow-red 1s ease-in-out infinite; }
 .animate-emergency-glow { animation: emergency-glow 1.2s ease-in-out infinite; }
+.animate-phase-pop      { animation: phase-pop 0.32s cubic-bezier(.22,.68,0,1.2); }
+.animate-vote-shake     { animation: vote-shake 0.35s ease-in-out; }
 
-/* Hazard stripe — тонка декоративна смуга небезпеки */
+/* Hazard stripe — рухома */
 .hazard-stripe {
   height: 3px;
   flex-shrink: 0;
@@ -92,13 +154,10 @@ body {
     transparent        6px,
     transparent       12px
   );
+  background-size: 17px 17px;
   opacity: 0.6;
   border-radius: 0 0 1px 1px;
-}
-
-@keyframes emergency-glow {
-  0%, 100% { filter: drop-shadow(0 0 6px rgba(204,34,0,0.9)) drop-shadow(0 0 2px rgba(204,34,0,0.5)); }
-  50%       { filter: drop-shadow(0 0 1px rgba(204,34,0,0.2)); }
+  animation: hazard-scroll 1.4s linear infinite;
 }
 
 /* Subtle dot-grid texture for main game area */

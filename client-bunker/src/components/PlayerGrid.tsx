@@ -69,6 +69,18 @@ function PlayerCard({
   const isBot     = player.isBot
   const isOffline = !player.isOnline && !isBot && !isDead
 
+  // Відслідковуємо момент вибування для анімації
+  const wasAliveRef = useRef(player.isAlive)
+  const [justEliminated, setJustEliminated] = useState(false)
+  useEffect(() => {
+    if (wasAliveRef.current && !player.isAlive) {
+      setJustEliminated(true)
+      const t = setTimeout(() => setJustEliminated(false), 900)
+      return () => clearTimeout(t)
+    }
+    wasAliveRef.current = player.isAlive
+  }, [player.isAlive])
+
   const revealedAttrs = Object.entries(player.attributes).filter(([, a]) => a.isRevealed)
   const hiddenKeys    = ATTR_ORDER.filter(k => !player.attributes[k as keyof typeof player.attributes]?.isRevealed)
 
@@ -112,12 +124,30 @@ function PlayerCard({
         transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
       }}
     >
+      {/* Спалах при вибуванні */}
+      {justEliminated && (
+        <div className="absolute inset-0 pointer-events-none rounded-xl z-10"
+             style={{ background: 'rgba(204,34,0,0.7)', animation: 'elim-flash 0.9s ease-out forwards' }} />
+      )}
+
       {/* Overlay для вибулих */}
       {isDead && (
         <div className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden"
              style={{
                background: 'repeating-linear-gradient(-45deg, transparent, transparent 7px, rgba(204,34,0,0.06) 7px, rgba(204,34,0,0.06) 8px)',
              }} />
+      )}
+
+      {/* Scan line — тільки для живих онлайн (ambient ефект) */}
+      {!isDead && !isOffline && (
+        <div className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden">
+          <div style={{
+            position: 'absolute', left: 0, right: 0, height: '30%',
+            background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.04), transparent)',
+            animation: `scan-line ${6 + index * 1.3}s ease-in-out infinite`,
+            animationDelay: `${index * 0.8}s`,
+          }} />
+        </div>
       )}
 
       {/* ── Заголовок ── */}

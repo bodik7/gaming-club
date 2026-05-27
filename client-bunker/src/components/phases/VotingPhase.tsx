@@ -22,6 +22,8 @@ export function VotingPhase() {
     p.isAlive && p.id !== myIndex && (!isTie || tiebreaker!.includes(p.id))
   )
 
+  const [shakeId, setShakeId] = useState<number | null>(null)
+
   const vote = (targetIdx: number) => {
     if (voted || myVote !== undefined) return
     // Перший тап — виділяємо кандидата; другий тап — підтверджуємо
@@ -33,6 +35,8 @@ export function VotingPhase() {
       sounds.vote()
     } else {
       setPendingVote(targetIdx)
+      setShakeId(targetIdx)
+      setTimeout(() => setShakeId(null), 400)
       haptic('light')
     }
   }
@@ -181,6 +185,7 @@ export function VotingPhase() {
                           boxShadow: isPending ? `0 0 12px ${baseRed},0.3)` : 'none',
                           transform: isPending ? 'scale(1.02)' : 'scale(1)',
                           transition: 'all 0.15s ease',
+                          animation: shakeId === p.id ? 'vote-shake 0.35s ease-in-out' : 'none',
                         }}>
                   <div className="flex items-center gap-1.5">
                     <span>{isPending ? '☠️' : '🚫'} {p.name}</span>
