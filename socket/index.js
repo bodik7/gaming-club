@@ -41,13 +41,19 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
 
     function emitLobbyUpdate(room) {
         if (room.started) return;
-        io.to(room.code).emit('lobbyUpdate', {
+        const payload = {
             players:  room.players.map(p => p.name),
             bots:     room.players.map(p => !!p.isBot),
             gameType: room.gameType,
             avatars:  room.players.map(p => ({ avatarId: p.avatarId || null, avatarColor: p.avatarColor || '#1a56db' })),
             ready:    room.ready ? [...room.ready] : [],
             settings: room.pendingSettings || null,
+        };
+        // Bug 4: send each player their updated index so client myIndex stays in sync after reshuffles
+        room.players.forEach(p => {
+            if (!p.socketId) return;
+            const s = io.sockets.sockets.get(p.socketId);
+            if (s) s.emit('lobbyUpdate', { ...payload, myIndex: p.index });
         });
     }
 

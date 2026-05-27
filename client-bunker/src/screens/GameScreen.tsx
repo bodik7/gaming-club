@@ -235,6 +235,7 @@ export function GameScreen() {
   )
 
   const canReveal = phase === 'round_reveal' && me && !me.hasRevealed
+  const allAttrsRevealed = me ? Object.values(me.attributes).every(a => a.isRevealed) : false
 
   // Картка персонажа — використовується в обох лейаутах
   const characterCard = me && (
@@ -242,7 +243,7 @@ export function GameScreen() {
       <div className="text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-1.5"
            style={{ color: 'var(--bunker-yellow)' }}>
         👤 Ваш персонаж
-        {canReveal && (
+        {canReveal && !allAttrsRevealed && (
           <span className="text-xs font-normal animate-pulse-urgent" style={{ color: 'var(--bunker-yellow)', fontSize: 9 }}>
             · натисни на 🔒 щоб розкрити
           </span>
@@ -250,7 +251,7 @@ export function GameScreen() {
       </div>
       {Object.entries(me.attributes).map(([key, attr]) => {
         const color = ATTR_COLORS[key] || '#e09600'
-        const isClickable = canReveal && !attr.isRevealed
+        const isClickable = canReveal && !attr.isRevealed && !allAttrsRevealed
         return (
           <div key={key}
                onClick={isClickable ? () => { setConfirmAttr(key); haptic('light') } : undefined}
@@ -276,6 +277,20 @@ export function GameScreen() {
           </div>
         )
       })}
+      {/* Bug 5: all attrs revealed but round not yet marked done — show explicit "Ready" button */}
+      {canReveal && allAttrsRevealed && (
+        <button
+          onClick={() => { revealAttr(Object.keys(me.attributes)[0]); haptic('success') }}
+          className="mt-1 w-full py-2.5 rounded-xl text-sm font-black transition-all active:scale-95 animate-pulse-urgent"
+          style={{
+            background: 'linear-gradient(135deg, rgba(60,150,80,0.4), rgba(30,100,50,0.3))',
+            border: '1px solid rgba(60,180,90,0.5)',
+            color: 'var(--bunker-green-bright)',
+            boxShadow: '0 0 12px rgba(60,180,90,0.2)',
+          }}>
+          ✅ Готовий до наступного раунду
+        </button>
+      )}
     </div>
   )
 

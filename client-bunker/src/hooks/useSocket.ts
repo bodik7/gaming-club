@@ -86,8 +86,15 @@ export function useSocket() {
 
     s.on('disconnect', () => setConnectionStatus('disconnected'))
 
-    s.on('lobbyUpdate', ({ players, bots }: { players: string[]; bots?: boolean[] }) => {
+    s.on('lobbyUpdate', ({ players, bots, myIndex: newMyIndex }: { players: string[]; bots?: boolean[]; myIndex?: number }) => {
       useGameStore.getState().setRoomPlayers(players, bots)
+      // Bug 4: update myIndex and isHost when player list reshuffles (e.g., someone leaves)
+      if (newMyIndex !== undefined) {
+        const store = useGameStore.getState()
+        if (newMyIndex !== store.myIndex) {
+          useGameStore.setState({ myIndex: newMyIndex, isHost: newMyIndex === 0 })
+        }
+      }
     })
 
     s.on('stateUpdate', ({ state }) => handleStateUpdate(state))
@@ -111,8 +118,8 @@ export function useSocket() {
       useGameStore.getState().setError(typeof msg === 'string' ? msg : 'Помилка сервера')
     })
 
-    s.on('chatMessage', ({ name, text, color }: { name: string; text: string; color: string }) => {
-      useGameStore.getState().addChatMessage({ name, text, color })
+    s.on('chatMessage', ({ name, text, color, icon }: { name: string; text: string; color: string; icon?: string }) => {
+      useGameStore.getState().addChatMessage({ name, text, color, icon })
     })
 
     // Коли телефон розблоковується або вкладка стає активною —

@@ -87,9 +87,11 @@ export const useGameStore = create<GameStore>((set) => ({
   })),
 
   handleGameStarted: (state) => set({
-    gameState: state,
-    myIndex:   state.myId,   // сервер надсилає myId у стейті
-    screen:    'game',
+    gameState:    state,
+    myIndex:      state.myId,   // сервер надсилає myId у стейті
+    screen:       'game',
+    chat:         [],           // Bug 3: clear chat history on new game
+    localMarkers: {},
   }),
 
   handleGameOver: (state) => set({ gameState: state }),
@@ -110,15 +112,16 @@ export const useGameStore = create<GameStore>((set) => ({
   setLeavingToHub: () => set({ leavingToHub: true }),
 
   reset: () => set({
-    screen:      'lobby',
-    myIndex:     null,
-    roomCode:    '',
-    roomPlayers: [],
-    roomBots:    [],
-    isHost:      false,
-    gameState:   null,
-    chat:        [],
-    localMarkers:{},
-    error:       null,
+    screen:        'lobby',
+    myIndex:       null,
+    roomCode:      '',
+    roomPlayers:   [],
+    roomBots:      [],
+    isHost:        false,
+    gameState:     null,
+    chat:          [],
+    localMarkers:  {},
+    error:         null,
+    leavingToHub:  false,   // Bug 2: reset leavingToHub flag
   }),
 }))
