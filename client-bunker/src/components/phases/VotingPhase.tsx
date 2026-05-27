@@ -11,6 +11,8 @@ export function VotingPhase() {
   if (!gameState || myIndex === null) return null
 
   const { players, votes, phase, tiebreaker, timerEnabled } = gameState
+  const me       = players[myIndex]
+  const isDead   = me && !me.isAlive
   const myVote   = votes[myIndex]
   const isTie    = !!tiebreaker
 
@@ -52,7 +54,20 @@ export function VotingPhase() {
     ? '⚖️ Повторне голосування — нічия!'
     : '🗳️ Голосування — хто залишає бункер?'
 
+  // Мертвий гравець бачить тільки результати, не може голосувати
+  if (isDead) {
+    return (
+      <div className="phase-fixed-panel">
+        <div className="px-4 py-3 rounded-xl text-xs text-center animate-fade-up"
+             style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--bunker-border)', color: 'var(--bunker-muted)' }}>
+          👁 Ви вибули — спостерігаєте за голосуванням
+        </div>
+      </div>
+    )
+  }
+
   return (
+    <div className="phase-fixed-panel">
     <div className="rounded-xl overflow-hidden animate-fade-up"
          style={{ border: `1px solid ${borderColor}`, boxShadow: '0 0 16px rgba(204,34,0,0.06)' }}>
 
@@ -184,6 +199,7 @@ export function VotingPhase() {
           </button>
         </div>
       )}
+    </div>
     </div>
   )
 }

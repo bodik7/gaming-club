@@ -63,6 +63,8 @@ export function WaitingScreen() {
   const [showScenarios, setShowScenarios]       = useState(false)
   const [showHowTo, setShowHowTo]               = useState(false)
   const [copied, setCopied]                     = useState(false)
+  // Налаштування що бачать не-хости (прийшли з сервера)
+  const [hostSettings, setHostSettings] = useState<{ scenarioId: number | null; timerEnabled: boolean } | null>(null)
   const scenarioRef = useRef<HTMLDivElement>(null)
 
   // Закриваємо дропдаун при кліку поза ним
@@ -77,13 +79,27 @@ export function WaitingScreen() {
 
   useEffect(() => {
     const s = getSocket()
-    s.on('lobbyUpdate', ({ players, bots }: { players: string[]; bots?: boolean[] }) => {
+    s.on('lobbyUpdate', ({ players, bots, settings }: {
+      players: string[]; bots?: boolean[]
+      settings?: { scenarioId: number | null; timerEnabled: boolean } | null
+    }) => {
       useGameStore.getState().setRoomPlayers(players, bots)
+      if (settings) setHostSettings(settings)
     })
     s.on('roomClosed', reset)
     s.on('kicked',     reset)
     return () => { s.off('lobbyUpdate'); s.off('roomClosed'); s.off('kicked') }
   }, [])
+
+  // Хост: синхронізуємо локальний вибір на сервер
+  const setScenario = (id: number | null) => {
+    setSelectedScenario(id)
+    getSocket().emit('updateLobbySettings', { scenarioId: id, timerEnabled })
+  }
+  const setTimer = (val: boolean) => {
+    setTimerEnabled(val)
+    getSocket().emit('updateLobbySettings', { scenarioId: selectedScenario, timerEnabled: val })
+  }
 
   const copyLink = () => {
     const url = `${location.origin}?join=${roomCode}`
@@ -106,6 +122,7 @@ export function WaitingScreen() {
     })
 
   const leaveRoom = () => {
+    localStorage.removeItem('monopolia_session')
     setLeavingToHub()
     getSocket().emit('leaveRoom')
     location.replace('/')
@@ -309,7 +326,7 @@ export function WaitingScreen() {
                 }}>
                   {/* Випадковий */}
                   <button
-                    onClick={() => { setSelectedScenario(null); setShowScenarios(false) }}
+                    onClick={() => { setScenario(null); setShowScenarios(false) }}
                     style={{
                       width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                       padding: '10px 14px', textAlign: 'left', cursor: 'pointer', border: 'none',
@@ -332,7 +349,7 @@ export function WaitingScreen() {
                   {SCENARIOS.map(sc => (
                     <button
                       key={sc.id}
-                      onClick={() => { setSelectedScenario(sc.id); setShowScenarios(false) }}
+                      onClick={() => { setScenario(sc.id); setShowScenarios(false) }}
                       style={{
                         width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                         padding: '10px 14px', textAlign: 'left', cursor: 'pointer', border: 'none',
@@ -363,7 +380,7 @@ export function WaitingScreen() {
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
-                  onClick={() => setTimerEnabled(true)}
+                  onClick={() => setTimer(true)}
                   style={{
                     flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700,
                     borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s', border: 'none',
@@ -375,7 +392,7 @@ export function WaitingScreen() {
                   ⏱ З таймером
                 </button>
                 <button
-                  onClick={() => setTimerEnabled(false)}
+                  onClick={() => setTimer(false)}
                   style={{
                     flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700,
                     borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s', border: 'none',
@@ -391,6 +408,52 @@ export function WaitingScreen() {
                 {timerEnabled
                   ? 'Кожна фаза автоматично завершується по таймеру'
                   : 'Хост або гравці завершують фазу вручну'}
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* ── Налаштування (тільки не-хост, читабельно) ── */}
+        {!isHost && hostSettings && (
+          <Card>
+            <SectionLabel>⚙️ Налаштування гри (обрав хост)</SectionLabel>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Сценарій */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12,
+                            padding: '10px 14px', borderRadius: 10,
+                            background: 'var(--bunker-surface2)',
+                            border: '1px solid var(--bunker-border)' }}>
+                <span style={{ fontSize: 22 }}>
+                  {hostSettings.scenarioId !== null ? SCENARIOS[hostSettings.scenarioId]?.emoji : '🎲'}
+                </span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>
+                    {hostSettings.scenarioId !== null
+                      ? SCENARIOS[hostSettings.scenarioId]?.title
+                      : 'Випадковий сценарій'}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--bunker-muted)' }}>
+                    {hostSettings.scenarioId !== null
+                      ? SCENARIOS[hostSettings.scenarioId]?.subtitle
+                      : 'Буде обрано автоматично'}
+                  </div>
+                </div>
+              </div>
+              {/* Таймер */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '8px 14px', borderRadius: 10,
+                            background: hostSettings.timerEnabled ? 'rgba(224,150,0,0.07)' : 'rgba(58,122,90,0.07)',
+                            border: `1px solid ${hostSettings.timerEnabled ? 'rgba(224,150,0,0.2)' : 'rgba(58,122,90,0.2)'}` }}>
+                <span style={{ fontSize: 18 }}>{hostSettings.timerEnabled ? '⏱' : '∞'}</span>
+                <div style={{ fontSize: 12, fontWeight: 700,
+                              color: hostSettings.timerEnabled ? 'var(--bunker-yellow)' : 'var(--bunker-green-bright)' }}>
+                  {hostSettings.timerEnabled ? 'З таймером' : 'Без таймера'}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--bunker-muted)', marginLeft: 4 }}>
+                  {hostSettings.timerEnabled
+                    ? 'фази завершуються автоматично'
+                    : 'хост завершує фази вручну'}
+                </div>
               </div>
             </div>
           </Card>

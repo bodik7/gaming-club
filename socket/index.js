@@ -47,6 +47,7 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
             gameType: room.gameType,
             avatars:  room.players.map(p => ({ avatarId: p.avatarId || null, avatarColor: p.avatarColor || '#1a56db' })),
             ready:    room.ready ? [...room.ready] : [],
+            settings: room.pendingSettings || null,
         });
     }
 
@@ -366,6 +367,17 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
             const room = roomStore.get(socket.roomCode);
             if (!room || socket.playerIndex !== 0) return;
             room.settings = { ...(room.settings || {}), ...newSettings };
+        });
+
+        // Бункер: хост оновлює налаштування до старту — транслюємо всім
+        socket.on('updateLobbySettings', ({ scenarioId, timerEnabled } = {}) => {
+            const room = roomStore.get(socket.roomCode);
+            if (!room || room.started || socket.playerIndex !== 0) return;
+            room.pendingSettings = {
+                scenarioId:   scenarioId   ?? null,
+                timerEnabled: timerEnabled ?? true,
+            };
+            emitLobbyUpdate(room);
         });
 
         socket.on('startGame', ({ settings } = {}) => {
