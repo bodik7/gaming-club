@@ -40,9 +40,13 @@
     flex: 1;
     display: flex;
     gap: 6px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
 }
+#d-info::-webkit-scrollbar { display: none; }
 .d-pill {
     display: flex;
     align-items: center;
@@ -764,4 +768,27 @@
     .dha-btn { min-height: 44px; padding: 10px 16px; font-size: 13px; }
     #d-action-bar { padding: 5px 8px; gap: 4px; }
     #d-hand-actions { gap: 6px; padding: 6px 10px; }
+}
+
+/* ─ Ландшафтний режим на телефоні ─ */
+@media (max-height: 500px) and (orientation: landscape) {
+    /* Компактний топбар */
+    #d-topbar { padding: 4px 10px; min-height: 36px; }
+    .d-topbar-title { font-size: 13px; }
+
+    /* Стіл і рука тісніше */
+    #d-table  { min-height: 80px; padding: 6px; gap: 6px; }
+    #d-hand   { min-height: 60px; padding: 4px 8px; gap: 4px; }
+    .d-card   { width: 42px; height: 64px; }
+    .d-cc     { font-size: 18px; }
+
+    /* Права панель ─ вужча */
+    .d-right-panel { width: 110px; min-width: 110px; }
+    #d-action-bar  { padding: 4px 8px; font-size: 11px; }
+    #d-hand-actions { padding: 4px 8px; gap: 4px; }
+    .dha-btn { padding: 8px 12px; font-size: 12px; min-height: 38px; }
+    .dab-btn { padding: 6px 10px; font-size: 11px; min-height: 38px; }
+
+    /* Дозволяємо горизонтальний скрол у лог */
+    #d-log { max-height: 80px; }
 }

@@ -1095,6 +1095,18 @@
 
 .t-score-pill.offline { opacity: 0.55; }
 
+/* ─ Дуже маленький екран (≤480px): прибираємо лог і чат, даємо місце кнопкам ─ */
+@media (max-width: 480px) {
+    #t-log   { display: none; }
+    .t-chat  { display: none; }
+    .t-right-panel { width: 120px; min-width: 120px; }
+    #t-actions {
+        flex: 1;
+        max-height: none;
+        overflow-y: auto;
+    }
+}
+
 /* ─ Планшет / великий телефон ─ */
 @media (max-width: 700px) {
     .t-table-zone { gap: 10px; }

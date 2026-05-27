@@ -1437,6 +1437,7 @@
         backdrop-filter: blur(10px);
         flex-shrink: 0;
         z-index: 40;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
     }
     .m-tab-btn {
         display: flex;

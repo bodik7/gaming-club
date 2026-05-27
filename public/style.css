@@ -1316,6 +1316,18 @@ body {
 
     /* Тости — вище таб-бара */
     #toast-container { bottom: 68px !important; }
+
+    /* Модалки — відступ знизу щоб кнопки не ховалися за таб-бар Монополії */
+    .modal {
+        padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px) + 16px);
+    }
+
+    /* Waiting room: кнопки налаштувань — більші таргети для торкання */
+    .wait-setting-btn {
+        padding: 10px 14px;
+        font-size: 13px;
+        min-height: 44px;
+    }
 }
 
 @media (max-width: 600px) {

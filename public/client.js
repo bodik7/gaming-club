@@ -1033,6 +1033,30 @@ function showLobbyWaiting(code) {
     if (shareBtn && navigator.share) shareBtn.textContent = '📤 Поділитись запрошенням';
     const chatBox = document.getElementById('lobby-chat-messages');
     if (chatBox) chatBox.innerHTML = '';
+    // Оновлюємо кнопку "Готовий" одразу після встановлення myPlayerIndex
+    // (lobbyUpdate міг прийти до callback і не побачив актуальний myPlayerIndex)
+    _syncReadyBigBtn();
+}
+
+function _syncReadyBigBtn() {
+    const readyBigBtn = document.getElementById('ready-big-btn');
+    if (!readyBigBtn) return;
+    const isHost = myPlayerIndex === 0;
+    const showBtn = !isHost && myPlayerIndex !== null && myPlayerIndex !== undefined;
+    readyBigBtn.style.display = showBtn ? '' : 'none';
+    if (showBtn) {
+        if (_isReady) {
+            readyBigBtn.textContent = '✅ Ви готові — натисніть щоб скасувати';
+            readyBigBtn.style.background = 'rgba(40,140,80,0.2)';
+            readyBigBtn.style.borderColor = 'rgba(76,175,128,0.7)';
+            readyBigBtn.style.color = '#4caf80';
+        } else {
+            readyBigBtn.textContent = '🙋 Я готовий!';
+            readyBigBtn.style.background = 'rgba(0,87,183,0.18)';
+            readyBigBtn.style.borderColor = 'rgba(0,150,255,0.5)';
+            readyBigBtn.style.color = '#64b5f6';
+        }
+    }
 }
 
 function copyRoomCode() {
@@ -1464,25 +1488,7 @@ socket.on('lobbyUpdate', ({ players, bots, gameType, avatars, ready }) => {
     if (myPlayerIndex !== null && myPlayerIndex !== undefined && myPlayerIndex !== 0) {
         _isReady = readySet.has(myPlayerIndex);
     }
-    const readyBigBtn = document.getElementById('ready-big-btn');
-    const iAmBot = bots && bots[myPlayerIndex];
-    const showReadyBtn = !isHost && !iAmBot && myPlayerIndex !== null && myPlayerIndex !== undefined;
-    if (readyBigBtn) {
-        readyBigBtn.style.display = showReadyBtn ? '' : 'none';
-        if (showReadyBtn) {
-            if (_isReady) {
-                readyBigBtn.textContent = '✅ Ви готові — натисніть щоб скасувати';
-                readyBigBtn.style.background = 'rgba(40,140,80,0.2)';
-                readyBigBtn.style.borderColor = 'rgba(76,175,128,0.7)';
-                readyBigBtn.style.color = '#4caf80';
-            } else {
-                readyBigBtn.textContent = '🙋 Я готовий!';
-                readyBigBtn.style.background = 'rgba(0,87,183,0.18)';
-                readyBigBtn.style.borderColor = 'rgba(0,150,255,0.5)';
-                readyBigBtn.style.color = '#64b5f6';
-            }
-        }
-    }
+    _syncReadyBigBtn();
     // Кнопки ботів (Мафія)
     let botPanel = document.getElementById('bot-controls');
     const showBots = isHost && _selectedGame === 'mafia';
