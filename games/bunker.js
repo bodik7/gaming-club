@@ -2,6 +2,7 @@ const { shuffle } = require('./utils.js');
 const {
     BUNKER_PROFESSIONS, BUNKER_HEALTH, BUNKER_HOBBIES,
     BUNKER_TRAITS, BUNKER_BAGGAGE, BUNKER_FACTS, BUNKER_ACTION_CARDS,
+    ACTION_CARD_PHASES,
 } = require('../public/games/bunker/attributes.js');
 const { BUNKER_SCENARIOS } = require('../public/games/bunker/scenarios.js');
 
@@ -461,6 +462,7 @@ function startBunkerRound(room) {
     s.tiebreaker     = null;
     s.players.forEach(p => {
         p.hasRevealed = false;
+        p.refutActive = false;
         if (p.isSilenced) p.isSilenced = false;
     });
     addBunkerLog(s, `📋 Раунд ${s.round} — розкриття карток`);
@@ -545,6 +547,15 @@ function resolveBunkerVoting(room) {
 
         if (tied.length === 1) {
             let toEliminate = tied[0];
+            // act_refut: повністю скасовує вигнання, новий раунд без жертв
+            if (toEliminate.refutActive) {
+                toEliminate.refutActive = false;
+                addBunkerLog(s, `🛡️ ${toEliminate.name} спростував вигнання — гра продовжується!`);
+                s.tiebreaker = null;
+                startBunkerRound(room);
+                return;
+            }
+            // Звичайний імунітет (act_luz, act_donat): захищає, але вигнання передається наступному
             if (toEliminate.immunityRounds > 0) {
                 toEliminate.immunityRounds--;
                 addBunkerLog(s, `🛡️ ${toEliminate.name} має імунітет — захищений!`);
@@ -667,6 +678,9 @@ function processBunkerAction(room, type, data, pidx) {
             const { cardId, target } = data;
             const card = p.actionCards.find(c => c.id === cardId && !c.used);
             if (!card) break;
+            // Серверна валідація фази — картку можна зіграти лише у дозволеній фазі
+            const allowedPhases = ACTION_CARD_PHASES[cardId];
+            if (allowedPhases && !allowedPhases.includes(s.phase)) break;
             card.used = true;
             applyBunkerCard(room, card, pidx, target);
             break;
@@ -804,8 +818,10 @@ function applyBunkerCard(room, card, pidx, target) {
             break;
         }
         case 'act_refut':
+            // act_refut повністю скасовує вигнання (новий раунд без усунення)
+            // НЕ immunityRounds — щоб не передавати вигнання наступному гравцю
             addBunkerLog(s, `🛡️ ${p.name} грає «Спростування»`);
-            p.immunityRounds = Math.max(p.immunityRounds, 1);
+            p.refutActive = true;
             p.isAlive = true;
             break;
         default:

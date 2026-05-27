@@ -18,7 +18,7 @@ const SCENARIOS = [
 
 // ── Як грати ──────────────────────────────────────────────────────────────────
 const HOW_TO_PLAY = [
-  { icon: '🎭', title: 'Персонаж',               text: "Кожен отримує персонажа з 5 прихованими атрибутами: професія, здоров'я, хобі, риса характеру та багаж." },
+  { icon: '🎭', title: 'Персонаж',               text: "Кожен отримує персонажа з 7 прихованими атрибутами: професія, біологія, здоров'я, хобі, риса характеру, багаж та секретний факт." },
   { icon: '🔍', title: 'Розкриття',              text: 'Кожен раунд гравці відкривають один свій атрибут. Стратегічно обирайте що показати.' },
   { icon: '💬', title: 'Дискусія і голосування', text: 'Після розкриття — обговорення і голосування. Хто набрав найбільше голосів — вибуває.' },
   { icon: '🃏', title: 'Карти дій',              text: 'Спеціальні карти: підглянути чужий атрибут, обмінятись, заблокувати голос тощо.' },
@@ -79,16 +79,24 @@ export function WaitingScreen() {
 
   useEffect(() => {
     const s = getSocket()
-    s.on('lobbyUpdate', ({ players, bots, settings }: {
-      players: string[]; bots?: boolean[]
+    // Слухаємо тільки settings з lobbyUpdate — setRoomPlayers вже обробляє useSocket.ts
+    // Використовуємо named function щоб видалити ТІЛЬКИ цей обробник (не той з useSocket.ts)
+    const onLobbyUpdate = ({ settings }: {
+      players?: string[]; bots?: boolean[]
       settings?: { scenarioId: number | null; timerEnabled: boolean } | null
     }) => {
-      useGameStore.getState().setRoomPlayers(players, bots)
       if (settings) setHostSettings(settings)
-    })
-    s.on('roomClosed', reset)
-    s.on('kicked',     reset)
-    return () => { s.off('lobbyUpdate'); s.off('roomClosed'); s.off('kicked') }
+    }
+    const onRoomClosed = () => reset()
+    const onKicked     = () => reset()
+    s.on('lobbyUpdate', onLobbyUpdate)
+    s.on('roomClosed',  onRoomClosed)
+    s.on('kicked',      onKicked)
+    return () => {
+      s.off('lobbyUpdate', onLobbyUpdate)
+      s.off('roomClosed',  onRoomClosed)
+      s.off('kicked',      onKicked)
+    }
   }, [])
 
   // Хост: синхронізуємо локальний вибір на сервер
