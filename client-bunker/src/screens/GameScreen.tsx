@@ -465,9 +465,6 @@ export function GameScreen() {
             <div className="flex-1 overflow-y-auto min-h-0 p-3 flex flex-col gap-3">
               {characterCard}
               <ActionCardPanel />
-              <div style={{ height: 260 }}>
-                <LogPanel />
-              </div>
             </div>
           )}
 
@@ -507,6 +504,13 @@ export function GameScreen() {
 
               {/* На старті — кнопка "Готовий" прямо на цій вкладці (fixed внизу) */}
               {phase === 'game_start' && <GameStartPhase />}
+
+              {/* Хід гри */}
+              <div className="text-xs font-black uppercase tracking-widest mb-0.5 mt-1"
+                   style={{ color: 'var(--bunker-muted)' }}>
+                📋 Хід гри
+              </div>
+              <LogPanel />
             </div>
           )}
         </div>
