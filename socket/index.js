@@ -702,7 +702,11 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
             io.to(socket.roomCode).emit('playerDisconnected', { playerIndex: socket.playerIndex });
 
             const _emptyCheckCode = socket.roomCode;
-            const _emptyDelay = room.started ? 60_000 : 0;
+            // Для bunker-кімнат що ще не почались — більше часу,
+            // бо хост може переходити на /bunker/ (page reload + reconnect)
+            const _emptyDelay = room.started ? 60_000
+                               : room.gameType === 'bunker' ? 12_000
+                               : 0;
             setTimeout(() => {
                 const r = roomStore.get(_emptyCheckCode);
                 if (!r) return;
