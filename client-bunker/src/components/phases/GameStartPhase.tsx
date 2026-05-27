@@ -4,16 +4,20 @@ import { getSocket } from '../../hooks/useSocket'
 import { useGameStore } from '../../store/gameStore'
 
 export function GameStartPhase() {
-  const { gameState } = useGameStore()
-  const [ready, setReady] = useState(false)
+  const { gameState, myIndex } = useGameStore()
+  // Ініціалізуємо з сервера — щоб після реконекту/рефрешу кнопка не скидалась
+  const me = myIndex !== null ? gameState?.players[myIndex] : null
+  const [ready, setReady] = useState(() => me?.hasRevealed || false)
   if (!gameState) return null
 
   const { scenario, players } = gameState
   const readyCount = players.filter(p => p.hasRevealed).length
   const pct = Math.round((readyCount / players.length) * 100)
+  // Синхронізуємо з сервером якщо стан прийшов після рендеру
+  const isReady = ready || (me?.hasRevealed ?? false)
 
   const markReady = () => {
-    if (ready) return
+    if (isReady) return
     setReady(true)
     getSocket().emit('action', { type: 'b_ready', data: {} })
   }
@@ -47,25 +51,25 @@ export function GameStartPhase() {
         {/* Кнопка */}
         <motion.button
           whileTap={{ scale: 0.97 }}
-          whileHover={!ready ? { scale: 1.01 } : {}}
+          whileHover={!isReady ? { scale: 1.01 } : {}}
           onClick={markReady}
-          disabled={ready}
+          disabled={isReady}
           className="w-full rounded-xl font-black tracking-wide disabled:opacity-60"
           style={{
             padding: '13px 20px',
             fontSize: 15,
-            background: ready
+            background: isReady
               ? 'linear-gradient(135deg, #1e4a2a, #162e1a)'
               : 'linear-gradient(135deg, #cc2200 0%, #8b1500 100%)',
             color: 'white',
-            border: ready
+            border: isReady
               ? '1px solid rgba(60,140,80,0.3)'
               : '1px solid rgba(204,34,0,0.5)',
-            boxShadow: ready ? 'none' : '0 4px 20px rgba(204,34,0,0.3)',
+            boxShadow: isReady ? 'none' : '0 4px 20px rgba(204,34,0,0.3)',
             letterSpacing: '0.04em',
           }}
         >
-          {ready ? '✅ Ви готові — чекаємо інших...' : '✅ Я прочитав — Готовий!'}
+          {isReady ? '✅ Ви готові — чекаємо інших...' : '✅ Я прочитав — Готовий!'}
         </motion.button>
       </div>
     </div>

@@ -10,6 +10,7 @@ export function RoundRevealPhase() {
   const total = alivePlayers.length
   const me = players[myIndex]
   const iMustReveal = me?.isAlive && !me?.hasRevealed
+  const allAttrsRevealed = me ? Object.values(me.attributes).every(a => a.isRevealed) : false
 
   return (
     <div className="phase-fixed-panel">
@@ -52,7 +53,9 @@ export function RoundRevealPhase() {
         {iMustReveal && (
           <div className="mobile-only px-4 py-2.5 rounded-xl text-xs text-center animate-pulse-urgent"
                style={{ background: 'rgba(224,150,0,0.1)', border: '1px solid rgba(224,150,0,0.3)', color: 'var(--bunker-yellow)' }}>
-            👆 Перейди на вкладку <strong>«Я»</strong> і натисни на атрибут щоб розкрити
+            {allAttrsRevealed
+              ? '👆 Перейди на вкладку «Я» і натисни «Готовий»'
+              : '👆 Перейди на вкладку «Я» і натисни на атрибут щоб розкрити'}
           </div>
         )}
 

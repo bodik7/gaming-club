@@ -99,8 +99,8 @@ export function LobbyScreen() {
             <input
               className="flex-1 rounded-lg px-4 py-3 text-white text-sm outline-none uppercase tracking-widest font-bold transition-all"
               style={{ background: '#111212', border: '1.5px solid var(--bunker-border)' }}
-              placeholder="Код (ABCD)"
-              maxLength={6}
+              placeholder="KYIV-1234"
+              maxLength={20}
               value={code}
               onChange={e => { setCode(e.target.value.toUpperCase()); setError('') }}
               onKeyDown={e => e.key === 'Enter' && joinRoom()}
