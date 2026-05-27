@@ -931,6 +931,20 @@
 .m-log-warn    { color: #fde68a; }
 .m-log-empty   { font-size: 10px; color: rgba(255,255,255,0.18); font-style: italic; }
 
+/* ── Топбар: таймер і фракції (мобільний) ── */
+.m-topbar-timer {
+    font-size: 11px;
+    color: var(--m-red-l);
+    font-weight: 700;
+    flex-shrink: 0;
+    display: none; /* показується через JS */
+}
+.m-topbar-factions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
 /* ═══════════════════════════════
    BOTTOM TABS (mobile only)
    ═══════════════════════════════ */
@@ -1460,12 +1474,38 @@
         text-align: center;
     }
 
+    /* Таймер і фракції у топбарі — показуємо на мобільному */
+    .m-topbar-timer { display: block; }
+
+    /* Тости вище таб-бару */
+    #toast-container { bottom: 66px !important; }
+
     /* Player grid: 1 col on mobile */
     .m-players-grid { grid-template-columns: 1fr; }
 
     /* Compact topbar */
     .m-topbar  { padding: 6px 12px; gap: 8px; }
     .m-title   { font-size: 11px; }
+
+    /* Більші кнопки дії для зручного торкання */
+    .m-panel-skip,
+    .m-panel-confirm {
+        min-height: 44px;
+        padding: 10px 14px;
+        font-size: 10px;
+    }
+
+    /* Кнопка дії на картці гравця — більша зона торкання */
+    .m-card-action-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+        top: 8px;
+        right: 8px;
+    }
+    .m-player-card-top { padding-right: 48px; }
+    .m-card-action-duo { top: 6px; right: 6px; }
+    .m-card-action-duo .m-card-action-btn { width: 36px; height: 36px; }
 
     /* Role reveal smaller */
     .m-role-reveal       { padding: 20px 16px 16px; }

@@ -254,14 +254,15 @@ function mRenderPhaseInfo() {
         const seeAll = !me?.isAlive || mState.phase === 'gameover' || mState.isSpectator;
         const myFaction = M_ROLE_LABELS[me?.role]?.faction;
         const showFactions = seeAll || myFaction === 'mafia' || mState.phase === 'gameover';
-        if (showFactions && (town + mafia + maniac > 0)) {
-            factionEl.innerHTML =
-                (town   > 0 ? `<span class="m-faction-badge town">🔵 ${town}</span>` : '') +
-                (mafia  > 0 ? `<span class="m-faction-badge mafia">🔴 ${mafia}</span>` : '') +
-                (maniac > 0 ? `<span class="m-faction-badge maniac">🟣 ${maniac}</span>` : '');
-        } else {
-            factionEl.innerHTML = '';
-        }
+        const factionHtml = showFactions && (town + mafia + maniac > 0)
+            ? (town   > 0 ? `<span class="m-faction-badge town">🔵 ${town}</span>` : '') +
+              (mafia  > 0 ? `<span class="m-faction-badge mafia">🔴 ${mafia}</span>` : '') +
+              (maniac > 0 ? `<span class="m-faction-badge maniac">🟣 ${maniac}</span>` : '')
+            : '';
+        factionEl.innerHTML = factionHtml;
+        // Дублюємо у топбар (видно на мобільному)
+        const topbarFactions = document.getElementById('m-topbar-factions');
+        if (topbarFactions) topbarFactions.innerHTML = factionHtml;
     }
 }
 
@@ -461,13 +462,12 @@ function mRenderPlayers() {
 function mRenderActions() {
     const s  = mState;
     const me = mMyIdx !== null ? s.players[mMyIdx] : null;
-    if (!me) return;
 
     const actionsEl  = document.getElementById('m-actions');
     const playersSec = document.getElementById('m-players-section');
     const panelEl    = document.getElementById('m-action-panel');
 
-    // Spectator: always show players, no actions
+    // Глядач або роль невідома — завжди показуємо гравців, без дій
     if (!me) {
         if (actionsEl)  actionsEl.style.display  = 'none';
         if (playersSec) playersSec.style.display = 'flex';
@@ -1080,25 +1080,33 @@ function mStartPhaseTimer(deadline) {
     const text  = document.getElementById('m-cir-text');
     const CIRC  = 119.4; // 2π*19
 
+    const topbarTimerEl = document.getElementById('m-topbar-timer');
     if (!deadline) {
         if (wrap) wrap.style.display = 'none';
+        if (topbarTimerEl) topbarTimerEl.style.display = 'none';
         return;
     }
     if (wrap) wrap.style.display = '';
+    if (topbarTimerEl) topbarTimerEl.style.display = '';
 
     const total = Math.max(1, deadline - Date.now());
+    const topbarTimer = document.getElementById('m-topbar-timer');
     const update = () => {
         const rem = Math.max(0, deadline - Date.now());
         const sec = Math.ceil(rem / 1000);
         const pct = rem / total;
+        const timeStr = sec > 0
+            ? (sec >= 60 ? `${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}` : `${sec}с`)
+            : '—';
         if (text) text.textContent = sec > 0
             ? (sec >= 60 ? `${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}` : sec)
             : '—';
+        if (topbarTimer) topbarTimer.textContent = timeStr;
         if (fill) {
             fill.style.strokeDashoffset = CIRC * (1 - pct);
             fill.className = 'm-cir-fill' + (pct > 0.4 ? '' : pct > 0.15 ? ' warn' : ' danger');
         }
-        if (rem <= 0) { clearInterval(_mTimers['phase-timer']); if (wrap) wrap.style.display = 'none'; }
+        if (rem <= 0) { clearInterval(_mTimers['phase-timer']); if (wrap) wrap.style.display = 'none'; if (topbarTimer) topbarTimer.style.display = 'none'; }
     };
     update();
     _mTimers['phase-timer'] = setInterval(update, 300);

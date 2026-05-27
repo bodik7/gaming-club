@@ -51,8 +51,10 @@ type MobileTab = 'players' | 'chat' | 'me' | 'scenario'
 export function GameScreen() {
   const { gameState, myIndex, setLeavingToHub } = useGameStore()
   const chatCount = useGameStore(s => s.chat.length)
+  const logCount  = useGameStore(s => s.gameState?.log.length ?? 0)
   const [mobileTab, setMobileTab]         = useState<MobileTab>('players')
   const [lastSeenChat, setLastSeenChat]   = useState(0)
+  const [lastSeenLog, setLastSeenLog]     = useState(0)
   const [confirmAttr, setConfirmAttr]     = useState<string | null>(null)
   const [showSplash, setShowSplash]         = useState(false)
   const [roundBanner, setRoundBanner]       = useState<number | null>(null)
@@ -69,7 +71,8 @@ export function GameScreen() {
   const me    = myIndex !== null ? players[myIndex] : null
   const pm    = PHASE_META[phase] || PHASE_META['game_start']
 
-  const unreadChat      = mobileTab !== 'chat' ? Math.max(0, chatCount - lastSeenChat) : 0
+  const unreadChat      = mobileTab !== 'chat'     ? Math.max(0, chatCount - lastSeenChat) : 0
+  const unreadLog       = mobileTab !== 'scenario' ? Math.max(0, logCount  - lastSeenLog)  : 0
   const availableCards  = me && !me.isBot
     ? me.actionCards.filter(c => !c.used && ((ACTION_CARD_PHASES as Record<string,string[]>)[c.id] || []).includes(phase)).length
     : 0
@@ -138,6 +141,7 @@ export function GameScreen() {
     const alive = me?.isAlive !== false
     if (phase === 'game_start') {
       setMobileTab('scenario')
+      setLastSeenLog(logCount)
     } else if (phase === 'round_reveal') {
       // Мертвий хост залишається на 'players' щоб бачити статус раунду
       if (alive) setMobileTab('me')
@@ -199,7 +203,8 @@ export function GameScreen() {
 
   const switchTab = (tab: MobileTab) => {
     setMobileTab(tab)
-    if (tab === 'chat') setLastSeenChat(chatCount)
+    if (tab === 'chat')     setLastSeenChat(chatCount)
+    if (tab === 'scenario') setLastSeenLog(logCount)
   }
 
   const leaveGame = () => {
@@ -505,12 +510,10 @@ export function GameScreen() {
               {/* На старті — кнопка "Готовий" прямо на цій вкладці (fixed внизу) */}
               {phase === 'game_start' && <GameStartPhase />}
 
-              {/* Хід гри */}
-              <div className="text-xs font-black uppercase tracking-widest mb-0.5 mt-1"
-                   style={{ color: 'var(--bunker-muted)' }}>
-                📋 Хід гри
+              {/* Хід гри — LogPanel вже має власний заголовок «📋 Хід гри» */}
+              <div style={{ height: 260, flexShrink: 0 }}>
+                <LogPanel />
               </div>
-              <LogPanel />
             </div>
           )}
         </div>
@@ -521,7 +524,7 @@ export function GameScreen() {
             { id: 'players'  as MobileTab, icon: '👥', label: 'Гравці' },
             { id: 'chat'     as MobileTab, icon: '💬', label: 'Чат',      badge: unreadChat },
             { id: 'me'       as MobileTab, icon: '👤', label: 'Я',        badge: cardBadge },
-            { id: 'scenario' as MobileTab, icon: '📋', label: 'Сценарій' },
+            { id: 'scenario' as MobileTab, icon: '📋', label: 'Сценарій', badge: unreadLog },
           ]).map(tab => {
             const active = mobileTab === tab.id
             return (
