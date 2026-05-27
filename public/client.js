@@ -1429,7 +1429,9 @@ function startGame() {
     console.log('[startGame] called, btn.disabled=', btn?.disabled, 'socket.connected=', socket.connected);
     if (btn && btn.disabled) { console.log('[startGame] BLOCKED — button is disabled'); return; }
     console.log('[startGame] emitting startGame...');
-    socket.emit('startGame', { settings: _gameSettings });
+    socket.emit('startGame', { settings: _gameSettings }, (ack) => {
+        console.log('[startGame] server ack:', ack);
+    });
 }
 
 function sendLobbyMsg() {
