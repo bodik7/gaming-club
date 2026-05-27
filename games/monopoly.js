@@ -1,7 +1,7 @@
 // ============================================
 // МОНОПОЛІЯ — серверна логіка
 // ============================================
-const { BOARD, TOKEN_COLORS, TOKEN_ICONS } = require('../public/games/monopoly/board.js');
+const { BOARD, TOKEN_COLORS, TOKEN_ICONS } = require('../public/shared/monopoly-board.js');
 const { CHANCE_CARDS, EXCURSION_CARDS }    = require('../public/games/monopoly/messages.js');
 const { shuffle, addLog } = require('./utils.js');
 

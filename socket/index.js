@@ -386,15 +386,9 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
             emitLobbyUpdate(room);
         });
 
-        socket.on('startGame', ({ settings } = {}, cb) => {
-            const _cb = typeof cb === 'function' ? cb : () => {};
+        socket.on('startGame', ({ settings } = {}) => {
             const room = roomStore.get(socket.roomCode);
-            console.log(`[startGame] roomCode=${socket.roomCode} playerIndex=${socket.playerIndex} roomFound=${!!room}`);
-            if (!room || socket.playerIndex !== 0) {
-                console.log(`[startGame] BLOCKED: !room=${!room} playerIndex=${socket.playerIndex}`);
-                _cb({ error: `blocked: room=${!!room} idx=${socket.playerIndex}` });
-                return;
-            }
+            if (!room || socket.playerIndex !== 0) return;
 
             if (room.gameType === 'mafia') {
                 const n = room.players.length;
@@ -434,22 +428,12 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
                 room.players.forEach(rp => { io.to(rp.socketId).emit('gameStarted', { state: sanitizeBunker(room.state, rp.index), myPlayerIndex: rp.index, gameType: 'bunker' }); });
                 startBunkerPhase(room, 'game_start');
             } else {
-                if (room.players.length < 2) { _cb({ error: 'need 2 players' }); return io.to(socket.id).emit('error', 'Потрібно мінімум 2 гравці'); }
-                try {
-                    console.log(`[startGame-monopoly] players=${room.players.length} gameType=${room.gameType}`);
-                    room.started = true;
-                    room.state = createGameState(room.players);
-                    console.log(`[startGame-monopoly] state created, players=${room.state?.players?.length}`);
-                    addLog(room.state, `🎮 Гра почалась! Перший хід: ${room.state.players[0].name}`, 'success');
-                    startTurnTimer(room);
-                    console.log(`[startGame-monopoly] emitting gameStarted to room ${socket.roomCode}`);
-                    io.to(socket.roomCode).emit('gameStarted', { state: sanitize(room.state), gameType: 'monopoly' });
-                    _cb({ ok: true });
-                    console.log(`[startGame-monopoly] done`);
-                } catch(e) {
-                    console.error(`[startGame-monopoly] ERROR:`, e);
-                    _cb({ error: String(e) });
-                }
+                if (room.players.length < 2) return io.to(socket.id).emit('error', 'Потрібно мінімум 2 гравці');
+                room.started = true;
+                room.state = createGameState(room.players);
+                addLog(room.state, `🎮 Гра почалась! Перший хід: ${room.state.players[0].name}`, 'success');
+                startTurnTimer(room);
+                io.to(socket.roomCode).emit('gameStarted', { state: sanitize(room.state), gameType: 'monopoly' });
             }
         });
 
