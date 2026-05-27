@@ -10,11 +10,12 @@ export function VotingPhase() {
   const [pendingVote, setPendingVote] = useState<number | null>(null)
   if (!gameState || myIndex === null) return null
 
-  const { players, votes, phase, tiebreaker, timerEnabled } = gameState
-  const me       = players[myIndex]
-  const isDead   = me && !me.isAlive
-  const myVote   = votes[myIndex]
-  const isTie    = !!tiebreaker
+  const { players, votes, phase, tiebreaker, timerEnabled, quarantined } = gameState
+  const me           = players[myIndex]
+  const isDead       = me && !me.isAlive
+  const myVote       = votes[myIndex]
+  const isTie        = !!tiebreaker
+  const isQuarantined = quarantined?.includes(myIndex)
 
   // Кандидати: при перепроголосуванні — тільки учасники нічиї
   const alive = players.filter(p =>
@@ -66,6 +67,18 @@ export function VotingPhase() {
     )
   }
 
+  // Карантинований гравець не може голосувати
+  if (isQuarantined && phase === 'voting') {
+    return (
+      <div className="phase-fixed-panel">
+        <div className="px-4 py-3 rounded-xl text-xs text-center animate-fade-up"
+             style={{ background: 'rgba(80,0,80,0.12)', border: '1px solid rgba(150,60,220,0.3)', color: '#cc88ff' }}>
+          🏥 Ви в карантині — не можете голосувати цього раунду
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="phase-fixed-panel">
     <div className="rounded-xl overflow-hidden animate-fade-up"
@@ -104,7 +117,15 @@ export function VotingPhase() {
                          border: `1px solid ${isMax ? 'rgba(204,34,0,0.4)' : 'var(--bunker-border)'}`,
                        }}>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold text-white">{p.name}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-bold text-white">{p.name}</span>
+                        {quarantined?.includes(p.id) && (
+                          <span className="text-xs px-1.5 py-px rounded font-black"
+                                style={{ background: 'rgba(80,0,80,0.4)', color: '#cc88ff', fontSize: 9 }}>
+                            🏥 карантин
+                          </span>
+                        )}
+                      </div>
                       <span className="text-sm font-black"
                             style={{ color: isMax ? 'var(--bunker-red)' : 'var(--bunker-muted2)' }}>
                         {cnt} {cnt === 1 ? 'голос' : 'голосів'}
@@ -161,7 +182,15 @@ export function VotingPhase() {
                           transform: isPending ? 'scale(1.02)' : 'scale(1)',
                           transition: 'all 0.15s ease',
                         }}>
-                  <span>{isPending ? '☠️' : '🚫'} {p.name}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span>{isPending ? '☠️' : '🚫'} {p.name}</span>
+                    {quarantined?.includes(p.id) && (
+                      <span className="text-xs px-1 py-px rounded font-bold"
+                            style={{ background: 'rgba(80,0,80,0.35)', color: '#cc88ff', fontSize: 9 }}>
+                        🏥
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     {cnt > 0 && (
                       <span className="text-xs font-normal px-1.5 py-0.5 rounded-full"

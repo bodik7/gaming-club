@@ -67,6 +67,7 @@ export interface BunkerState {
   players:        BunkerPlayer[]
   votes:          Record<number, number>   // voterIdx → targetIdx
   tiebreaker:     number[] | null          // ID гравців у повторному голосуванні
+  quarantined:    number[]                 // ID гравців що не можуть голосувати
   log:            string[]
   winner:         number[] | null
   epilogue:       string | null

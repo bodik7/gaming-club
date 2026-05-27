@@ -51,11 +51,13 @@ type MobileTab = 'players' | 'chat' | 'me' | 'scenario'
 export function GameScreen() {
   const { gameState, myIndex, setLeavingToHub } = useGameStore()
   const chatCount = useGameStore(s => s.chat.length)
-  const [mobileTab, setMobileTab]       = useState<MobileTab>('players')
-  const [lastSeenChat, setLastSeenChat] = useState(0)
-  const [confirmAttr, setConfirmAttr]   = useState<string | null>(null)
-  const [showSplash, setShowSplash]     = useState(false)
-  const splashShownRef                  = useRef(false)
+  const [mobileTab, setMobileTab]         = useState<MobileTab>('players')
+  const [lastSeenChat, setLastSeenChat]   = useState(0)
+  const [confirmAttr, setConfirmAttr]     = useState<string | null>(null)
+  const [showSplash, setShowSplash]       = useState(false)
+  const [refutCountdown, setRefutCountdown] = useState<number | null>(null)
+  const refutTimerRef                     = useRef<ReturnType<typeof setInterval> | null>(null)
+  const splashShownRef                    = useRef(false)
   const playersScrollRef = useRef<HTMLDivElement>(null)
 
   if (!gameState) return null
@@ -77,6 +79,39 @@ export function GameScreen() {
     haptic('success')
     sounds.reveal()
   }, [])
+
+  // Попап «Спростування» — якщо гравець виганяється і має act_refut
+  useEffect(() => {
+    if (phase !== 'voting_result' || myIndex === null || !gameState) return
+
+    const me = gameState.players[myIndex]
+    const hasRefut = me?.isAlive && me?.actionCards.some(c => c.id === 'act_refut' && !c.used)
+    if (!hasRefut) return
+
+    // Перевіряємо чи саме цей гравець набрав найбільше голосів
+    const votes = gameState.votes
+    const counts: Record<number, number> = {}
+    Object.values(votes).forEach(t => { counts[t] = (counts[t] || 0) + 1 })
+    const maxVotes = Math.max(0, ...Object.values(counts))
+    if (maxVotes === 0) return
+    const topIds = gameState.players.filter(p => p.isAlive && (counts[p.id] || 0) === maxVotes).map(p => p.id)
+    if (!topIds.includes(myIndex)) return
+
+    // Запускаємо відлік 4 секунди
+    setRefutCountdown(4)
+    haptic('heavy')
+    const iv = setInterval(() => {
+      setRefutCountdown(prev => {
+        if (prev === null || prev <= 1) {
+          clearInterval(iv)
+          return null
+        }
+        return prev - 1
+      })
+    }, 1000)
+    refutTimerRef.current = iv
+    return () => clearInterval(iv)
+  }, [phase])
 
   // Авто-переключення вкладок при зміні фази
   useEffect(() => {
@@ -482,6 +517,80 @@ export function GameScreen() {
 
       {/* Попап підтвердження розкриття */}
       <AnimatePresence>{confirmPopup}</AnimatePresence>
+
+      {/* Попап «Спростування» — виганяють, але є карта порятунку */}
+      <AnimatePresence>
+        {refutCountdown !== null && me && (
+          <motion.div
+            key="refut-popup"
+            initial={{ opacity: 0, scale: 0.92, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.88, y: -10 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(6px)' }}
+          >
+            <div className="w-full max-w-xs rounded-2xl overflow-hidden"
+                 style={{ border: '2px solid rgba(245,196,0,0.5)', background: 'var(--bunker-surface2)' }}>
+              <div className="hazard-stripe" style={{ opacity: 0.6 }} />
+              <div className="p-5 flex flex-col items-center gap-4 text-center">
+                <div className="text-5xl animate-emergency-glow">🛡️</div>
+                <div>
+                  <div className="text-base font-black text-white mb-1">Вас виганяють!</div>
+                  <div className="text-xs" style={{ color: 'var(--bunker-muted2)' }}>
+                    У вас є карта «🛡️ Спростування» — зіграйте щоб залишитись
+                  </div>
+                </div>
+
+                {/* Відлік */}
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4].map(n => (
+                    <div key={n}
+                         className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-black transition-all duration-300"
+                         style={{
+                           background: refutCountdown >= n ? 'rgba(245,196,0,0.3)' : 'rgba(255,255,255,0.04)',
+                           border: `2px solid ${refutCountdown >= n ? 'rgba(245,196,0,0.7)' : 'var(--bunker-border)'}`,
+                           color: refutCountdown >= n ? 'var(--bunker-yellow)' : 'var(--bunker-muted)',
+                         }}>
+                      {n}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col gap-2 w-full">
+                  <button
+                    onClick={() => {
+                      getSocket().emit('action', { type: 'b_useCard', data: { cardId: 'act_refut' } })
+                      if (refutTimerRef.current) clearInterval(refutTimerRef.current)
+                      setRefutCountdown(null)
+                      haptic('success')
+                    }}
+                    className="w-full py-3 rounded-xl font-black text-sm transition-all active:scale-95"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(245,196,0,0.35), rgba(200,150,0,0.25))',
+                      border: '1.5px solid rgba(245,196,0,0.6)',
+                      color: 'var(--bunker-yellow)',
+                      boxShadow: '0 0 20px rgba(245,196,0,0.2)',
+                    }}
+                  >
+                    🛡️ Зіграти Спростування!
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (refutTimerRef.current) clearInterval(refutTimerRef.current)
+                      setRefutCountdown(null)
+                    }}
+                    className="w-full py-2 rounded-xl text-xs"
+                    style={{ color: 'var(--bunker-muted)', border: '1px solid var(--bunker-border)', background: 'transparent' }}
+                  >
+                    Відмовитись
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Сплеш-екран початку гри */}
       <AnimatePresence>

@@ -132,6 +132,7 @@ function sanitizeBunker(state, forIdx) {
             : {},
         isSecretVoting: state.isSecretVoting || false,
         tiebreaker:     state.tiebreaker || null,
+        quarantined:    state.quarantined || [],
         log:      state.log.slice(0, 40),
         winner:   state.winner,
         epilogue: state.epilogue || null,
@@ -433,9 +434,10 @@ function onBunkerTimeout(room, phase) {
                 const attr = Object.keys(p.attributes).find(k => !p.attributes[k].isRevealed);
                 if (attr && p.attributes[attr]) {
                     p.attributes[attr].isRevealed = true;
-                    p.hasRevealed = true;
                     addBunkerLog(s, `⏰ ${p.name} — авто-розкриття`);
                 }
+                // Якщо всі атрибути вже розкриті — просто позначаємо як «розкрився»
+                p.hasRevealed = true;
             });
             startBunkerPhase(room, 'discussion');
             break;
@@ -597,12 +599,19 @@ function processBunkerAction(room, type, data, pidx) {
             if (s.phase !== 'round_reveal') break;
             if (p.hasRevealed) break;
             const { attr } = data;
-            if (!attr || !p.attributes[attr]) break;
-            if (p.attributes[attr].isRevealed) break;
 
-            p.attributes[attr].isRevealed = true;
-            p.hasRevealed = true;
-            addBunkerLog(s, `🔓 ${p.name} розкрив(ла) ${BUNKER_ATTR_LABELS[attr]}`);
+            const allAlreadyRevealed = Object.values(p.attributes).every(a => a.isRevealed);
+            if (allAlreadyRevealed) {
+                // Всі атрибути вже розкриті — просто позначаємо готовим
+                p.hasRevealed = true;
+                addBunkerLog(s, `✅ ${p.name} — всі атрибути вже відкриті`);
+            } else {
+                if (!attr || !p.attributes[attr]) break;
+                if (p.attributes[attr].isRevealed) break;
+                p.attributes[attr].isRevealed = true;
+                p.hasRevealed = true;
+                addBunkerLog(s, `🔓 ${p.name} розкрив(ла) ${BUNKER_ATTR_LABELS[attr]}`);
+            }
 
             const allRevealed = s.players.filter(pl => pl.isAlive).every(pl => pl.hasRevealed);
             if (allRevealed) {

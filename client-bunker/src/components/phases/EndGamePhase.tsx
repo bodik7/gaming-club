@@ -114,7 +114,12 @@ export function EndGamePhase() {
             Чекаємо реваншу від хоста...
           </div>
         )}
-        <button onClick={() => { getSocket().emit('leaveRoom'); reset() }}
+        <button onClick={() => {
+                  localStorage.removeItem('monopolia_session')
+                  getSocket().emit('leaveRoom')
+                  reset()
+                  location.replace('/')
+                }}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95"
                 style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--bunker-muted2)', border: '1px solid var(--bunker-border)' }}>
           🏠 Нова гра

@@ -146,7 +146,7 @@ function PlayerCard({
         })()}
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1 mb-px">
+          <div className="flex items-center gap-1 mb-px flex-wrap">
             {isDead && (
               <span className="px-1 py-px rounded font-black flex-shrink-0"
                     style={{ background: 'rgba(180,30,0,0.5)', color: '#ff6060', fontSize: 8, letterSpacing: '0.05em' }}>
@@ -157,6 +157,18 @@ function PlayerCard({
               <span className="px-1 py-px rounded font-black flex-shrink-0"
                     style={{ background: 'rgba(80,80,80,0.5)', color: '#aaa', fontSize: 8, letterSpacing: '0.05em' }}>
                 ОФЛАЙН
+              </span>
+            )}
+            {!isDead && player.isSilenced && (
+              <span className="px-1 py-px rounded font-black flex-shrink-0"
+                    style={{ background: 'rgba(80,0,80,0.5)', color: '#cc88ff', fontSize: 8, letterSpacing: '0.05em' }}>
+                🔇 БАН
+              </span>
+            )}
+            {!isDead && player.immunityRounds > 0 && (
+              <span className="px-1 py-px rounded font-black flex-shrink-0"
+                    style={{ background: 'rgba(0,100,180,0.4)', color: '#88ccff', fontSize: 8, letterSpacing: '0.05em' }}>
+                🛡️×{player.immunityRounds}
               </span>
             )}
             {!isDead && player.hasRevealed && (
