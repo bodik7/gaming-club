@@ -77,12 +77,14 @@ function dStartTurnTimer(room) {
 }
 
 function createDurakState(roomPlayers, settings={}) {
-    const deck = shuffle(D_SUITS.flatMap(s=>D_RANKS.map(r=>r+s)));
-    const players = roomPlayers.map((rp,i)=>({ id:i, name:rp.name, hand:deck.splice(0,6), avatarId: rp.avatarId||null, avatarColor: rp.avatarColor||'#1a56db' }));
-    const trumpCard = deck[deck.length-1];
-    deck.splice(deck.length-1, 1);
-    deck.unshift(trumpCard);
+    const allCards = shuffle(D_SUITS.flatMap(s=>D_RANKS.map(r=>r+s)));
+    // Беремо козирь ДО роздачі — інакше при 6 гравцях (6×6=36) колода порожніє
+    // і trumpCard стає undefined, що крашить dSuit()
+    const trumpCard = allCards.pop();           // виймаємо останню карту
     const trump = dSuit(trumpCard);
+    allCards.unshift(trumpCard);                // кладемо козирь «відкрито» знизу колоди
+    const deck = allCards;
+    const players = roomPlayers.map((rp,i)=>({ id:i, name:rp.name, hand:deck.splice(1,6), avatarId: rp.avatarId||null, avatarColor: rp.avatarColor||'#1a56db' }));
     const attacker = dFindFirstAttacker(players, trump);
     return {
         gameType:'durak', mode: settings.mode||'podkidnoy',

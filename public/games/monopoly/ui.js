@@ -60,6 +60,11 @@ function showModal({ title, body, buttons, wide = false, onClose = null, dismiss
 
 function closeModal() {
     document.getElementById('modal').classList.add('hidden');
+    // Зупиняємо таймер торгівлі якщо модалка закрилась з будь-якої причини
+    if (window._tradeCountdownInterval) {
+        clearInterval(window._tradeCountdownInterval);
+        window._tradeCountdownInterval = null;
+    }
 }
 
 function modalOpen() {

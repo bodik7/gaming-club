@@ -389,7 +389,21 @@ function applyState(state, diceRolled, landingPos, onDone) {
     _prevAuction       = state.auctionState;
     _prevPendingTrade  = state.pendingTrade;
     _prevCurrentPlayerIdx = state.currentPlayerIndex;
-    pendingRent        = state.pendingAction === 'payRent' ? (pendingRent || null) : null;
+    // Якщо pendingRent порожній (реконект / перший рендер) але сервер чекає оплату — відновлюємо з pendingData
+    if (state.pendingAction === 'payRent') {
+        if (!pendingRent && state.pendingData) {
+            const pd = state.pendingData;
+            pendingRent = {
+                player: state.players[state.currentPlayerIndex],
+                cell:   (typeof BOARD !== 'undefined' ? BOARD[pd.pos] : null),
+                rent:   pd.rent,
+                owner:  state.players[pd.ownerId],
+            };
+        }
+        // else keep existing pendingRent
+    } else {
+        pendingRent = null;
+    }
 
     if (window._pendingCardPos != null && myPlayerIndex === state.currentPlayerIndex) {
         const pos = window._pendingCardPos;

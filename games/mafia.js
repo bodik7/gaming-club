@@ -77,6 +77,7 @@ function createMafiaState(roomPlayers, settings = {}) {
         donFindings:     [],   // { id, isSheriff } — видно тільки дону
         winner:     null,
         log:        [],
+        doctorLastTarget: null,   // Bug fix: заборона лікувати одного двічі поспіль
         nightDuration:  settings.nightDuration  || 90,
         dayDuration:    settings.dayDuration    || 120,
         voteDuration:   settings.voteDuration   || 60,
@@ -230,6 +231,10 @@ function resolveNight(room) {
     const protected_ = new Set();
     if (acts.doctorHeal && !nightBlocked.has(acts.doctorHeal.actorId)) {
         protected_.add(acts.doctorHeal.targetId);
+        // Запам'ятовуємо ціль лікаря — наступного разу не можна лікувати того ж самого
+        state.doctorLastTarget = acts.doctorHeal.targetId;
+    } else {
+        state.doctorLastTarget = null;  // якщо не лікував — ліміт скидається
     }
 
     let sheriffResult = null;
@@ -445,6 +450,8 @@ function processMafiaAction(state, type, data, pidx) {
             if (state.phase !== 'night' || player.role !== 'doctor') break;
             const { targetId: dht } = data;
             if (!state.players[dht]?.isAlive) break;
+            // Заборона лікувати одного гравця двічі поспіль (як зазначено в правилах ролі)
+            if (state.doctorLastTarget === dht) break;
             state.nightActions.doctorHeal = { actorId: pidx, targetId: dht };
             break;
         }
