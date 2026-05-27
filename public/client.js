@@ -756,8 +756,18 @@ function tryRejoin() {
     socket.emit('rejoin', { code, playerIndex, playerName }, ({ success, error, started, state, players }) => {
         if (error) {
             clearSession();
+            // Ховаємо всі ігрові екрани
+            ['waiting-screen','game-screen','durak-screen','tysyacha-screen','mafia-screen'].forEach(id => {
+                document.getElementById(id)?.classList.add('hidden');
+            });
             document.getElementById('lobby-screen').classList.remove('hidden');
-            showRejoinError(error);
+            // Якщо кімната зникла після перезапуску сервера — пояснюємо чому
+            const isRoomGone = error.includes('не знайдено') || error.includes('not found');
+            if (isRoomGone) {
+                showToast('⚠️ Сервер перезапустився — кімната не збереглась. Створіть нову.', { color: '#e65100', duration: 7000 });
+            } else {
+                showRejoinError(error);
+            }
             return;
         }
         myPlayerIndex = playerIndex;
@@ -851,17 +861,42 @@ function showToast(text, { color = '#333', duration = 3500 } = {}) {
     }, duration);
 }
 
+// ── Reconnect banner (показується при втраті зв'язку) ──────────
+let _reconnectBanner = null;
+function _showReconnectBanner() {
+    if (_reconnectBanner) return;
+    _reconnectBanner = document.createElement('div');
+    _reconnectBanner.id = 'reconnect-banner';
+    _reconnectBanner.style.cssText = `
+        position:fixed;top:0;left:0;right:0;z-index:99999;
+        background:#b71c1c;color:#fff;text-align:center;
+        padding:10px 16px;font-size:14px;font-weight:700;
+        letter-spacing:0.3px;box-shadow:0 2px 8px rgba(0,0,0,0.4);
+        animation:slideDown 0.25s ease-out;
+    `;
+    _reconnectBanner.textContent = '🔄 Відновлюємо з\'єднання…';
+    document.body.appendChild(_reconnectBanner);
+}
+function _hideReconnectBanner() {
+    if (!_reconnectBanner) return;
+    _reconnectBanner.remove();
+    _reconnectBanner = null;
+}
+
 // При підключенні — перевіряємо збережену сесію
 socket.on('connect', () => {
+    _hideReconnectBanner();
     setConnectionStatus(true);
     tryRejoin();
 });
 socket.on('disconnect', (reason) => {
     setConnectionStatus(false);
-    // Якщо сервер рестартував — показуємо зрозуміле повідомлення
-    if (reason === 'transport close' || reason === 'transport error') {
-        showToast('🔄 Сервер оновився. Оновіть сторінку щоб продовжити.', { color: '#c62828', duration: 0 });
+    if (reason === 'transport close' || reason === 'transport error' || reason === 'io server disconnect') {
+        _showReconnectBanner();
     }
+});
+socket.on('connect_error', () => {
+    _showReconnectBanner();
 });
 
 // ── Чат ──────────────────────────────────────

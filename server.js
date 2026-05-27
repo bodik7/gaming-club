@@ -168,7 +168,19 @@ async function restoreRoomsFromDB() {
     let restored = 0;
     for (const { code, gameType, state } of saved) {
         if (roomStore.has(code)) continue;
-        roomStore.set(code, { code, players: [], started: true, state, gameType, createdAt: Date.now(), lastActivityAt: Date.now() });
+        if (state.__waiting) {
+            // Зала очікування — відновлюємо з гравцями (socketId будуть оновлені при rejoin)
+            roomStore.set(code, {
+                code, gameType,
+                players: state.players || [],
+                ready:   new Set(state.ready || []),
+                started: false, state: null,
+                createdAt: Date.now(), lastActivityAt: Date.now(),
+            });
+        } else {
+            // Активна гра — state зберігається, players порожні (оновляться при rejoin)
+            roomStore.set(code, { code, players: [], started: true, state, gameType, createdAt: Date.now(), lastActivityAt: Date.now() });
+        }
         restored++;
     }
     if (restored > 0) console.log(`♻️  Відновлено ${restored} кімнат з БД`);
@@ -176,8 +188,17 @@ async function restoreRoomsFromDB() {
 
 async function autoSaveRooms() {
     for (const room of roomStore.all()) {
-        if (room.started && room.state)
+        if (room.started && room.state) {
+            // Активна гра
             await db.saveRoom(room.code, room.gameType || room.state.gameType || 'monopoly', room.state);
+        } else if (!room.started && room.players.length >= 2) {
+            // Зала очікування з 2+ гравцями — теж зберігаємо
+            await db.saveRoom(room.code, room.gameType || 'monopoly', {
+                __waiting: true,
+                players: room.players,
+                ready:   room.ready ? [...room.ready] : [],
+            });
+        }
     }
 }
 
