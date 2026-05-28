@@ -1240,31 +1240,51 @@ body {
         display: grid !important;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
-        padding: 8px 8px 0;
-        overflow: hidden;
+        padding: 8px;
+        align-items: start;
+        height: auto !important;
+        overflow-y: auto;
     }
     .game-screen.mn-tab-chat .game-layout .left-panel {
         display: flex !important;
         flex-direction: column;
-        height: 100%;
-        min-height: 0;
+        height: auto;
         gap: 0;
     }
     .game-screen.mn-tab-chat .game-layout .left-panel .players-panel { display: none !important; }
     .game-screen.mn-tab-chat .game-layout .left-panel .chat-panel {
-        flex: 1;
-        min-height: 0;
-        max-height: none;
+        flex: none;
+        height: auto;
+    }
+    /* Фіксована висота повідомлень — щоб чат не розтягувався на весь екран */
+    .game-screen.mn-tab-chat .game-layout .left-panel .chat-panel .chat-messages {
+        height: 200px;
+        min-height: 60px;
+        max-height: 200px;
+        overflow-y: auto;
+        flex: none;
+    }
+    /* Кнопка надіслати — зручна для пальця */
+    .game-screen.mn-tab-chat .game-layout .left-panel .chat-panel .chat-send-btn {
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 18px;
+        padding: 0 12px;
+        border-radius: 10px;
+    }
+    .game-screen.mn-tab-chat .game-layout .left-panel .chat-panel .chat-input {
+        font-size: 15px;
+        padding: 10px;
+        min-height: 44px;
+        border-radius: 10px;
     }
     /* Права колонка: тільки кнопки дій, лог прихований */
     .game-screen.mn-tab-chat .game-layout .actions-panel {
         display: flex !important;
         flex-direction: column;
-        height: 100%;
-        min-height: 0;
+        height: auto;
         padding: 0;
-        overflow-y: auto;
-        gap: 6px;
+        gap: 4px;
     }
     .game-screen.mn-tab-chat .game-layout .actions-panel .log,
     .game-screen.mn-tab-chat .game-layout .actions-panel #quit-btn-monopoly { display: none !important; }
@@ -1272,18 +1292,15 @@ body {
         display: flex !important;
         flex-direction: column;
         gap: 4px;
-        overflow-y: auto;
-        flex: 1;
-        min-height: 0;
-        align-content: flex-start;
+        height: auto;
     }
     .game-screen.mn-tab-chat .game-layout .actions-panel #action-buttons button {
         flex: none !important;
         width: 100%;
-        min-height: 34px;
+        min-height: 36px;
         height: auto;
         font-size: 11px;
-        padding: 5px 8px;
+        padding: 6px 8px;
         text-align: left;
         border-radius: 6px;
         line-height: 1.2;
@@ -1344,6 +1361,21 @@ body {
         overflow-y: auto;
         margin: 0;
         max-height: none;
+        padding: 8px;
+        font-size: 11px;
+    }
+    .game-screen.mn-tab-players .game-layout .actions-panel .log h3 {
+        font-size: 11px;
+        margin-bottom: 6px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid rgba(0,87,183,0.15);
+    }
+    .game-screen.mn-tab-players .game-layout .actions-panel .log .log-entry {
+        font-size: 10px;
+        padding: 4px 6px;
+        margin-bottom: 3px;
+        border-left-width: 2px;
+        line-height: 1.4;
     }
 
     /* Тости — вище таб-бара */

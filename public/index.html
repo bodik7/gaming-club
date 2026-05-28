@@ -874,14 +874,49 @@
                 const badge = document.getElementById('mn-chat-badge');
                 if (badge) badge.textContent = '';
             }
-            // Прокручуємо лог вниз при відкритті чату
+            // Прокручуємо вниз
             if (tab === 'chat') {
                 const msgs = document.getElementById('chat-messages');
                 if (msgs) msgs.scrollTop = msgs.scrollHeight;
                 const logContent = document.getElementById('log-content');
                 if (logContent) logContent.scrollTop = logContent.scrollHeight;
             }
+            // Скидаємо зсув клавіатури при переключенні вкладки
+            _mnResetKbOffset();
         }
+
+        // Обробка клавіатури — не перекриває чат-інпут
+        let _mnKbListener = null;
+        function _mnResetKbOffset() {
+            const tabs = document.getElementById('mn-tabs');
+            if (tabs) tabs.style.transform = '';
+            const gl = document.querySelector('#game-screen .game-layout');
+            if (gl) gl.style.paddingBottom = '';
+        }
+        function _mnInitKeyboardHandler() {
+            if (!window.visualViewport || _mnKbListener) return;
+            _mnKbListener = () => {
+                const gs = document.getElementById('game-screen');
+                if (!gs || gs.classList.contains('hidden') || _mnCurrentTab !== 'chat') {
+                    _mnResetKbOffset();
+                    return;
+                }
+                const vv = window.visualViewport;
+                const kbH = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+                const tabs = document.getElementById('mn-tabs');
+                const gl = document.querySelector('#game-screen .game-layout');
+                if (kbH > 80) {
+                    if (tabs) tabs.style.transform = `translateY(-${kbH}px)`;
+                    if (gl) gl.style.paddingBottom = `${kbH + 8}px`;
+                } else {
+                    _mnResetKbOffset();
+                }
+            };
+            window.visualViewport.addEventListener('resize', _mnKbListener);
+            window.visualViewport.addEventListener('scroll', _mnKbListener);
+        }
+        // Ініціалізуємо один раз при старті гри
+        document.addEventListener('DOMContentLoaded', _mnInitKeyboardHandler);
 
         function mnMarkChatUnread() {
             // Не рахуємо якщо чат вже відкритий або ми на десктопі
