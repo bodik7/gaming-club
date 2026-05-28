@@ -310,7 +310,7 @@ async function doAuth() {
 function playAsGuest() {
     _isGuest = true;
     _authUsername = '';
-    _enterLobby('', null);
+    _enterLobby('', _pendingJoinCode || null);
 }
 
 function logOut() {
@@ -1128,16 +1128,23 @@ function confirmAbandonGame() {
     const isMonopoly = !document.getElementById('game-screen').classList.contains('hidden');
 
     if (isMonopoly) {
+        const mnPlayers = typeof players !== 'undefined' ? players : [];
+        const mnMyIdx   = typeof myPlayerIndex === 'number' ? myPlayerIndex : -1;
+        const mnMe      = mnPlayers[mnMyIdx];
+        const propCount = mnMe?.properties?.length || 0;
+        const money     = mnMe?.money ?? 0;
         showModal({
             title: '🏳️ Здатись?',
             body: `<p style="text-align:center;padding:12px 0;color:#555">
                 Ви вибуваєте з гри як банкрут.<br>
-                Вся ваша власність повертається банку.<br>
+                <b>Готівка:</b> ₴${money} · <b>Ділянок:</b> ${propCount}<br>
+                Вся власність повертається банку.<br>
                 <span style="font-size:13px;color:#999">Інші гравці продовжать гру.</span>
             </p>`,
             buttons: [
                 { text: '🏳️ Здатись', class: 'btn-danger', action: () => {
                     closeModal();
+                    window._surrenderStats = { name: mnMe?.name, money, props: propCount, icon: mnMe?.icon };
                     socket.emit('surrenderMonopoly');
                 }},
                 { text: 'Продовжити гру', class: 'btn-secondary', action: closeModal }
@@ -1204,6 +1211,8 @@ socket.on('gameAbandoned', ({ reason }) => {
 });
 
 socket.on('surrendered', () => {
+    const stats = window._surrenderStats || {};
+    window._surrenderStats = null;
     clearSession();
     myPlayerIndex = null;
     closeModal();
@@ -1211,7 +1220,29 @@ socket.on('surrendered', () => {
     document.getElementById('game-screen').classList.add('hidden');
     setQuitBtn(false);
     document.getElementById('lobby-screen').classList.remove('hidden');
-    showRejoinError('🏳️ Ви здались. Ваша власність повернута банку. Інші гравці продовжують.');
+
+    const ov = document.createElement('div');
+    ov.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.82);
+        display:flex;align-items:center;justify-content:center;z-index:9999;
+        backdrop-filter:blur(6px);font-family:'Segoe UI',sans-serif`;
+    ov.innerHTML = `
+        <div style="background:#1a1a2e;border:1px solid rgba(255,255,255,0.15);border-radius:16px;
+                    padding:28px 32px;max-width:340px;width:90%;text-align:center">
+            <div style="font-size:52px;margin-bottom:10px">${stats.icon || '💀'}</div>
+            <div style="font-size:20px;font-weight:800;color:#ef5350;margin-bottom:6px">Банкрутство!</div>
+            <div style="font-size:14px;color:rgba(255,255,255,0.75);margin-bottom:16px">
+                ${stats.name ? `<b>${stats.name}</b><br>` : ''}
+                Готівка: <b>₴${stats.money ?? 0}</b> · Ділянок: <b>${stats.props ?? 0}</b><br>
+                <span style="font-size:12px;color:rgba(255,255,255,0.45)">Вся власність повернута банку</span>
+            </div>
+            <button id="_surrender_ok_btn" style="
+                background:#1565c0;color:#fff;border:none;border-radius:8px;
+                padding:11px 28px;font-size:14px;font-weight:700;cursor:pointer">
+                OK → Лобі
+            </button>
+        </div>`;
+    document.body.appendChild(ov);
+    document.getElementById('_surrender_ok_btn').onclick = () => ov.remove();
 });
 
 function copyInviteLink() {

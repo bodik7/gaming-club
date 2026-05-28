@@ -1271,50 +1271,67 @@ body {
     .game-screen.mn-tab-chat .game-layout .actions-panel #action-buttons {
         display: flex !important;
         flex-direction: column;
-        gap: 6px;
+        gap: 4px;
+        overflow-y: auto;
         flex: 1;
+        min-height: 0;
+        align-content: flex-start;
     }
     .game-screen.mn-tab-chat .game-layout .actions-panel #action-buttons button {
+        flex: none !important;
         width: 100%;
-        min-height: 44px;
-        font-size: 13px;
+        min-height: 34px;
+        height: auto;
+        font-size: 11px;
+        padding: 5px 8px;
+        text-align: left;
+        border-radius: 6px;
+        line-height: 1.2;
+        min-width: 0;
     }
 
     /* ════════════ ВАБ: ГРАВЦІ + ХІД ГРИ ════════════ */
     .game-screen.mn-tab-players .game-layout {
-        display: flex !important;
-        flex-direction: column;
+        display: grid !important;
+        grid-template-columns: 45% 1fr;
+        gap: 8px;
         height: 100%;
         padding: 8px;
-        gap: 8px;
-        overflow-y: auto;
+        overflow: hidden;
     }
-    /* Список гравців зверху */
+    /* Ліва колонка: список гравців */
     .game-screen.mn-tab-players .game-layout .left-panel {
         display: flex !important;
         flex-direction: column;
-        gap: 8px;
-        flex-shrink: 0;
+        gap: 6px;
+        min-height: 0;
+        overflow-y: auto;
     }
     .game-screen.mn-tab-players .game-layout .left-panel .chat-panel { display: none !important; }
     .game-screen.mn-tab-players .game-layout .left-panel .players-panel {
         display: flex !important;
         flex-direction: column;
-        flex-wrap: nowrap;
+        gap: 6px;
         overflow-y: visible;
-        max-height: none;
     }
+    /* Компактніші картки гравців */
     .game-screen.mn-tab-players .game-layout .left-panel .players-panel .player-card {
         min-width: auto;
         max-width: none;
         width: 100%;
+        padding: 6px 8px;
     }
-    /* Лог знизу, кнопки дій приховані */
+    .game-screen.mn-tab-players .game-layout .left-panel .players-panel .player-card .player-name {
+        font-size: 12px;
+    }
+    .game-screen.mn-tab-players .game-layout .left-panel .players-panel .player-card .player-money {
+        font-size: 16px;
+    }
+    /* Права колонка: лог гри, кнопки дій приховані */
     .game-screen.mn-tab-players .game-layout .actions-panel {
         display: flex !important;
         flex-direction: column;
-        gap: 8px;
-        flex-shrink: 0;
+        min-height: 0;
         padding: 0;
     }
     .game-screen.mn-tab-players .game-layout .actions-panel #action-buttons,
@@ -1322,9 +1339,11 @@ body {
     .game-screen.mn-tab-players .game-layout .actions-panel .log {
         display: flex !important;
         flex-direction: column;
-        max-height: 40vh;
+        flex: 1;
+        min-height: 0;
         overflow-y: auto;
         margin: 0;
+        max-height: none;
     }
 
     /* Тости — вище таб-бара */
@@ -1355,16 +1374,6 @@ body {
         font-size: 16px !important;
     }
 
-    /* Монополія чат-таб: на дуже вузьких (≤ 400px) стек вертикально замість grid */
-    @media (max-width: 400px) {
-        .game-screen.mn-tab-chat .game-layout {
-            grid-template-columns: 1fr !important;
-            overflow-y: auto;
-        }
-        .game-screen.mn-tab-chat .game-layout .actions-panel {
-            max-height: 200px;
-        }
-    }
 }
 
 @media (max-width: 600px) {
@@ -1411,12 +1420,19 @@ body {
     .cell.left .cell-color-bar,
     .cell.right .cell-color-bar { width: 8px; height: 100%; }
 
-    /* Клітинки — назви прибираємо, лишаємо іконку + ціну */
-    .cell-name { display: none !important; }
+    /* Клітинки — ховаємо назву МІСТА, лишаємо назву вулиці + іконку + ціну */
+    .cell-city { display: none !important; }
+    .cell-name {
+        font-size: 6px !important;
+        line-height: 1.15 !important;
+        hyphens: auto !important;
+        -webkit-hyphens: auto !important;
+        word-break: break-word;
+        max-width: 100%;
+        text-align: center;
+    }
     .cell-content {
         font-size: 7px !important;
-        hyphens: none !important;
-        -webkit-hyphens: none !important;
         padding: 1px;
         gap: 1px;
     }
@@ -1426,15 +1442,15 @@ body {
         line-height: 1;
     }
 
-    /* Іконки в клітинках (SVG) — трохи більші без назв */
-    .cell-content svg { width: 14px !important; height: 14px !important; }
+    /* Іконки в клітинках (SVG) */
+    .cell-content svg { width: 12px !important; height: 12px !important; }
 
     /* Кутові клітинки */
-    .cell.corner .cell-content { font-size: 7px !important; padding: 2px; }
-    .cell.corner .cell-icon { font-size: 18px; margin-bottom: 2px; }
+    .cell.corner .cell-content { font-size: 6px !important; padding: 2px; }
+    .cell.corner .cell-icon { font-size: 16px; margin-bottom: 1px; }
 
     /* Токени */
-    .token { width: 18px; height: 18px; font-size: 10px; }
+    .token { width: 16px; height: 16px; font-size: 9px; }
 }
 
 
