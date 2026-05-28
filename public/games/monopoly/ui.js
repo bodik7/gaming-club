@@ -1222,9 +1222,10 @@ function openTradeBuilder(targetId) {
         }).join('');
     };
 
+    const isMobile = window.innerWidth < 600;
     const html = `
         <p style="font-size:13px;color:#666;margin-bottom:10px">Поставте галочки на ділянках, які входять у обмін, і вкажіть готівку. Доплачує та сторона, яка додає кошти.</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="${isMobile ? 'display:flex;flex-direction:column' : 'display:grid;grid-template-columns:1fr 1fr'};gap:10px">
             <div style="border:2px solid #0057b7;border-radius:8px;padding:8px">
                 <h4 style="color:#0057b7;font-size:14px;margin-bottom:6px">${me.icon} Я (${me.name}) даю:</h4>
                 ${renderPropList(me, 'from')}

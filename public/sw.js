@@ -1,10 +1,16 @@
-const CACHE = 'igclub-v1';
+const CACHE = 'igclub-v2';
 const STATIC = [
     '/style.css',
     '/client.js',
+    '/avatars.js',
+    '/shared/monopoly-board.js',
     '/games/monopoly/board.js',
     '/games/monopoly/icons.js',
+    '/games/monopoly/messages.js',
     '/games/monopoly/ui.js',
+    '/games/monopoly/engine.js',
+    '/games/monopoly/client.js',
+    '/games/monopoly/script.js',
     '/games/tysyacha/tysyacha.css',
     '/games/tysyacha/tysyacha.js',
     '/games/mafia/mafia.css',
@@ -31,26 +37,29 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
     const url = new URL(e.request.url);
 
-    // Ігноруємо не-HTTP схеми (chrome-extension://, etc.)
     if (!url.protocol.startsWith('http')) return;
 
     // Socket.io та API — завжди мережа
     if (url.pathname.startsWith('/socket.io') || url.pathname.startsWith('/api')) return;
 
-    // HTML — завжди мережа (no-store)
+    // HTML — завжди мережа
     if (e.request.headers.get('accept')?.includes('text/html')) return;
 
-    // Статика — cache-first
+    // Стратегія stale-while-revalidate:
+    // — відразу повертаємо закешовану версію (швидко)
+    // — паралельно оновлюємо кеш з мережі (юзер отримає оновлення на наступному завантаженні)
     e.respondWith(
-        caches.match(e.request).then(cached => {
-            if (cached) return cached;
-            return fetch(e.request).then(res => {
-                if (res.ok && e.request.method === 'GET') {
-                    const clone = res.clone();
-                    caches.open(CACHE).then(c => c.put(e.request, clone));
-                }
-                return res;
-            });
-        })
+        caches.open(CACHE).then(cache =>
+            cache.match(e.request).then(cached => {
+                const networkFetch = fetch(e.request).then(res => {
+                    if (res.ok && e.request.method === 'GET') {
+                        cache.put(e.request, res.clone());
+                    }
+                    return res;
+                }).catch(() => null);
+
+                return cached || networkFetch;
+            })
+        )
     );
 });
