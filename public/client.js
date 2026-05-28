@@ -899,6 +899,22 @@ socket.on('connect_error', () => {
     _showReconnectBanner();
 });
 
+// ── Синхронізація стану при поверненні на сторінку ───────────────
+// Якщо сокет ще підключений (не встиг дропнутись), але браузер був
+// у фоні — запитуємо свіжий стан щоб не пропустити оновлення.
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (!localStorage.getItem(SESSION_KEY)) return;
+    if (!socket.connected) return; // connect → tryRejoin спрацює сам
+    socket.emit('syncState', ({ state, error }) => {
+        if (error || !state) return;
+        if (state.gameType === 'durak')    { updateDurak(state, null); return; }
+        if (state.gameType === 'mafia')    { updateMafia(state, null); return; }
+        if (state.gameType === 'tysyacha') { updateTysyacha(state);    return; }
+        applyState(state, false, null, null);
+    });
+});
+
 // ── Чат ──────────────────────────────────────
 const _esc = s => String(s).replace(/[&<>"']/g, c =>
     ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));

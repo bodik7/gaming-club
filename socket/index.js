@@ -644,6 +644,19 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
             }
         });
 
+        socket.on('syncState', (cb) => {
+            if (typeof cb !== 'function') return;
+            const room = socket.roomCode ? roomStore.get(socket.roomCode) : null;
+            if (!room?.started || !room.state) return cb({ error: 'no_state' });
+            const pidx = socket.playerIndex;
+            const st = room.state.gameType === 'tysyacha' ? sanitizeTysyacha(room.state, pidx)
+                     : room.state.gameType === 'mafia'    ? sanitizeMafia(room.state, pidx)
+                     : room.state.gameType === 'durak'    ? sanitizeDurak(room.state, pidx)
+                     : room.state.gameType === 'bunker'   ? sanitizeBunker(room.state, pidx)
+                     : sanitize(room.state);
+            cb({ state: st });
+        });
+
         socket.on('spectatorJoin', ({ code }, cb) => {
             if (!isStr(code, 20)) return cb({ error: 'not_found' });
             const room = roomStore.get(code.toUpperCase());
@@ -745,7 +758,7 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
             const _emptyCheckCode = socket.roomCode;
             // Для bunker-кімнат що ще не почались — більше часу,
             // бо хост може переходити на /bunker/ (page reload + reconnect)
-            const _emptyDelay = room.started ? 60_000
+            const _emptyDelay = room.started ? 300_000
                                : room.gameType === 'bunker' ? 12_000
                                : 0;
             setTimeout(() => {
