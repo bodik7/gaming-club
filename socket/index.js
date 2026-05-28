@@ -71,6 +71,15 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
     io.on('connection', (socket) => {
         console.log('+ підключення:', socket.id);
 
+        // Глобальний flood-захист: не більше 60 подій/с з одного сокета
+        socket.use(([event], next) => {
+            if (!rateLimit(`flood:${socket.id}`, 60, 1_000)) {
+                console.warn(`[flood] ${socket.id} перевищив ліміт подій (event: ${event})`);
+                return;
+            }
+            next();
+        });
+
         socket.on('authenticate', async ({ token }) => {
             try {
                 const payload = jwt.verify(token, JWT_SECRET);
@@ -255,6 +264,7 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
         });
 
         socket.on('dayChatMsg', ({ text }) => {
+            if (!rateLimit(`chat:${socket.id}`, 5, 8_000)) return;
             const room = roomStore.get(socket.roomCode);
             if (!room?.state || room.state.gameType !== 'mafia') return;
             if (room.state.phase !== 'day_discussion' && room.state.phase !== 'day_voting') return;
@@ -270,6 +280,7 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
         });
 
         socket.on('deadChat', ({ text }) => {
+            if (!rateLimit(`chat:${socket.id}`, 5, 8_000)) return;
             const room = roomStore.get(socket.roomCode);
             if (!room?.state || room.state.gameType !== 'mafia') return;
             const player = room.state.players[socket.playerIndex];
@@ -281,6 +292,7 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
         });
 
         socket.on('mafiaChat', ({ text }) => {
+            if (!rateLimit(`chat:${socket.id}`, 5, 8_000)) return;
             const room = roomStore.get(socket.roomCode);
             if (!room?.state || room.state.gameType !== 'mafia') return;
             if (room.state.phase !== 'night') return;
@@ -499,6 +511,7 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
 
         socket.on('action', ({ type, data }) => {
             if (!isStr(type, 50)) return;
+            if (!rateLimit(`action:${socket.id}`, 15, 1_000)) return;
             const room = roomStore.get(socket.roomCode);
             if (!room?.state) return;
             const state = room.state;

@@ -2,6 +2,7 @@ const CACHE = 'igclub-v2';
 const STATIC = [
     '/style.css',
     '/client.js',
+    '/client-cabinet.js',
     '/avatars.js',
     '/shared/monopoly-board.js',
     '/games/monopoly/board.js',
