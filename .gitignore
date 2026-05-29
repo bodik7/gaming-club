@@ -7,3 +7,6 @@ node_modules/
 script.js.backup
 test_cells.js
 users.json
+*.db
+*.db-shm
+*.db-wal
