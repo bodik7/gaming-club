@@ -1,12 +1,13 @@
 // ============================================
 // Конфігурація застосунку
 // ============================================
-const JWT_SECRET = process.env.JWT_SECRET || 'igclub-dev-secret-change-in-prod';
-const PORT       = process.env.PORT || 3000;
+const JWT_SECRET    = process.env.JWT_SECRET || 'igclub-dev-secret-change-in-prod';
+const PORT          = process.env.PORT || 3000;
+const INITIAL_ADMIN = (process.env.INITIAL_ADMIN || 'bodik').toLowerCase();
 
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
     console.error('❌  JWT_SECRET не задано в production! Встановіть змінну середовища JWT_SECRET.');
     process.exit(1);
 }
 
-module.exports = { JWT_SECRET, PORT };
+module.exports = { JWT_SECRET, PORT, INITIAL_ADMIN };

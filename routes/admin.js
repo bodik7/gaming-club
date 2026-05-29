@@ -3,7 +3,8 @@
 // ============================================
 const router = require('express').Router();
 const db     = require('../db');
-const { requireAdmin } = require('../middleware/auth');
+const { INITIAL_ADMIN } = require('../config');
+const { requireAdmin }  = require('../middleware/auth');
 
 module.exports = function adminRoutes(io, roomStore) {
     router.get('/users', requireAdmin, async (req, res) => {
@@ -13,8 +14,8 @@ module.exports = function adminRoutes(io, roomStore) {
 
     router.delete('/users/:username', requireAdmin, async (req, res) => {
         const target = req.params.username;
-        if (target.toLowerCase() === 'bodik')
-            return res.status(403).json({ error: 'Неможливо видалити адміна' });
+        if (target.toLowerCase() === INITIAL_ADMIN)
+            return res.status(403).json({ error: 'Неможливо видалити головного адміна' });
         try {
             await db.deleteUser(target);
             res.json({ ok: true });

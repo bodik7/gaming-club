@@ -71,14 +71,24 @@ function playSound(type) {
     } catch(e) {}
 }
 
-// ── Статистика (localStorage) ─────────────────
+// ── Статистика ────────────────────────────────
+// Для авторизованих — єдине джерело правди це _serverStats (з /api/me).
+// Для гостей — localStorage як fallback.
 function updateStats(game, won) {
-    const k = 'stats_' + game;
-    const s = JSON.parse(localStorage.getItem(k) || '{"g":0,"w":0}');
-    s.g++; if (won) s.w++;
-    localStorage.setItem(k, JSON.stringify(s));
+    if (_serverStats) {
+        // Оновлюємо in-memory кеш оптимістично; сервер вже зберіг реальні дані
+        if (!_serverStats[game]) _serverStats[game] = { g: 0, w: 0 };
+        _serverStats[game].g++;
+        if (won) _serverStats[game].w++;
+    } else {
+        const k = 'stats_' + game;
+        const s = JSON.parse(localStorage.getItem(k) || '{"g":0,"w":0}');
+        s.g++; if (won) s.w++;
+        localStorage.setItem(k, JSON.stringify(s));
+    }
 }
 function getStats(game) {
+    if (_serverStats) return { g: _serverStats[game]?.g || 0, w: _serverStats[game]?.w || 0 };
     return JSON.parse(localStorage.getItem('stats_' + game) || '{"g":0,"w":0}');
 }
 
@@ -106,6 +116,7 @@ let _avatarId      = null;
 let _isAdmin       = false;
 let _isSpectator   = false;
 let _emojiBarOpen  = false;
+let _serverStats   = null; // статистика з /api/me, null = гість або не завантажено
 
 // ── Push-сповіщення ──────────────────────────
 function _requestNotifPermission() {
@@ -132,6 +143,7 @@ async function loadProfile(token) {
             _avatarColor = data.avatarColor  || '#1a56db';
             _avatarId    = data.avatarId     || null;
             _isAdmin     = !!data.isAdmin;
+            _serverStats = data.stats || {};
             return data.username;
         }
     } catch {}

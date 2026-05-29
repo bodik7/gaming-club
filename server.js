@@ -40,7 +40,7 @@ app.use(express.json());
 // Service Worker з динамічною версією кешу
 app.get('/sw.js', (req, res) => {
     const content = fs.readFileSync(path.join(__dirname, 'public/sw.js'), 'utf8')
-        .replace("'igclub-v1'", `'igclub-${SW_VERSION}'`);
+        .replace("'__SW_VERSION__'", `'igclub-${SW_VERSION}'`);
     res.setHeader('Content-Type', 'application/javascript');
     res.setHeader('Cache-Control', 'no-store');
     res.send(content);
@@ -76,6 +76,17 @@ const roomStore = {
     all:    () => Object.values(rooms),
     has:    code => code in rooms,
     keys:   () => Object.keys(rooms),
+    // Єдина реалізація cleanup — використовується і тут, і в socket/index.js
+    cleanup(code) {
+        const r = rooms[code];
+        if (!r) return;
+        r.players.forEach(rp => {
+            if (!rp.socketId) return;
+            const s = io.sockets.sockets.get(rp.socketId);
+            if (s) { s.leave(code); s.roomCode = null; s.playerIndex = null; }
+        });
+        delete rooms[code];
+    },
 };
 
 // ── Спільні дані (єдине джерело правди) ────
@@ -99,18 +110,6 @@ app.use('/api', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin')(io, roomStore));
 app.use('/api',       require('./routes/api')(roomStore));
 
-// ── Очищення неактивних кімнат ────────────────
-function cleanupRoom(code) {
-    const r = roomStore.get(code);
-    if (!r) return;
-    r.players.forEach(rp => {
-        if (!rp.socketId) return;
-        const s = io.sockets.sockets.get(rp.socketId);
-        if (s) { s.leave(code); s.roomCode = null; s.playerIndex = null; }
-    });
-    roomStore.delete(code);
-}
-
 const { clearTurnTimer, clearTradeTimer } = monopolyMod;
 const { clearBunkerTimer } = bunkerMod;
 
@@ -122,7 +121,7 @@ setInterval(() => {
         if (now - (room.lastActivityAt || room.createdAt) > IDLE_MS) {
             clearTurnTimer(room);
             clearTradeTimer(room);
-            cleanupRoom(code);
+            roomStore.cleanup(code);
             console.log(`🗑️ Кімнату ${code} видалено (неактивна 10+ хв)`);
         }
     });
@@ -148,7 +147,7 @@ mafiaMod.init(io, db, roomStore, (room) => {
         })
     );
     db.deleteRoom(room.code);
-    cleanupRoom(room.code);
+    roomStore.cleanup(room.code);
 });
 
 // ── Socket.io ────────────────────────────────
@@ -195,19 +194,24 @@ async function restoreRoomsFromDB() {
     if (restored > 0) console.log(`♻️  Відновлено ${restored} кімнат з БД`);
 }
 
+let _autoSaving = false;
 async function autoSaveRooms() {
-    for (const room of roomStore.all()) {
-        if (room.started && room.state) {
-            // Активна гра
-            await db.saveRoom(room.code, room.gameType || room.state.gameType || 'monopoly', room.state);
-        } else if (!room.started && room.players.length >= 2) {
-            // Зала очікування з 2+ гравцями — теж зберігаємо
-            await db.saveRoom(room.code, room.gameType || 'monopoly', {
-                __waiting: true,
-                players: room.players,
-                ready:   room.ready ? [...room.ready] : [],
-            });
+    if (_autoSaving) return;
+    _autoSaving = true;
+    try {
+        for (const room of roomStore.all()) {
+            if (room.started && room.state) {
+                await db.saveRoom(room.code, room.gameType || room.state.gameType || 'monopoly', room.state);
+            } else if (!room.started && room.players.length >= 2) {
+                await db.saveRoom(room.code, room.gameType || 'monopoly', {
+                    __waiting: true,
+                    players: room.players,
+                    ready:   room.ready ? [...room.ready] : [],
+                });
+            }
         }
+    } finally {
+        _autoSaving = false;
     }
 }
 

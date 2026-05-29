@@ -1,4 +1,4 @@
-const CACHE = 'igclub-v2';
+const CACHE = '__SW_VERSION__';
 const STATIC = [
     '/style.css',
     '/client.js',

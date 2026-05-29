@@ -8,6 +8,7 @@ const { JWT_SECRET } = require('../config');
 
 // ── In-memory rate limiter ─────────────────
 const _rl = new Map();
+const RL_MAX_ENTRIES = 50_000;
 
 function rateLimit(key, max, windowMs) {
     const now   = Date.now();
@@ -18,10 +19,15 @@ function rateLimit(key, max, windowMs) {
     return entry.count <= max;
 }
 
-// Clean stale entries every 5 min
+// Очищення: прострочені записи кожні 5 хв + hard cap при переповненні
 setInterval(() => {
     const now = Date.now();
     for (const [k, v] of _rl) if (now > v.resetAt) _rl.delete(k);
+    if (_rl.size > RL_MAX_ENTRIES) {
+        const toDelete = _rl.size - RL_MAX_ENTRIES;
+        let i = 0;
+        for (const k of _rl.keys()) { if (i++ >= toDelete) break; _rl.delete(k); }
+    }
 }, 5 * 60_000);
 
 function apiLimiter(max, windowMs) {

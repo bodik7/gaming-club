@@ -287,7 +287,7 @@ function cabRenderUsers(list) {
             <td>${u.games}</td>
             <td>${u.wins}</td>
             <td><span class="${u.isAdmin ? 'cab-badge-admin' : 'cab-badge-user'}">${u.isAdmin ? '⚡ Адмін' : 'Гравець'}</span></td>
-            <td>${u.username.toLowerCase() !== 'bodik'
+            <td>${!u.isAdmin
                 ? `<button class="cab-admin-del-btn" onclick="cabDeleteUser('${u.username}')">Видалити</button>`
                 : ''}</td>
         </tr>`).join('')}

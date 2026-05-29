@@ -2,6 +2,7 @@
 // db.js — Turso (libsql) хмарна БД
 // ============================================
 const { createClient } = require('@libsql/client');
+const { INITIAL_ADMIN } = require('./config');
 
 let _client = null;
 
@@ -56,36 +57,51 @@ async function init() {
             played_at    TEXT NOT NULL DEFAULT (datetime('now')),
             players_json TEXT NOT NULL DEFAULT '[]'
         )` },
+        { sql: `CREATE TABLE IF NOT EXISTS game_history_players (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            history_id INTEGER NOT NULL REFERENCES game_history(id) ON DELETE CASCADE,
+            username   TEXT    NOT NULL COLLATE NOCASE,
+            won        INTEGER NOT NULL DEFAULT 0
+        )` },
         { sql: `CREATE INDEX IF NOT EXISTS idx_stats_username  ON game_stats(username)` },
         { sql: `CREATE INDEX IF NOT EXISTS idx_stats_game_type ON game_stats(game_type)` },
         { sql: `CREATE INDEX IF NOT EXISTS idx_rooms_updated   ON rooms_backup(updated_at)` },
         { sql: `CREATE INDEX IF NOT EXISTS idx_history_played  ON game_history(played_at)` },
+        { sql: `CREATE INDEX IF NOT EXISTS idx_histplayers_username ON game_history_players(username)` },
     ], 'deferred');
 
-    // Міграції: нові колонки (ігнор "duplicate column" — норма при повторному старті)
+    // Міграції: нові колонки та таблиці (ігнор "duplicate column" / "already exists" — норма при повторному старті)
     const migrations = [
         `ALTER TABLE users ADD COLUMN display_name TEXT`,
         `ALTER TABLE users ADD COLUMN avatar_color TEXT DEFAULT '#1a56db'`,
         `ALTER TABLE users ADD COLUMN is_admin    INTEGER DEFAULT 0`,
         `ALTER TABLE users ADD COLUMN avatar_id   TEXT`,
+        `CREATE TABLE IF NOT EXISTS game_history_players (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            history_id INTEGER NOT NULL REFERENCES game_history(id) ON DELETE CASCADE,
+            username   TEXT    NOT NULL COLLATE NOCASE,
+            won        INTEGER NOT NULL DEFAULT 0
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_histplayers_username ON game_history_players(username)`,
     ];
     for (const sql of migrations) {
         try {
             await c.execute(sql);
             console.log('[db] migration ok:', sql.slice(0, 60));
         } catch (e) {
-            if (!e.message?.includes('duplicate column')) {
-                console.error('[db] migration error:', e.message, '|', sql.slice(0, 60));
+            const msg = e.message || '';
+            if (!msg.includes('duplicate column') && !msg.includes('already exists')) {
+                console.error('[db] migration error:', msg, '|', sql.slice(0, 60));
             }
         }
     }
     // Початковий адмін
     try {
         const r = await c.execute({
-            sql:  `UPDATE users SET is_admin = 1 WHERE LOWER(username) = 'bodik'`,
-            args: [],
+            sql:  `UPDATE users SET is_admin = 1 WHERE LOWER(username) = ?`,
+            args: [INITIAL_ADMIN],
         });
-        if (r.rowsAffected > 0) console.log('[db] bodik promoted to admin');
+        if (r.rowsAffected > 0) console.log(`[db] ${INITIAL_ADMIN} promoted to admin`);
     } catch (e) { console.error('[db] admin init:', e.message); }
 }
 
@@ -208,21 +224,33 @@ async function saveGameHistory(gameType, winner, rounds, players) {
     // players: [{ username, name, role, won }]
     const withUsername = (players || []).filter(p => p.username);
     if (!withUsername.length) return;
+    const c = getClient();
     try {
-        await getClient().execute({
+        const result = await c.execute({
             sql:  `INSERT INTO game_history (game_type, winner, rounds, players_json) VALUES (?, ?, ?, ?)`,
             args: [gameType, winner || null, rounds || 0, JSON.stringify(players || [])],
         });
+        const historyId = Number(result.lastInsertRowid);
+        if (historyId) {
+            await c.batch(
+                withUsername.map(p => ({
+                    sql:  `INSERT INTO game_history_players (history_id, username, won) VALUES (?, ?, ?)`,
+                    args: [historyId, p.username, p.won ? 1 : 0],
+                })),
+                'deferred'
+            );
+        }
     } catch (e) { console.error('[db] saveGameHistory:', e.message); }
 }
 
 async function getHistory(username, limit = 20) {
     const result = await getClient().execute({
-        sql:  `SELECT id, game_type, winner, rounds, played_at, players_json
-               FROM game_history
-               WHERE players_json LIKE ?
-               ORDER BY played_at DESC LIMIT ?`,
-        args: [`%"username":"${username}"%`, limit],
+        sql:  `SELECT h.id, h.game_type, h.winner, h.rounds, h.played_at, h.players_json
+               FROM game_history h
+               INNER JOIN game_history_players p ON p.history_id = h.id
+               WHERE p.username = ? COLLATE NOCASE
+               ORDER BY h.played_at DESC LIMIT ?`,
+        args: [username, limit],
     });
     return result.rows.map(r => {
         let players = [];

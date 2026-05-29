@@ -5,7 +5,7 @@ const router  = require('express').Router();
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const db      = require('../db');
-const { JWT_SECRET }                  = require('../config');
+const { JWT_SECRET, INITIAL_ADMIN }   = require('../config');
 const { apiLimiter, requireAuth }     = require('../middleware/auth');
 
 router.post('/register', apiLimiter(5, 10 * 60_000), async (req, res) => {
@@ -44,17 +44,17 @@ router.get('/me', requireAuth, async (req, res) => {
     try {
         let user = await db.getUser(req.authUser.username);
         if (!user) {
-            const isAdmin = req.authUser.username.toLowerCase() === 'bodik' ? 1 : 0;
+            const isAdmin = req.authUser.username.toLowerCase() === INITIAL_ADMIN ? 1 : 0;
             await db.getClient().execute({
                 sql:  `INSERT OR IGNORE INTO users (username, hash, is_admin) VALUES (?, '', ?)`,
                 args: [req.authUser.username, isAdmin],
             });
             user = await db.getUser(req.authUser.username);
         }
-        if (req.authUser.username.toLowerCase() === 'bodik' && Number(user?.is_admin) !== 1) {
+        if (req.authUser.username.toLowerCase() === INITIAL_ADMIN && Number(user?.is_admin) !== 1) {
             await db.getClient().execute({
-                sql: `UPDATE users SET is_admin = 1 WHERE LOWER(username) = 'bodik'`,
-                args: [],
+                sql:  `UPDATE users SET is_admin = 1 WHERE LOWER(username) = ?`,
+                args: [INITIAL_ADMIN],
             });
             if (user) user.is_admin = 1;
         }
