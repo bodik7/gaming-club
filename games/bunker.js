@@ -153,23 +153,63 @@ async function generateBunkerEpilogue(state) {
     const key = process.env.GEMINI_API_KEY;
     if (!key || key === 'YOUR_KEY_HERE') return null;
 
-    const survivors = state.players
-        .filter(p => p.isAlive)
-        .map(p => `${p.name} (${p.attributes.profession.value.split('(')[0].trim()}, ${p.attributes.health.value}, ${p.attributes.hobby.value.split('(')[0].trim()})`)
-        .join('; ');
+    const ATTR_LABELS = {
+        profession: 'Професія', biology: 'Біологія', health: 'Здоров\'я',
+        hobby: 'Хобі', trait: 'Характер', baggage: 'Багаж', fact: 'Таємний факт',
+    };
 
-    const eliminated = state.players
-        .filter(p => !p.isAlive)
-        .map(p => p.attributes.profession.value.split('(')[0].trim())
-        .join(', ');
+    // Рандомний стиль — кожен епілог унікальний
+    const TONES = [
+        'документального фільму BBC про дику природу (ніби вижилі — рідкісні тварини, що прижилися в нових умовах)',
+        'рекламного ролику туристичного агентства (намагаючись продати бункер як п\'ятизірковий курорт)',
+        'відгуку на TripAdvisor (з рейтингом зірочок, плюсами, мінусами та відповіддю менеджменту)',
+        'шкільного підручника з основ виживання (з абсурдними "корисними порадами" у дужках)',
+        'шокуючого таблоїду (з сенсаційними заголовками, капслоком та трьома знаками оклику)',
+        'казки для дітей з темним фіналом (починається "Жили собі...", закінчується моральлю)',
+        'нудного офісного звіту HR-відділу (з пунктами, KPI та "зонами для покращення")',
+        'захопленого листа від туриста додому (що вперше побачив бункер і не може повірити своїм очам)',
+    ];
+
+    const tone = TONES[Math.floor(Math.random() * TONES.length)];
+
+    const formatPlayer = (p) => {
+        const attrKeys = ['profession', 'biology', 'health', 'hobby', 'trait', 'baggage', 'fact'];
+        const revealed = attrKeys
+            .filter(k => p.attributes[k]?.isRevealed)
+            .map(k => `${ATTR_LABELS[k]}: ${p.attributes[k].value}`)
+            .join(' | ');
+        return `• ${p.name}${revealed ? ' — ' + revealed : ''}`;
+    };
+
+    const survivors  = state.players.filter(p =>  p.isAlive);
+    const eliminated = state.players.filter(p => !p.isAlive);
+
+    const survivorsText  = survivors.map(formatPlayer).join('\n');
+    const eliminatedText = eliminated.length > 0
+        ? eliminated.map(formatPlayer).join('\n')
+        : '• (всі потрапили до бункера — рекорд!)';
 
     const prompt = `Ти — саркастичний ведучий постапокаліптичного шоу «Бункер».
-Катастрофа: ${state.scenario.title} (${state.scenario.subtitle}).
-Бункер: ${state.scenario.bunker.slice(0, 120)}.
-Хто вижив: ${survivors}.
-Вигнані: ${eliminated || 'ніхто'}.
+Твоє завдання: написати фінальний епілог ВИКЛЮЧНО у стилі «${tone}».
 
-Напиши смішний та іронічний епілог 2-3 речення — що буде з цими людьми через рік у бункері. Згадай конкретні характеристики вижилих. Відповідь тільки текст епілогу, без зайвих слів. Українською мовою.`;
+КАТАСТРОФА: ${state.scenario.title} — ${state.scenario.disaster || state.scenario.subtitle || ''}
+БУНКЕР: ${state.scenario.bunker.slice(0, 160)}
+
+ХТО ПОТРАПИВ ДО БУНКЕРА (${survivors.length} осіб):
+${survivorsText}
+
+ХТО ЗАЛИШИВСЯ НАЗОВНІ (${eliminated.length} осіб):
+${eliminatedText}
+
+Напиши епілог 3-4 речення — що відбувається через рік після закриття бункера.
+
+Жорсткі вимоги:
+1. Стиль ТОЧНО відповідає «${tone}»
+2. Згадай щонайменше 2 конкретні абсурдні деталі з реальних атрибутів гравців
+3. Один несподіваний або іронічний поворот у кінці
+4. Темний гумор і сарказм вітаються
+
+Відповідь — ТІЛЬКИ текст епілогу, без заголовків і пояснень. Українською мовою.`;
 
     try {
         const res = await fetch(
@@ -177,7 +217,10 @@ async function generateBunkerEpilogue(state) {
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 1.0, maxOutputTokens: 350 },
+                }),
                 signal: AbortSignal.timeout(10_000),
             }
         );
