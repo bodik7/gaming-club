@@ -328,6 +328,9 @@ function clearBunkerTimer(room) {
     if (room.bunkerTimer) { clearTimeout(room.bunkerTimer); room.bunkerTimer = null; }
 }
 
+// TODO: Gemini bot decisions — розкоментувати коли буде робочий ключ
+async function getBotDecisions(/* room, phase */) { return null; }
+/*
 async function getBotDecisions(room, phase) {
     const key = process.env.GEMINI_API_KEY;
     if (!key || key === 'YOUR_KEY_HERE') return null;
@@ -420,6 +423,7 @@ ${playersDesc}
         return null;
     }
 }
+*/
 
 function scheduleBotActions(room, phase) {
     const bots = room.players.filter(p => p.isBot);
