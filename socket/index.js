@@ -405,7 +405,7 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
                     if (!rp.socketId) return;
                     const s = io.sockets.sockets.get(rp.socketId);
                     if (s && mafiaIds.includes(rp.index)) s.join(`${room.code}_mafia`);
-                    io.to(rp.socketId).emit('gameStarted', { state: sanitizeMafia(room.state, rp.index), gameType: 'mafia' });
+                    io.to(rp.socketId).emit('gameStarted', { state: sanitizeMafia(room.state, rp.index), myPlayerIndex: rp.index, gameType: 'mafia' });
                 });
                 getMafiaBotDecisions(room);
                 setTimeout(() => { if (room.state?.phase === 'role_reveal') startNightPhase(room); }, 25000);
@@ -416,12 +416,12 @@ module.exports = function registerSocketHandlers(io, roomStore, gameCtx) {
                 if (settings) room.settings = { ...(room.settings || {}), ...settings };
                 room.state = createDurakState(room.players, room.settings || {});
                 dStartTurnTimer(room);
-                room.players.forEach(rp => { io.to(rp.socketId).emit('gameStarted', { state: sanitizeDurak(room.state, rp.index), gameType: 'durak' }); });
+                room.players.forEach(rp => { io.to(rp.socketId).emit('gameStarted', { state: sanitizeDurak(room.state, rp.index), myPlayerIndex: rp.index, gameType: 'durak' }); });
             } else if (room.gameType === 'tysyacha') {
                 if (room.players.length < 2 || room.players.length > 3) return io.to(socket.id).emit('error', 'Тисяча: потрібно 2 або 3 гравці');
                 room.started = true;
                 room.state = createTysyachaState(room.players);
-                room.players.forEach(rp => { io.to(rp.socketId).emit('gameStarted', { state: sanitizeTysyacha(room.state, rp.index), gameType: 'tysyacha' }); });
+                room.players.forEach(rp => { io.to(rp.socketId).emit('gameStarted', { state: sanitizeTysyacha(room.state, rp.index), myPlayerIndex: rp.index, gameType: 'tysyacha' }); });
                 startTysyachaTimer(room);
             } else if (room.gameType === 'bunker') {
                 const n = room.players.length;

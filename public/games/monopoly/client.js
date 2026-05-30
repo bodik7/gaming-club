@@ -702,8 +702,9 @@ function animateDice() {
 
 // ── Адаптовані UI-функції для онлайну ─────────
 function offerPurchaseOnline(player, cell) {
-    if (!cell) return;
-    const canBuy = player.money >= cell.price;
+    if (!cell || !player) return;
+    const money = player.money ?? 0;
+    const canBuy = money >= cell.price;
     showModal({
         title: '',
         body: `
@@ -718,7 +719,7 @@ function offerPurchaseOnline(player, cell) {
             </div>
             <div class="modal-row ${canBuy ? 'green' : 'red'}">
                 <span class="mlabel">Ваша готівка</span>
-                <span class="mval ${canBuy ? 'green' : 'red'}">₴${player.money}</span>
+                <span class="mval ${canBuy ? 'green' : 'red'}">₴${money}</span>
             </div>
             <p style="font-size:11px;color:#888;text-align:center;margin-top:8px">
                 Якщо відмовитесь — буде аукціон серед усіх гравців.

@@ -420,6 +420,8 @@
     min-height: 118px;
     flex-wrap: nowrap;
     overflow-x: auto;
+    width: 100%;
+    box-sizing: border-box;
     scrollbar-width: none; /* Firefox */
 }
 #t-hand::-webkit-scrollbar { display: none; }
