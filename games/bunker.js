@@ -149,87 +149,174 @@ function emitBunkerUpdate(room) {
     });
 }
 
-async function generateBunkerEpilogue(state) {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key || key === 'YOUR_KEY_HERE') return null;
-
-    const ATTR_LABELS = {
-        profession: 'Професія', biology: 'Біологія', health: 'Здоров\'я',
-        hobby: 'Хобі', trait: 'Характер', baggage: 'Багаж', fact: 'Таємний факт',
-    };
-
-    // Рандомний стиль — кожен епілог унікальний
-    const TONES = [
-        'документального фільму BBC про дику природу (ніби вижилі — рідкісні тварини, що прижилися в нових умовах)',
-        'рекламного ролику туристичного агентства (намагаючись продати бункер як п\'ятизірковий курорт)',
-        'відгуку на TripAdvisor (з рейтингом зірочок, плюсами, мінусами та відповіддю менеджменту)',
-        'шкільного підручника з основ виживання (з абсурдними "корисними порадами" у дужках)',
-        'шокуючого таблоїду (з сенсаційними заголовками, капслоком та трьома знаками оклику)',
-        'казки для дітей з темним фіналом (починається "Жили собі...", закінчується моральлю)',
-        'нудного офісного звіту HR-відділу (з пунктами, KPI та "зонами для покращення")',
-        'захопленого листа від туриста додому (що вперше побачив бункер і не може повірити своїм очам)',
-    ];
-
-    const tone = TONES[Math.floor(Math.random() * TONES.length)];
-
-    const formatPlayer = (p) => {
-        const attrKeys = ['profession', 'biology', 'health', 'hobby', 'trait', 'baggage', 'fact'];
-        const revealed = attrKeys
-            .filter(k => p.attributes[k]?.isRevealed)
-            .map(k => `${ATTR_LABELS[k]}: ${p.attributes[k].value}`)
-            .join(' | ');
-        return `• ${p.name}${revealed ? ' — ' + revealed : ''}`;
-    };
+function generateLocalEpilogue(state) {
+    const pick  = arr => arr[Math.floor(Math.random() * arr.length)];
+    const clean = val  => (val || '').split('(')[0].trim().toLowerCase();
 
     const survivors  = state.players.filter(p =>  p.isAlive);
     const eliminated = state.players.filter(p => !p.isAlive);
+    const sc = state.scenario;
 
-    const survivorsText  = survivors.map(formatPlayer).join('\n');
-    const eliminatedText = eliminated.length > 0
-        ? eliminated.map(formatPlayer).join('\n')
-        : '• (всі потрапили до бункера — рекорд!)';
+    // Пріоритет атрибутів: смішніші вище
+    const PRIO = ['hobby', 'health', 'trait', 'baggage', 'profession', 'biology', 'fact'];
+    const getAttr = (p, k) => p.attributes[k]?.isRevealed ? p.attributes[k].value : null;
 
-    const prompt = `Ти — саркастичний ведучий постапокаліптичного шоу «Бункер».
-Твоє завдання: написати фінальний епілог ВИКЛЮЧНО у стилі «${tone}».
+    const highlight = (p) => {
+        for (const k of PRIO) {
+            const v = getAttr(p, k);
+            if (v) return { name: p.name, key: k, val: v, short: clean(v) };
+        }
+        return { name: p.name, key: 'biology', val: '???', short: 'загадкова особистість' };
+    };
 
-КАТАСТРОФА: ${state.scenario.title} — ${state.scenario.disaster || state.scenario.subtitle || ''}
-БУНКЕР: ${state.scenario.bunker.slice(0, 160)}
+    const hl = survivors.map(highlight);
+    const h1 = hl[0] || { name: 'невідомий', short: 'невідомо', key: 'biology', val: '?' };
+    const h2 = hl[1] || h1;
 
-ХТО ПОТРАПИВ ДО БУНКЕРА (${survivors.length} осіб):
-${survivorsText}
+    const el  = eliminated[0];
+    const el2 = eliminated[1];
+    const elName  = el  ? el.name  : null;
+    const elProf  = el  ? clean(getAttr(el, 'profession') || el.name) : null;
+    const el2Name = el2 ? el2.name : null;
 
-ХТО ЗАЛИШИВСЯ НАЗОВНІ (${eliminated.length} осіб):
-${eliminatedText}
+    const elPhrase = elName
+        ? pick([
+            `${elName} (${elProf}) залишився назовні — і, судячи з усього, не дуже скучив.`,
+            `${elName} все ще десь там надворі. Принаймні, у бункері так думають.`,
+            `Про ${elName} (${elProf}) вирішили більше не говорити вголос.`,
+            `${elName} погрожував помстою — але що він може зробити? Він надворі.`,
+        ])
+        : pick([
+            `Так і живуть. Усі разом. Без жодного варіанту вийти.`,
+            `Усі вижили. Це, мабуть, найстрашніше.`,
+        ]);
 
-Напиши епілог 3-4 речення — що відбувається через рік після закриття бункера.
+    const BUILDERS = [
 
-Жорсткі вимоги:
-1. Стиль ТОЧНО відповідає «${tone}»
-2. Згадай щонайменше 2 конкретні абсурдні деталі з реальних атрибутів гравців
-3. Один несподіваний або іронічний поворот у кінці
-4. Темний гумор і сарказм вітаються
+        // 🎙️ BBC документалка
+        () => {
+            const open = pick([
+                `Натуралісти зафіксували рідкісну адаптацію: популяція бункера «${sc.title}» стабільно розмножується — морально.`,
+                `Через рік після закриття дверей бункера «${sc.title}» вчені нарешті отримали перші дані.`,
+                `У природних умовах постапокаліпсису особина виду «виживший у бункері» поводиться несподівано.`,
+            ]);
+            const mid = pick([
+                `${h1.name} — типовий представник виду — не полишив звички до ${h1.short}, що, за іронією долі, підвищує загальний моральний дух.`,
+                `Особливо цікавить науковців ${h1.name}: попри закриті стіни, той/-та продовжує практикувати ${h1.short} з маніакальною наполегливістю.`,
+                `${h2.name} демонструє захисну поведінку — ${h2.short} — яку спостерігачі спочатку сприйняли за симптом.`,
+            ]);
+            return `${open} ${mid} ${elPhrase}`;
+        },
 
-Відповідь — ТІЛЬКИ текст епілогу, без заголовків і пояснень. Українською мовою.`;
+        // ⭐ TripAdvisor
+        () => {
+            const stars = pick(['★★☆☆☆', '★★★☆☆', '★☆☆☆☆', '★★★★☆']);
+            const pro = pick([
+                `є дах, ${h1.name} знає що робити`,
+                `відносно сухо, ${h1.short} непогано скрашує вечори`,
+                `виживання гарантоване (майже)`,
+            ]);
+            const con = pick([
+                `${h2.name} займається ${h2.short} щоночі`,
+                `харчування одноманітне, ${h2.name} скаржиться постійно`,
+                `${h1.name} і ${h2.name} не можуть поділити запаси`,
+            ]);
+            const mgr = elName
+                ? `Відповідь менеджменту: «Дякуємо! ${elName} (${elProf}) — це не наша помилка, це ваш вибір.»`
+                : `Відповідь менеджменту: «Ми постійно покращуємо умови апокаліпсису. Чекайте оновлень.»`;
+            return `${stars} Бункер «${sc.title}» — чесний відгук після року. Плюси: ${pro}. Мінуси: ${con}. ${mgr}`;
+        },
 
-    try {
-        const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { temperature: 1.0, maxOutputTokens: 350 },
-                }),
-                signal: AbortSignal.timeout(10_000),
-            }
-        );
-        if (!res.ok) return null;
-        const data = await res.json();
-        return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null;
-    } catch {
-        return null;
-    }
+        // 📰 Жовтий таблоїд
+        () => {
+            const head = pick([
+                `СЕНСАЦІЯ: ${h1.name.toUpperCase()} (${h1.short.toUpperCase()}) ШОКУВАВ/-ЛА ВСІХ БУНКЕРНИКІВ!!!`,
+                `СКАНДАЛ У БУНКЕРІ «${sc.title.toUpperCase()}»: ${h1.name.toUpperCase()} ВІДМОВЛЯЄТЬСЯ ДІЛИТИСЯ!!!`,
+                `ТАЄМНИЦЯ РОЗКРИТА: ЩО НАСПРАВДІ РОБИТЬ ${h1.name.toUpperCase()} УНОЧІ В БУНКЕРІ!!!`,
+            ]);
+            const body = pick([
+                `${h2.name} СТВЕРДЖУЄ: «${h2.short.toUpperCase()}» — ЦЕ КОНКУРЕНТНА ПЕРЕВАГА, А НЕ ПРОБЛЕМА!!!`,
+                `ОЧЕВИДЦІ КАЖУТЬ: ${h2.name} ВСЕ ЩЕ ЗАЙМАЄТЬСЯ ${h2.short.toUpperCase()} — У БУНКЕРІ!!!`,
+            ]);
+            const el_line = elName
+                ? `ВИГНАНИЙ ${elName.toUpperCase()} (${elProf?.toUpperCase()}) ЗАЯВИВ: «ЦЕ НЕ КІНЕЦЬ!!!» — ПІДПИСУЙТЕСЬ НА НАШ КАНАЛ!!!`
+                : `БІЛЬШЕ ПОДРОБИЦЬ ПІСЛЯ РЕКЛАМИ ГРЕЧКИ!!!`;
+            return `${head} ${body} ${el_line}`;
+        },
+
+        // 🧸 Темна казка
+        () => {
+            const open = pick([
+                `Жили собі ${survivors.map(p => p.name).join(', ')} у підземному бункері під час ${sc.subtitle}.`,
+                `В одному підземному царстві, коли надворі лютував ${sc.subtitle.toLowerCase()}, оселилося ${survivors.length} сміливих душ.`,
+            ]);
+            const mid = pick([
+                `${h1.name} — найхоробріший/-а — щодня дивував/-ла всіх своїм ${h1.short}. ${h2.name} відповідав/-ла ${h2.short}.`,
+                `${h1.name} (${h1.short}) спочатку здавався/-лась корисним/-ою. Потім — не дуже. А потім — знов корисним/-ою.`,
+            ]);
+            const moral = elName
+                ? pick([
+                    `А мораль: вигнати ${elName} (${elProf}) — легко. Жити з вибором — складніше.`,
+                    `Мораль: ${elName} — надворі. Решта — у бункері. Хто щасливіший — невідомо.`,
+                ])
+                : pick([
+                    `І жили вони довго та щасливо — у темряві, тісноті, але разом. Мораль: іноді «разом» — це вже вирок.`,
+                    `Мораль: якщо вижив — заслужив. Якщо ні — теж, мабуть, заслужив.`,
+                ]);
+            return `${open} ${mid} ${moral}`;
+        },
+
+        // 📊 HR-звіт
+        () => {
+            const pct = pick([43, 67, 71, 88, 52, 95, 38]);
+            const kpi = pick([
+                `${h1.name} (компетенція: ${h1.short}) — оцінено «перевищує очікування для кінця світу» (3.7/5).`,
+                `${h1.name} (посада: де-факто лідер) — показник виживання: ${pct}%. Зона для покращення: паніка.`,
+            ]);
+            const review = pick([
+                `${h2.name} отримав/-ла зауваження щодо ${h2.short} — «недостатньо пов'язане з цілями бункера».`,
+                `Компетенція ${h2.name} «${h2.short}» зафіксована як нерелевантна. Але хто ми такі, щоб судити.`,
+            ]);
+            const dismiss = elName
+                ? `${elName} (${elProf}) — звільнено за скороченням. Пункт 7.3: «Невідповідність вимогам апокаліпсису».`
+                : `Некомплект: 0 осіб. Продуктивність: задовільна для кінця цивілізації.`;
+            return `Звіт HR-відділу. Бункер «${sc.title}». KPI виконано на ${pct}%. ${kpi} ${review} ${dismiss} Наступна атестація — якщо доживемо.`;
+        },
+
+        // ✉️ Лист додому
+        () => {
+            const greet = pick([`Привіт, мамо!`, `Дорогий щоденнику.`, `Звіт для онуків — якщо будуть:`]);
+            const main = pick([
+                `Уяви: ${h1.name} — той/-та, що займається ${h1.short} — виявився/-лась найкориснішим/-ою. Хто б міг подумати. ${h2.name} теж тримається.`,
+                `Тут є ${h1.name} з ${h1.short}. В бункері ця навичка раптом стала найважливішою. ${h2.name} не погоджується, але мовчить.`,
+            ]);
+            const end = elName
+                ? pick([
+                    `${elName} не потрапив/-ла. Сподіваюсь, впорається. Хоча навряд.`,
+                    `Передай привіт ${elName} — якщо побачиш. Хоча краще не треба.`,
+                ])
+                : `Загалом — живемо. Це, мабуть, головне. Цілую.`;
+            return `${greet} ${main} ${end}`;
+        },
+
+        // 📚 Суха Вікіпедія
+        () => {
+            const open = pick([
+                `Бункер «${sc.title}» (неофіційна назва) — задокументований кейс виживання ${survivors.length} осіб за умов ${sc.subtitle.toLowerCase()}.`,
+                `Інцидент «${sc.title}»: колективне виживання тривалістю ${state.round || '?'} раундів при місткості бункера ${state.bunkerCapacity || '?'} осіб.`,
+            ]);
+            const note = pick([
+                `Примітка: ${h1.name} (фах: ${h1.short}) документально підтверджено як «найбільш суперечливий вибір групи».`,
+                `Особливий випадок: ${h1.name} (${h1.short}) продовжував/-ла звичну діяльність попри апокаліпсис — феномен, відомий як «бункерна нормалізація».`,
+            ]);
+            const ref = elName
+                ? `Докладніше про ${elName} (${elProf}) — у розділі «Вигнані: причини та наслідки» (сторінка не існує).`
+                : `Для самоперевірки: оцініть, чи оптимально розподілено ролі. (Правильна відповідь: ні.)`;
+            return `${open} ${note} ${ref}`;
+        },
+    ];
+
+    return pick(BUILDERS)();
 }
 
 function addBunkerLog(state, text) {
@@ -312,7 +399,7 @@ ${playersDesc}
     if (!prompt) return null;
     try {
         const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${key}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-latest:generateContent?key=${key}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -541,12 +628,8 @@ function eliminatePlayers(room, toEliminate) {
             }))
         );
         _db.deleteRoom(room.code);
+        s.epilogue = generateLocalEpilogue(s);
         emitBunkerUpdate(room);
-        generateBunkerEpilogue(s).then(text => {
-            if (!text || !room.state) return;
-            room.state.epilogue = text;
-            emitBunkerUpdate(room);
-        }).catch(() => {});
     } else {
         s.tiebreaker = null;
         startBunkerRound(room);
